@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from .torch_utils import *
 from .local_utils import Indexflow, split_img, imshow
-from collections import deque
+from collections import deque, OrderedDict
 import functools
 
 class passthrough(nn.Module):
@@ -34,13 +34,15 @@ def weights_init(m):
         m.bias.data.fill_(0)
 
 class sentConv(nn.Module):
-    def __init__(self, in_dim, row, col, channel, activ ):
+    def __init__(self, in_dim, row, col, channel, 
+                 activ = None, last_active = False):
         super(sentConv, self).__init__()
         self.__dict__.update(locals())
         out_dim = row*col*channel
         _layers = [nn.Linear(in_dim, out_dim)]
         _layers += [nn.BatchNorm1d(out_dim)]
-        _layers += [activ]
+        if not last_active and  activ is not None:
+            _layers += [activ] 
         
         self.out = nn.Sequential(*_layers)    
          
@@ -48,6 +50,97 @@ class sentConv(nn.Module):
         output = self.out(inputs)
         output = output.view(-1, self.channel, self.row, self.col)
         return output
+
+def cat_vec_conv(text_enc, img_enc):
+    # text_enc (B, dim)
+    # img_enc  (B, chn, row, col)
+    b, c = text_enc.size()
+    row, col = img_enc.size()[2::]
+    text_enc = text_enc.unsqueeze(-1).unsqueeze(-1)
+    text_enc = text_enc.expand(b, c, row, col )
+    com_inp = torch.cat([img_enc, text_enc], 1)
+    return com_inp
+
+class connectSide(nn.Module):
+    def __init__(self, side_in, side_out, hid_in, sent_in, out_dim, 
+                 norm, activ, down_rate, repeat= 0):
+        # side_in is transformed to side_out, concate with hid_in, 
+        # forward to down__rate smaller version concat with sent_in.
+        # and use unet to preserve information.
+        super(connectSide, self).__init__()
+        self.__dict__.update(locals())
+
+        _layers = []
+        _layers += [nn.Conv2d(side_in, side_out, kernel_size = 1, padding=0, bias=True)]
+        _layers += [getNormLayer(norm)(side_out )]
+        _layers += [activ]
+        self.side_trans = nn.Sequential(*_layers)
+        
+        _dict = OrderedDict()
+        
+        in_dim = side_out + hid_in
+
+        in_list = [in_dim]
+        for idx in range(down_rate):
+            marker = 'down_{}'.format(idx)
+            _dict[marker] = \
+                conv_norm(in_dim,  out_dim, norm,  activ, 0, True,True,  3,1,2)
+            in_dim = out_dim
+            in_list.append(in_dim)
+
+        for idx in range(down_rate):
+            up_marker = 'up_{}'.format(idx)
+            marker = 'conv_{}'.format(idx)
+            _dict[up_marker] = nn.Upsample(scale_factor=2, mode='nearest')
+
+            if idx != 0:
+                in_dim = in_dim +  in_list[down_rate - idx]
+            else:
+                in_dim = in_dim + self.sent_in 
+
+            _dict[marker] = \
+                conv_norm(in_dim, out_dim, norm,  activ, 0, True,True,  3,1,1)
+            in_dim = out_dim
+        
+        for k, v in _dict.items():
+            setattr(self, k, v)   
+            
+    def forward(self, img_input, sent_input, hid_input):
+        img_trans = self.side_trans(img_input)
+        
+        inputs = torch.cat( [img_trans, hid_input], 1)
+        down_res_list = []
+        for idx in range(self.down_rate):
+            marker = 'down_{}'.format(idx)
+            _layer = getattr(self, marker)
+            down_res_list.append(inputs)
+            _this_out = _layer(inputs)
+            
+            inputs = _this_out
+
+        _conv_out = cat_vec_conv(sent_input, _this_out)
+        
+
+        for idx in range(self.down_rate):
+            
+            up_marker = 'up_{}'.format(idx)
+            marker    = 'conv_{}'.format(idx)
+
+            up_layer  = getattr(self, up_marker)
+            conv_layer = getattr(self, marker)
+            
+            #print([a.size() for a in down_res_list])
+            if idx != 0:
+                _cap_inp = down_res_list[self.down_rate - idx]
+                #print('cat size: ', _conv_out.size(), _cap_inp.size())
+                _cat_out = torch.cat([_conv_out, _cap_inp], dim=1)
+            else:
+                _cat_out = _conv_out
+
+            _up_out    = up_layer(_cat_out)
+            _conv_out  = conv_layer(_up_out)
+            
+        return _conv_out
 
 def up_conv(in_dim, out_dim, norm, activ, repeat=1, get_layer = False):
     _layers = [nn.Upsample(scale_factor=2,mode='nearest')]
@@ -67,12 +160,13 @@ def up_conv(in_dim, out_dim, norm, activ, repeat=1, get_layer = False):
     else:
         return _layers
 
-def down_conv(in_dim, out_dim, norm, activ, repeat=1,kernel_size=3, get_layer = False):
+def down_conv(in_dim, out_dim, norm, activ, repeat=1,
+              kernel_size=3, get_layer = False):
     _layers = [nn.Conv2d(in_dim,  out_dim, stride=2, 
                kernel_size = 3, padding=1)]
     _layers += [getNormLayer(norm)(out_dim )]
     _layers += [activ]
-    for _ in range(repeat-1):
+    for _ in range(repeat):
         _layers += [nn.Conv2d(out_dim,  out_dim, 
                     kernel_size = 1, padding=0, bias=True)]
         _layers += [getNormLayer(norm)(out_dim )]
@@ -83,18 +177,20 @@ def down_conv(in_dim, out_dim, norm, activ, repeat=1,kernel_size=3, get_layer = 
         return _layers
 
 def conv_norm(in_dim, out_dim, norm, activ=None, repeat=1, get_layer = False,
-              last_active=True, kernel_size=1, padding=0, stride=1):
+              last_active=True, kernel_size=1, padding=0, stride=1, last_norm=True):
     _layers = []
     _layers += [nn.Conv2d(in_dim,  out_dim, kernel_size = kernel_size, 
                             padding=padding, stride=stride, bias=True)]
-    _layers += [getNormLayer(norm)(out_dim )]
-
+    
     for _ in range(repeat):
         _layers += [activ] 
+        _layers += [getNormLayer(norm)(out_dim )]
         _layers += [nn.Conv2d(out_dim,  out_dim, kernel_size = kernel_size, 
                             padding=padding,bias=True)]
-        _layers += [getNormLayer(norm)(out_dim )]
-    
+        
+    if last_norm:
+       _layers += [getNormLayer(norm)(out_dim )]
+
     if last_active and activ is not None:
        _layers += [activ] 
     if get_layer:
@@ -112,7 +208,7 @@ def brach_out(in_dim, out_dim, norm, activ, repeat= 1, get_layer = False):
     
     _layers += [nn.Conv2d(in_dim,  out_dim, 
                 kernel_size = 1, padding=0, bias=True)]    
-    _layers += [torch.nn.Tanh()]
+    _layers += [nn.Tanh()]
 
     if get_layer:
         return nn.Sequential(*_layers)
@@ -120,6 +216,43 @@ def brach_out(in_dim, out_dim, norm, activ, repeat= 1, get_layer = False):
         return _layers
 
 
+class catSentConv(nn.Module):
+    def __init__(self, enc_dim, emb_dim, feat_size, 
+                 norm, activ, down_rate):
+        '''
+          enc_dim: B*enc_dim*H*W
+          emb_dim: the dimension of feeded embedding
+          feat_size: the feature map size of the feature map. 
+        '''
+        super(catSentConv, self).__init__()
+        self.__dict__.update(locals())
+
+        inp_dim = enc_dim + emb_dim
+        _layers =  conv_norm(inp_dim, enc_dim, norm, activ, 1, False, True, 1, 0)
+        for _ in range(down_rate):
+            _layers +=  \
+            conv_norm(enc_dim, enc_dim, norm, activ, 0, False, True, 3, 1, 2)
+        
+        new_feat_size = feat_size//int(2**down_rate)
+        _layers += [nn.Conv2d(enc_dim, 1, kernel_size = new_feat_size, padding =0)]
+        self.node = nn.Sequential(*_layers)
+
+    def forward(self,sent_code,  img_code):
+        sent_code =  sent_code.unsqueeze(-1).unsqueeze(-1)
+        dst_shape = list(sent_code.size())
+        #print(dst_shape, img_code.size())
+        dst_shape[1] =  sent_code.size()[1]
+        dst_shape[2] =  img_code.size()[2] 
+        dst_shape[3] =  img_code.size()[3] 
+        sent_code = sent_code.expand(dst_shape)
+        #sent_code = sent_code.view(*dst_shape)
+        #print(img_code.size(), sent_code.size())
+        comp_inp = torch.cat([img_code, sent_code], dim=1)
+        output = self.node(comp_inp)
+        chn  = output.size()[1]
+        output = output.view(-1, chn)
+
+        return output
 
 class LanguageModelCriterion(nn.Module):
     def __init__(self):

@@ -1,4 +1,3 @@
-import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,6 +5,7 @@ from torch.autograd import Variable
 
 from collections import OrderedDict
 from ..proj_utils.model_utils import *
+import math
 
 def KL_loss(mu, log_sigma):
     loss = -log_sigma + .5 * (-1 + torch.exp(2. * log_sigma) + mu**2)
@@ -21,6 +21,20 @@ def sample_encoded_context(mean, logsigma, kl_loss=False):
 
     kl_loss = KL_loss(mean, logsigma) if kl_loss else None
     return c, kl_loss
+
+class resConn(nn.Module):
+    def __init__(self, in_path, side_path, activ):
+        super(resConn, self).__init__()
+        self.in_path = in_path
+        self.side_path = side_path
+        self.activ = activ
+
+    def forward(self, inputs):
+        node_0 = self.in_path(inputs)
+        node_1 = self.side_path(node_0)
+        node2  = self.activ(node_0 + node_1)
+        return node2
+
 
 class condEmbedding(nn.Module):
     def __init__(self, noise_dim, emb_dim):
@@ -47,207 +61,110 @@ def genAct():
 def discAct():
     return nn.LeakyReLU(0.2)
 
+def cat_vec_conv(text_enc, img_enc):
+    # text_enc (B, dim)
+    # img_enc  (B, chn, row, col)
+    b, c = text_enc.size()
+    row, col = img_enc.size()[2::]
+    text_enc = text_enc.unsqueeze(-1).unsqueeze(-1)
+    text_enc = text_enc.expand(b, c, row, col )
+    com_inp = torch.cat([img_enc, text_enc], dim=1)
+    return com_inp
 
-def brach_out(feat_dim, out_dim, norm, repeat=2):
-    _layers = []
-    for _ in range(repeat):
-        _layers += [Bottleneck(feat_dim, feat_dim) ] 
-    
-    _layers += [nn.Conv2d(feat_dim,  out_dim, 
-                kernel_size = 3, padding=1, bias=True)]    
-    _layers += [torch.nn.Tanh()]
-    return _layers
-
-def up_conv(in_dim, out_dim, norm, activ, repeat=1, get_layer = False):
-    _layers = [nn.Upsample(scale_factor=2,mode='nearest')]
-    for _ in range(repeat):
-        _layers += [nn.Conv2d(in_dim,  in_dim, 
-                    kernel_size = 3, padding=1)]
-        _layers += [getNormLayer(norm)(in_dim )]
-        _layers += [activ]
-    
-    _layers += [nn.Conv2d(in_dim,  out_dim, 
-                kernel_size = 3, padding=1, bias=True)]
-    _layers += [getNormLayer(norm)(out_dim )]
-    _layers += [activ]
-    if get_layer:
-        return nn.Sequential(*_layers)
-    else:
-        return _layers
-
-def down_conv(in_dim, out_dim, norm, activ, repeat=1,kernel_size=3, get_layer = False):
-    _layers = [nn.Conv2d(in_dim,  out_dim, stride=2, 
-               kernel_size = 3, padding=1)]
-    _layers += [getNormLayer(norm)(out_dim )]
-    _layers += [activ]
-    for _ in range(repeat):
-        _layers += [nn.Conv2d(out_dim,  out_dim, 
-                    kernel_size = 3, padding=1, bias=True)]
-        _layers += [getNormLayer(norm)(out_dim )]
-        _layers += [activ]
-    if get_layer:
-        return nn.Sequential(*_layers)
-    else:
-        return _layers
-
-def conv_norm(in_dim, out_dim, norm, activ=None, repeat=1, get_layer = False,
-              last_active=True, kernel_size=3, padding=1):
-    _layers = []
-    _layers += [nn.Conv2d(in_dim,  out_dim, kernel_size = kernel_size, 
-                            padding=padding,bias=True)]
-    _layers += [getNormLayer(norm)(out_dim )]
-
-    for _ in range(repeat - 1):
-        _layers += [activ] 
-        _layers += [nn.Conv2d(out_dim,  out_dim, kernel_size = kernel_size, 
-                            padding=padding,bias=True)]
-        _layers += [getNormLayer(norm)(out_dim )]
-    
-    if last_active and activ is not None:
-       _layers += [activ] 
-    if get_layer:
-        return nn.Sequential(*_layers)
-    else:
-        return _layers
-
-def brach_out(in_dim, out_dim, norm, activ, repeat= 1, get_layer = False):
-    _layers = []
-    for _ in range(repeat):
-        _layers += [nn.Conv2d(in_dim,  in_dim, 
-                    kernel_size = 3, padding=1, bias=True)]
-        _layers += [getNormLayer(norm)(in_dim )]
-        _layers += [activ]
-    
-    _layers += [nn.Conv2d(in_dim,  out_dim, 
-                kernel_size = 3, padding=1, bias=True)]    
-    _layers += [torch.nn.Tanh()]
-
-    if get_layer:
-        return nn.Sequential(*_layers)
-    else:
-        return _layers
-
-class connectSide(nn.Module):
-    def __init__(self, side_in, side_out, hid_in, sent_in,out_dim, norm, activ, repeat= 0):
-        super(connectSide, self).__init__()
-        self.__dict__.update(locals())
-
-        _layers = []
-        _layers += [nn.Conv2d(side_in, side_out, kernel_size = 3, padding=1, bias=True)]
-        _layers += [getNormLayer(norm)(side_out )]
-        _layers += [activ]
-        
-        self.side_trans = nn.Sequential(*_layers)
-        
-        _layers = [nn.Conv2d(side_out + sent_in + hid_in,  out_dim,
-                    kernel_size = 3, padding=1, bias=True)]
-        _layers += [getNormLayer(norm)(out_dim )]
-        _layers += [activ]
-
-        for _ in range(repeat):
-            _layers += [nn.Conv2d(out_dim,  out_dim, 
-                        kernel_size = 3, padding=1, bias=True)]
-            _layers += [getNormLayer(norm)(out_dim )]
-            _layers += [activ]
-
-        self.out = nn.Sequential(*_layers)    
-         
-    def forward(self, img_input, sent_input, hid_input):
-        img_trans = self.side_trans(img_input)
-        
-        b, c ,_ ,_ = img_trans.size()
-        row, col = img_trans.size()[2::]
-        sent_input = sent_input.unsqueeze(-1).unsqueeze(-1)
-        sent_input = sent_input.expand(b, c, row, col )
-        #print(img_trans.size(), sent_input.size(), hid_input.size())
-        com_inp = torch.cat([img_trans, sent_input, hid_input], 1)
-        out = self.out(com_inp)
-        return out
-
-class sentConv(nn.Module):
-    def __init__(self, in_dim, row, col, channel, activ ):
-        super(sentConv, self).__init__()
-        self.__dict__.update(locals())
-        out_dim = row*col*channel
-        _layers = [nn.Linear(in_dim, out_dim)]
-        _layers += [activ]
-        
-        self.out = nn.Sequential(*_layers)    
-         
-    def forward(self, inputs):
-        output = self.out(inputs)
-        output = output.view(-1, self.channel, self.row, self.col)
-        return output
-            
 class Generator(nn.Module):
     def __init__(self, input_size, sent_dim,  noise_dim, num_chan, 
-                 emb_dim, hid_dim, norm = 'instance',branch=True, small_output=True):
+                 emb_dim, hid_dim, norm = 'ln',branch=True, small_output=True):
         super(Generator, self).__init__()
         self.__dict__.update(locals())
         self.register_buffer('device_id', torch.zeros(1))
-        self.sent_init = condEmbedding(sent_dim, emb_dim)
+        self.condEmbedding = condEmbedding(sent_dim, emb_dim)
         # We need to know how many layers we will use at the beginning
-        side_out = 128 # map 3 channel image to this channel.
+        self.s = 64 # we fix it to 64
+        self.s2, self.s4, self.s8, self.s16 =\
+            int(self.s / 2), int(self.s / 4), int(self.s / 8), int(self.s / 16)
         activ = genAct()
         
-        self.node_4   = sentConv(emb_dim+noise_dim, 4, 4, hid_dim, activ)
-        self.node_8   = up_conv(hid_dim, hid_dim, norm, activ, repeat=1, get_layer =True)
+        node1_0 = sentConv(emb_dim+noise_dim, self.s16, self.s16, self.hid_dim*8, None, False)
+        _layers = conv_norm(self.hid_dim*8,  self.hid_dim*2, norm,  activ, 0, False,True,  1, 0)
+        _layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,True,  3, 1)
+        _layers += conv_norm(self.hid_dim*2,  self.hid_dim*8, norm, activ, 0, False,False,  3, 1)
+        node1_1 = nn.Sequential(*_layers)
+        self.node1  = resConn(node1_0, node1_1, activ)
 
-        self.node_16   = up_conv(hid_dim, hid_dim, norm, activ, repeat=1, get_layer =True)
-        #self.branch_16 = brach_out(hid_dim, 3, norm, activ, repeat=1, get_layer =True)
-        #self.sent_16   = condEmbedding(sent_dim, emb_dim)
-        #self.conn_16   = connectSide(3, side_out, hid_dim, emb_dim, hid_dim, norm, activ, repeat= 0)
+        _layers = [nn.Upsample((self.s8, self.s8),mode='nearest')]
+        _layers += conv_norm(self.hid_dim*8,  self.hid_dim*4, norm, activ, 0, False,False,  3, 1)
+        node2_0 = nn.Sequential(*_layers)
         
-        self.node_32   = up_conv(hid_dim, hid_dim, norm, activ, repeat=1, get_layer =True)
-        self.branch_32 = brach_out(hid_dim, 3, norm, activ, repeat=1, get_layer =True)
-        self.sent_32   = condEmbedding(sent_dim, emb_dim)
-        self.conn_32   = connectSide(3, side_out, hid_dim, emb_dim, hid_dim, norm, activ, repeat= 0)
+        _layers = conv_norm(self.hid_dim*4,  self.hid_dim*1, norm,  activ, 0, False,True,  1, 0)
+        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,True, 3, 1)
+        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*4, norm,  activ, 0, False,False, 3, 1)
+        node2_1 = nn.Sequential(*_layers)
+        self.node2  = resConn(node2_0, node2_1, activ)
+        
+        _layers  = [nn.Upsample((self.s4, self.s4), mode='nearest')]  # 16
+        _layers += conv_norm(self.hid_dim*4,  self.hid_dim*2, norm,  activ, 0, False,True, 3, 1)
+        _layers += [nn.Upsample((self.s2, self.s2), mode='nearest')]  # 32
+        _layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm,  activ, 0, False,True, 3, 1)
+        self.node_32 =  nn.Sequential(*_layers)
 
-        self.node_64   = up_conv(hid_dim, hid_dim, norm, activ, repeat=1, get_layer =True)
-        self.branch_64 = brach_out(hid_dim, 3, norm, activ, repeat=1, get_layer =True)
-        self.sent_64   = condEmbedding(sent_dim, emb_dim)
-        self.conn_64   = connectSide(3, side_out, hid_dim, emb_dim, hid_dim, norm, activ, repeat= 0)
+        self.out_32  = brach_out(hid_dim*2, 3, norm, activ, repeat=1, get_layer =True)
+        self.side_32 = connectSide(3, hid_dim, hid_dim*2, emb_dim, hid_dim*2, norm, activ, 2)
 
-        self.node_128 = up_conv(hid_dim, hid_dim, norm, activ, repeat=1, get_layer =True)
-        self.node_256 = up_conv(hid_dim, 3, norm, activ, repeat=1, get_layer =True)
+        _layers = [nn.Upsample((self.s, self.s), mode='nearest')]
+        _layers += conv_norm(self.hid_dim*2,  self.hid_dim,   norm,  activ, 0, False,True, 3, 1)   
+        self.node_64 = nn.Sequential(*_layers)
+
+        self.out_64  = brach_out(hid_dim, 3, norm, activ, repeat=1, get_layer =True)
+        self.side_64 = connectSide(3, hid_dim//2, hid_dim, emb_dim, hid_dim, norm, activ, 3)
+
+        _layers = [nn.Upsample((128, 128), mode='nearest')]
+        _layers += conv_norm(self.hid_dim,  self.hid_dim//2, norm,  activ, 0, False,True, 3, 1)
+        self.node_128 = nn.Sequential(*_layers)
+
+        self.out_128  = brach_out(hid_dim//2, 3, norm, activ, repeat=1, get_layer =True)
+        self.side_128 = connectSide(3, hid_dim//4, hid_dim//2, emb_dim, hid_dim//2, norm, activ, 3)
+
+        _layers = [nn.Upsample((256, 256), mode='nearest')]
+        _layers += conv_norm(self.hid_dim//2,  self.hid_dim//4, 'no',  activ, 0, False,True, 3, 1)
+
+        _layers += [nn.Conv2d(self.hid_dim//4,  self.num_chan, kernel_size = 3, padding=1)]
+        _layers += [nn.Tanh()]
+        self.out_256 =  nn.Sequential(*_layers)
 
         self.apply(weights_init)
 
     def forward(self, sent_embeddings, z=None):
         out_dict = OrderedDict()
-        sent_random, kl_loss  = self.sent_init(sent_embeddings)
+        sent_random, kl_loss  = self.condEmbedding(sent_embeddings)
+
         com_inp = torch.cat([sent_random, z], dim=1)
+        node1 = self.node1(com_inp)
+        node2 = self.node2(node1)
 
-        node_4 = self.node_4(com_inp)
-        node_8 = self.node_8(node_4)
+        node_32 = self.node_32(node2)
+        out_32  = self.out_32(node_32)
+        side_32 = self.side_32(out_32, sent_random, node_32)
 
-        node_16 = self.node_16(node_8)
-        #branch_16 = self.branch_16(node_16)
-        #sent_16, _this_kl  = self.sent_16(sent_embeddings)
-        #kl_loss += _this_kl
-        #conn_16 = self.conn_16(branch_16, sent_16, node_16)
+        node_64 = self.node_64(side_32)
+        out_64  = self.out_64(node_64)
+        side_64 = self.side_64(out_64, sent_random, node_64)
 
-        node_32 = self.node_32(node_16)
-        branch_32 = self.branch_32(node_32)
-        sent_32, _this_kl  = self.sent_32(sent_embeddings)
-        kl_loss += _this_kl
-        conn_32 = self.conn_32(branch_32, sent_32, node_32)
+        node_128 = self.node_128(side_64)
+        out_128  = self.out_128(node_128)
+        side_128 = self.side_128(out_128, sent_random, node_128)
 
-        node_64 = self.node_64(conn_32)
-        branch_64 = self.branch_64(node_64)
-        sent_64, _this_kl  = self.sent_64(sent_embeddings)
-        kl_loss += _this_kl
-        conn_64 = self.conn_64(branch_64, sent_64, node_64)
+        out_256 = self.out_256(side_128)
 
-        node_128 = self.node_128(conn_64)
-        node_256 = self.node_256(node_128)
+        out_dict['output_256']  = out_256
+        out_dict['output_128']  = out_128
+        out_dict['output_64']  = out_64
+        out_dict['output_32']  = out_32
+        #branch_128 = self.branch_128(node_128)
 
-        #out_dict['output_16']  = branch_16
-        #out_dict['output_32']  = branch_32
-        #out_dict['output_64']  = branch_64
-        out_dict['output_256'] = node_256
-                
         return out_dict, kl_loss
+
+# DCGAN discriminator (using somewhat the reverse of the generator)
+# Removed Batch Norm we can't backward on the gradients with BatchNorm2d
 
 class ImageDown(torch.nn.Module):
     '''
@@ -261,69 +178,36 @@ class ImageDown(torch.nn.Module):
         max_down_rate = math.log(input_size, 2)
         assert down_rate <= max_down_rate, 'down rate is too large for this image'
         down_rate = min(down_rate, max_down_rate)
-        _layers = []
-        _layers += conv_norm(num_chan, hid_dim, norm, activ, repeat=0, get_layer = False)
 
-        if input_size == 16:
-            _layers += down_conv(hid_dim, hid_dim, norm, activ, repeat=1, get_layer = False)
-            _layers += down_conv(hid_dim, hid_dim, norm, activ, repeat=1, get_layer = False)
-            _layers += conv_norm(hid_dim, hid_dim, norm, activ, repeat=1, get_layer = False,
-                                 kernel_size=1, padding=0)
-            _layers += conv_norm(hid_dim, hid_dim, norm, activ, repeat=0, get_layer = False,
-                                 kernel_size=4, padding=0)
-        elif input_size == 32:
-            _layers += down_conv(hid_dim, hid_dim,  norm, activ,  repeat=1, get_layer = False)  # 16
-            _layers += down_conv(hid_dim, hid_dim,  norm, activ,  repeat=1, get_layer = False)  # 8
-            _layers += down_conv(hid_dim, hid_dim,  norm, activ,  repeat=1, get_layer = False)  # 4
-            _layers += conv_norm(hid_dim, hid_dim, norm, activ, repeat=1, get_layer = False, # 4
-                                 kernel_size=1, padding=0)
-            _layers += conv_norm(hid_dim, hid_dim, norm, activ, repeat=0, get_layer = False, # 1
-                                 kernel_size=4, padding=0)
-        else:                                                  
-            for _ in range(down_rate):
-                _layers += down_conv(hid_dim, hid_dim, norm, activ, repeat=1, get_layer = False)
+        if input_size == 32:
+            _layers = conv_norm(num_chan, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 16
+            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 8
+            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  5,0,1)  # 4
+            _layers += conv_norm(hid_dim, out_dim,  norm, activ, 0, False,True,  4,0,1)  # 1                     
+        if input_size == 64:
+            _layers = conv_norm(num_chan, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 32
+            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 16
+            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 8
+            _layers += conv_norm(hid_dim, out_dim,  norm, activ, 0, False,True,  5,0,1)  # 4    
 
-        _layers += conv_norm(hid_dim, out_dim, norm, activ, repeat=0, get_layer = False,
-                            kernel_size=1, padding=0)
+        if input_size == 128:
+            _layers = conv_norm(num_chan, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 64
+            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 32
+            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 16
+            _layers += conv_norm(hid_dim, out_dim,  norm, activ, 0, False,True,  3,1,2)  # 8  
+
+        if input_size == 256:
+            _layers = conv_norm(num_chan, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 128
+            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 64
+            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 32
+            _layers += conv_norm(hid_dim, out_dim,  norm, activ, 0, False,True,  3,1,2)  # 16  
 
         self.node = nn.Sequential(*_layers)
 
     def forward(self, inputs):
         # inputs (B, C, H, W), must be dividable by 32
-        # return (B, C, 16, 16)
+        # return (B, C, row, col)
         return self.node(inputs)
-
-class catSentConv(nn.Module):
-    def __init__(self, enc_dim, emb_dim, feat_size, norm='instance'):
-        '''
-        enc_dim: B*enc_dim*H*W
-        emb_dim: the dimension of feeded embedding
-        feat_size: the feature map size of the feature map. 
-        '''
-        super(catSentConv, self).__init__()
-        self.__dict__.update(locals())
-        activ = discAct()
-        inp_dim = enc_dim + emb_dim
-        _layers =  conv_norm(inp_dim, enc_dim, norm, activ, 2, False, True, 1, 0)
-        _layers += [nn.Conv2d(enc_dim, 1, kernel_size = feat_size, padding =0)]
-        self.node = nn.Sequential(*_layers)
-
-    def forward(self,sent_code,  img_code):
-        sent_code =  sent_code.unsqueeze(-1).unsqueeze(-1)
-        dst_shape = list(sent_code.size())
-        #print(dst_shape, img_code.size())
-        dst_shape[1] =  sent_code.size()[1]
-        dst_shape[2] =  img_code.size()[2] 
-        dst_shape[3] =  img_code.size()[3] 
-        sent_code = sent_code.expand(dst_shape)
-        #sent_code = sent_code.view(*dst_shape)
-        #print(img_code.size(), sent_code.size())
-        comp_inp = torch.cat([img_code, sent_code], dim=1)
-        output = self.node(comp_inp)
-        chn  = output.size()[1]
-        output = output.view(-1, chn)
-
-        return output
 
 class Discriminator(torch.nn.Module):
     '''
@@ -341,25 +225,25 @@ class Discriminator(torch.nn.Module):
         _layers = [nn.Linear(sent_dim, emb_dim)]
         #_layers += [nn.BatchNorm1d(emb_dim)]
         _layers += [discAct()]
-        _layers += [nn.Linear(emb_dim, emb_dim)]
+        #_layers += [nn.Linear(emb_dim, emb_dim)]
         #_layers += [nn.BatchNorm1d(emb_dim*4*4)]
-        _layers += [discAct()]
+        #_layers += [discAct()]
         self.context_emb_pipe = nn.Sequential(*_layers)
 
-        #self.img_encoder_16  = ImageDown(16,  num_chan, hid_dim, enc_dim, 4, norm) # 1
-        self.img_encoder_32  = ImageDown(32,  num_chan, hid_dim, enc_dim, 4, norm) # 1
-        self.img_encoder_64  = ImageDown(64,  num_chan, hid_dim, enc_dim, 4, norm) # 4
-        self.img_encoder_256 = ImageDown(256, num_chan, hid_dim, enc_dim, 4, norm) # 16
+        self.img_encoder_32  = ImageDown(32,  num_chan, hid_dim, enc_dim, 4, norm)  # 1
+        self.img_encoder_64  = ImageDown(64,  num_chan, hid_dim, enc_dim, 4, norm)  # 4
+        self.img_encoder_128 = ImageDown(128,  num_chan, hid_dim, enc_dim, 4, norm) # 8
+        self.img_encoder_256 = ImageDown(256, num_chan, hid_dim, enc_dim, 4, norm)  # 16
         
-        #self.pair_disc_16  = catSentConv(enc_dim, emb_dim, 1, norm)
-        self.pair_disc_32  = catSentConv(enc_dim, emb_dim, 1, norm)
-        self.pair_disc_64  = catSentConv(enc_dim, emb_dim, 4, norm)
-        self.pair_disc_256 = catSentConv(enc_dim, emb_dim, 16, norm)
+        self.pair_disc_32   = catSentConv(enc_dim, emb_dim, 1,  norm, activ, 0)
+        self.pair_disc_64   = catSentConv(enc_dim, emb_dim, 4,  norm, activ, 0)
+        self.pair_disc_128  = catSentConv(enc_dim, emb_dim, 8,  norm, activ, 0)
+        self.pair_disc_256  = catSentConv(enc_dim, emb_dim, 16, norm, activ, 1)
         
-        #self.img_disc_16  = conv_norm(enc_dim, 1, norm, activ, 3, True, True, 1, 0)
-        self.img_disc_32  = conv_norm(enc_dim, 1, norm, activ, 3, True, True, 1, 0)
-        self.img_disc_64  = conv_norm(enc_dim, 1, norm, activ, 3, True, True, 1, 0)
-        self.img_disc_256 = conv_norm(enc_dim, 1, norm, activ, 3, True, True, 1, 0)
+        self.img_disc_32   = conv_norm(enc_dim, 1, norm, activ, 1, True, True, 1, 0, 1, False)
+        self.img_disc_64   = conv_norm(enc_dim, 1, norm, activ, 1, True, True, 1, 0, 1, False)
+        self.img_disc_128  = conv_norm(enc_dim, 1, norm, activ, 1, True, True, 1, 0, 1, False)
+        self.img_disc_256  = conv_norm(enc_dim, 1, norm, activ, 1, True, True, 1, 0, 1, False)
     
     def forward(self, images, embdding):
         '''
@@ -373,7 +257,7 @@ class Discriminator(torch.nn.Module):
         '''
         out_dict = OrderedDict()
         img_size = images.size()[3]
-        assert img_size in [16, 32, 64, 256], 'wrong input size in image discriminator'
+        assert img_size in [32, 64, 128, 256], 'wrong input size {} in image discriminator'.format(img_size)
         
         img_encoder_sym  = 'img_encoder_{}'.format(img_size)
         img_disc_sym = 'img_disc_{}'.format(img_size)
@@ -394,15 +278,3 @@ class Discriminator(torch.nn.Module):
         out_dict['img_disc']      = img_disc_out
         out_dict['content_code']  = img_code
         return out_dict
-
-## Weights init function, DCGAN use 0.02 std
-def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        if hasattr(m, 'weight'):
-            m.weight.data.normal_(0.0, 0.02)
-    elif classname.find('BatchNorm') != -1:
-        # Estimated variance, must be around 1
-        m.weight.data.normal_(1.0, 0.02)
-        # Estimated mean, must be around 0
-        m.bias.data.fill_(0)

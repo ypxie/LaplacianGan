@@ -58,15 +58,7 @@ def genAct():
 def discAct():
     return nn.LeakyReLU(0.2)
 
-def cat_vec_conv(text_enc, img_enc):
-    # text_enc (B, dim)
-    # img_enc  (B, chn, row, col)
-    b, c = text_enc.size()
-    row, col = img_enc.size()[2::]
-    text_enc = text_enc.unsqueeze(-1).unsqueeze(-1)
-    text_enc = text_enc.expand(b, c, row, col )
-    com_inp = torch.cat([img_enc, text_enc], 1)
-    return com_inp
+
 
 class Generator(nn.Module):
     def __init__(self, input_size, sent_dim,  noise_dim, num_chan, 
@@ -80,7 +72,7 @@ class Generator(nn.Module):
         self.s2, self.s4, self.s8, self.s16 =\
             int(self.s / 2), int(self.s / 4), int(self.s / 8), int(self.s / 16)
         activ = genAct()
-        
+
         node1_0 = sentConv(emb_dim+noise_dim, self.s16, self.s16, self.hid_dim*8, activ)
         _layers = conv_norm(self.hid_dim*8,  self.hid_dim*2, norm,  activ, 0, False,True,  1, 0)
         _layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,True,  3, 1)

@@ -47,8 +47,6 @@ def genAct():
 def discAct():
     return nn.LeakyReLU(0.2)
 
-
-
 class connectSide(nn.Module):
     def __init__(self, side_in, side_out, hid_in, sent_in,out_dim, norm, activ, repeat= 0):
         super(connectSide, self).__init__()
@@ -60,7 +58,7 @@ class connectSide(nn.Module):
         _layers += [activ]
         
         self.side_trans = nn.Sequential(*_layers)
-        
+
         _layers = [nn.Conv2d(side_out + sent_in + hid_in,  out_dim,
                     kernel_size = 3, padding=1, bias=True)]
         _layers += [getNormLayer(norm)(out_dim )]
@@ -200,37 +198,7 @@ class ImageDown(torch.nn.Module):
         # return (B, C, 16, 16)
         return self.node(inputs)
 
-class catSentConv(nn.Module):
-    def __init__(self, enc_dim, emb_dim, feat_size, norm='instance'):
-        '''
-        enc_dim: B*enc_dim*H*W
-        emb_dim: the dimension of feeded embedding
-        feat_size: the feature map size of the feature map. 
-        '''
-        super(catSentConv, self).__init__()
-        self.__dict__.update(locals())
-        activ = discAct()
-        inp_dim = enc_dim + emb_dim
-        _layers =  conv_norm(inp_dim, enc_dim, norm, activ, 1, False, True, 1, 0)
-        _layers += [nn.Conv2d(enc_dim, 1, kernel_size = feat_size, padding =0)]
-        self.node = nn.Sequential(*_layers)
 
-    def forward(self,sent_code,  img_code):
-        sent_code =  sent_code.unsqueeze(-1).unsqueeze(-1)
-        dst_shape = list(sent_code.size())
-        #print(dst_shape, img_code.size())
-        dst_shape[1] =  sent_code.size()[1]
-        dst_shape[2] =  img_code.size()[2] 
-        dst_shape[3] =  img_code.size()[3] 
-        sent_code = sent_code.expand(dst_shape)
-        #sent_code = sent_code.view(*dst_shape)
-        #print(img_code.size(), sent_code.size())
-        comp_inp = torch.cat([img_code, sent_code], dim=1)
-        output = self.node(comp_inp)
-        chn  = output.size()[1]
-        output = output.view(-1, chn)
-
-        return output
 
 class Discriminator(torch.nn.Module):
     '''

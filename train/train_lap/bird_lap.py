@@ -8,8 +8,8 @@ import argparse, os
 import torch, h5py
 from torch.nn.utils import weight_norm
 
-from LaplacianGan.models.expModels import Discriminator as Disc
-from LaplacianGan.models.expModels import Generator as Gen
+from LaplacianGan.models.refineModels import Discriminator as Disc
+from LaplacianGan.models.refineModels import Generator as Gen
 from LaplacianGan.lapGan import train_gans
 
 from LaplacianGan.fuel.datasets import TextDataset
@@ -24,7 +24,7 @@ data_name = 'birds'
 datadir = os.path.join(data_root, data_name)
 
 
-device_id = 2
+device_id = 1
 
 if  __name__ == '__main__':
 
@@ -40,7 +40,7 @@ if  __name__ == '__main__':
 
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--reuse_weigths', action='store_false', default = False,
+    parser.add_argument('--reuse_weigths', action='store_false', default = True,
                         help='continue from last checkout point')
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
@@ -50,7 +50,7 @@ if  __name__ == '__main__':
     parser.add_argument('--display_freq', type=int, default= 200, metavar='N',
                         help='plot the results every {} batches')
     
-    parser.add_argument('--batch_size', type=int, default= 4, metavar='N',
+    parser.add_argument('--batch_size', type=int, default= 8, metavar='N',
                         help='batch size.')
     parser.add_argument('--num_emb', type=int, default= 4, metavar='N',
                         help='number of emb chosen for each image.')
@@ -79,21 +79,21 @@ if  __name__ == '__main__':
     img_size, lratio = 256, 4
     
     netG = Gen(input_size  = img_size, sent_dim= 1024, noise_dim = args.noise_dim, 
-               num_chan=3, emb_dim= 128, hid_dim= 256, norm='bn', 
+               num_chan=3, emb_dim= 128, hid_dim= 128, norm='bn', 
                branch=True, small_output=False)
 
-    netD = Disc(input_size = img_size, num_chan = 3, hid_dim = 256, 
+    netD = Disc(input_size = img_size, num_chan = 3, hid_dim = 128, 
                 sent_dim=1024, enc_dim = 256, emb_dim= 128,  norm='bn')
-                            
+
+    print(netG)
+    print(netD)
+
     if args.cuda:
         netD = netD.cuda(device_id)
         netG = netG.cuda(device_id)
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
         
-    print(netG)
-    print(netD)
-    
     dataset = TextDataset(datadir, 'cnn-rnn', lratio)
     filename_test = os.path.join(datadir, 'test')
     dataset.test = dataset.get_data(filename_test)
