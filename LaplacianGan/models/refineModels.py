@@ -195,9 +195,7 @@ class ImageDown(torch.nn.Module):
         self.activ = discAct()
         max_down_rate = math.log(input_size, 2)
         assert down_rate <= max_down_rate, 'down rate is too large for this image'
-        down_rate = min(down_rate, max_down_rate)
 
-  
         if input_size == 64:
             _layers = conv_norm(num_chan, hid_dim,     norm,  activ, 0, False,True, 3, 1, 2) # 32
             _layers += conv_norm(hid_dim, hid_dim*2,   norm,  activ, 0, False,True, 3, 1, 2) # 16
