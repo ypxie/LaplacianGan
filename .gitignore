@@ -1,0 +1,21 @@
+*.DS_Store
+*.pyc
+*py~
+*.pth
+Data/*
+models/*
+*.swp
+.vscode
+*~
+temp/*
+# test-related
+.coverage
+.cache
+# developer environments
+.idea
+.ipython*
+*/.ipynb*
+*/.ipynb_checkpoints/*
+
+
+.remote-sync.json
