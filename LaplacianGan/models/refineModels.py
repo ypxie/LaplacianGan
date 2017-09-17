@@ -101,6 +101,7 @@ class Generator(nn.Module):
         node2_1 = nn.Sequential(*_layers)
         self.node2  = resConn(node2_0, node2_1, activ)
         
+        
         _layers  = [nn.Upsample((self.s4, self.s4), mode='nearest')]  # 16
         _layers += conv_norm(self.hid_dim*4,  self.hid_dim*2, norm,  activ, 0, False,True, 3, 1)
         _layers += [nn.Upsample((self.s2, self.s2), mode='nearest')]  # 32
