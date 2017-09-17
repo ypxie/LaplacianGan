@@ -83,7 +83,7 @@ if  __name__ == '__main__':
                branch=True, small_output=False)
 
     netD = Disc(input_size = img_size, num_chan = 3, hid_dim = 128, 
-                sent_dim=1024, enc_dim = 256, emb_dim= 128,  norm='bn')
+                sent_dim=1024, emb_dim= 128,  norm='bn')
 
     print(netG)
     print(netD)

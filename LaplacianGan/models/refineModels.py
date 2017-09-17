@@ -72,8 +72,8 @@ def cat_vec_conv(text_enc, img_enc):
     return com_inp
 
 class Generator(nn.Module):
-    def __init__(self, input_size, sent_dim,  noise_dim, num_chan, 
-                 emb_dim, hid_dim, norm = 'ln',branch=True, small_output=True):
+    def __init__(self, input_size, sent_dim,  noise_dim, num_chan, emb_dim, hid_dim, 
+                 norm = 'ln', side_list=[64, 128]):
         super(Generator, self).__init__()
         self.__dict__.update(locals())
         self.register_buffer('device_id', torch.zeros(1))
@@ -86,50 +86,68 @@ class Generator(nn.Module):
         
         node1_0 = sentConv(emb_dim+noise_dim, self.s16, self.s16, self.hid_dim*8, None, False)
         _layers = conv_norm(self.hid_dim*8,  self.hid_dim*2, norm,  activ, 0, False,True,  1, 0)
-        _layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,True,  3, 1)
+        #_layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,True,  3, 1)
         _layers += conv_norm(self.hid_dim*2,  self.hid_dim*8, norm, activ, 0, False,False,  3, 1)
         node1_1 = nn.Sequential(*_layers)
         self.node1  = resConn(node1_0, node1_1, activ)
 
-        _layers = [nn.Upsample((self.s8, self.s8),mode='nearest')]
+        _layers = [nn.Upsample((8,8),mode='nearest')]
         _layers += conv_norm(self.hid_dim*8,  self.hid_dim*4, norm, activ, 0, False,False,  3, 1)
         node2_0 = nn.Sequential(*_layers)
-        
         _layers = conv_norm(self.hid_dim*4,  self.hid_dim*1, norm,  activ, 0, False,True,  1, 0)
-        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,True, 3, 1)
         _layers += conv_norm(self.hid_dim*1,  self.hid_dim*4, norm,  activ, 0, False,False, 3, 1)
         node2_1 = nn.Sequential(*_layers)
-        self.node2  = resConn(node2_0, node2_1, activ)
+        self.node_8  = resConn(node2_0, node2_1, activ)
         
-        _layers  = [nn.Upsample((self.s4, self.s4), mode='nearest')]  # 16
-        _layers += conv_norm(self.hid_dim*4,  self.hid_dim*2, norm,  activ, 0, False,True, 3, 1)
-        _layers += [nn.Upsample((self.s2, self.s2), mode='nearest')]  # 32
-        _layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm,  activ, 0, False,True, 3, 1)
-        self.node_32 =  nn.Sequential(*_layers)
+        _layers = [nn.Upsample((16,16),mode='nearest')]
+        _layers += conv_norm(self.hid_dim*4,  self.hid_dim*2, norm, activ, 0, False,False,  3, 1)
+        node4_0 = nn.Sequential(*_layers)
+        _layers = conv_norm(self.hid_dim*2,  self.hid_dim*1, norm,   activ, 0, False,True,  1, 0)
+        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*2, norm,  activ, 0, False,False, 3, 1)
+        node4_1 = nn.Sequential(*_layers)
+        self.node_16  = resConn(node4_0, node4_1, activ)
 
-        self.out_32  = brach_out(hid_dim*2, 3, norm, activ, repeat=1, get_layer =True)
-        self.side_32 = connectSide(3, hid_dim, hid_dim*2, emb_dim, hid_dim*2, norm, activ, 2)
+        _layers = [nn.Upsample((32,32),mode='nearest')]
+        _layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,False,  3, 1)
+        node32_0 = nn.Sequential(*_layers)
+        _layers = conv_norm(self.hid_dim*2,  self.hid_dim*1, norm,   activ, 0, False,True,  1, 0)
+        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*2, norm,  activ, 0, False,False, 3, 1)
+        node32_1 = nn.Sequential(*_layers)
+        self.node_32  = resConn(node32_0, node32_1, activ)
 
-        _layers = [nn.Upsample((self.s, self.s), mode='nearest')]
-        _layers += conv_norm(self.hid_dim*2,  self.hid_dim,   norm,  activ, 0, False,True, 3, 1)   
-        self.node_64 = nn.Sequential(*_layers)
 
-        self.out_64  = brach_out(hid_dim, 3, norm, activ, repeat=1, get_layer =True)
-        self.side_64 = connectSide(3, hid_dim//2, hid_dim, emb_dim, hid_dim, norm, activ, 3)
+        _layers = [nn.Upsample((64,64),mode='nearest')]
+        _layers += conv_norm( hid_dim*2,  hid_dim, norm, activ, 0, False,False,  3, 1)
+        node64_0 = nn.Sequential(*_layers)
+        _layers = conv_norm( hid_dim*1, hid_dim//2, norm,   activ, 0, False,True,  1, 0)
+        _layers += conv_norm( hid_dim//2,   hid_dim, norm,  activ, 0, False,False, 3, 1)
+        node64_1 = nn.Sequential(*_layers)
+        self.node_64  = resConn(node64_0, node64_1, activ)
+        if 64 in side_list:
+            self.out_64  = brach_out(hid_dim, 3, norm, activ, repeat = 1, get_layer =True)
+            self.side_64 = connectSide(3, hid_dim//2, hid_dim, emb_dim, hid_dim, norm, activ, 3)
+
 
         _layers = [nn.Upsample((128, 128), mode='nearest')]
-        _layers += conv_norm(self.hid_dim,  self.hid_dim//2, norm,  activ, 0, False,True, 3, 1)
-        self.node_128 = nn.Sequential(*_layers)
-
-        self.out_128  = brach_out(hid_dim//2, 3, norm, activ, repeat=1, get_layer =True)
-        self.side_128 = connectSide(3, hid_dim//4, hid_dim//2, emb_dim, hid_dim//2, norm, activ, 3)
+        _layers += conv_norm(hid_dim,  hid_dim//2, norm, activ, 0, False,False,  3, 1)
+        node64_0 = nn.Sequential(*_layers)
+        _layers = conv_norm(hid_dim//2,  hid_dim//4, norm,   activ, 0, False,True,  1, 0)
+        _layers += conv_norm(hid_dim//4,  hid_dim//2, norm,  activ, 0, False,False, 3, 1)
+        node64_1 = nn.Sequential(*_layers)
+        self.node_128  = resConn(node64_0, node64_1, activ)
+        if 128 in side_list:
+            self.out_128  = brach_out(hid_dim, 3, norm, activ, repeat=1, get_layer =True)
+            self.side_128 = connectSide(3, hid_dim//4, hid_dim//2, emb_dim, hid_dim//2, norm, activ, 3)
 
         _layers = [nn.Upsample((256, 256), mode='nearest')]
-        _layers += conv_norm(self.hid_dim//2,  self.hid_dim//4, 'no',  activ, 0, False,True, 3, 1)
-
-        _layers += [nn.Conv2d(self.hid_dim//4,  self.num_chan, kernel_size = 3, padding=1)]
-        _layers += [nn.Tanh()]
-        self.out_256 =  nn.Sequential(*_layers)
+        _layers += conv_norm(hid_dim//2,  hid_dim//4, norm, activ, 0, False,False,  3, 1)
+        node256_0 = nn.Sequential(*_layers)
+        _layers = conv_norm(hid_dim//4,  hid_dim//4, norm,   activ, 0, False,True,  1, 0)
+        _layers += conv_norm(hid_dim//4,  hid_dim//4, norm,  activ, 0, False,False, 3, 1)
+        node256_1 = nn.Sequential(*_layers)
+        self.node_256  = resConn(node256_0, node256_1, activ)
+        
+        self.out_256  = brach_out(hid_dim//4, 3, norm, activ, repeat=1, get_layer =True)
 
         self.apply(weights_init)
 
@@ -142,24 +160,24 @@ class Generator(nn.Module):
         node2 = self.node2(node1)
 
         node_32 = self.node_32(node2)
-        out_32  = self.out_32(node_32)
-        side_32 = self.side_32(out_32, sent_random, node_32)
 
-        node_64 = self.node_64(side_32)
-        out_64  = self.out_64(node_64)
-        side_64 = self.side_64(out_64, sent_random, node_64)
+        node_64 = self.node_64(node_32)
 
-        node_128 = self.node_128(side_64)
-        out_128  = self.out_128(node_128)
-        side_128 = self.side_128(out_128, sent_random, node_128)
+        if 64 in self.side_list:
+            out_64  = self.out_64(node_64)
+            node_64 = self.side_64(out_64, sent_random, node_64)
+            out_dict['output_64']  = out_64
+        
+        node_128 = self.node_128(node_64)
 
-        out_256 = self.out_256(side_128)
+        if 128 in self.side_list:
+            out_128  = self.out_128(node_128)
+            node_128 = self.side_128(out_128, sent_random, node_128)
+            out_dict['output_128']  = out_128
+
+        out_256 = self.out_256(node_128)
 
         out_dict['output_256']  = out_256
-        out_dict['output_128']  = out_128
-        out_dict['output_64']  = out_64
-        out_dict['output_32']  = out_32
-        #branch_128 = self.branch_128(node_128)
 
         return out_dict, kl_loss
 
@@ -174,40 +192,45 @@ class ImageDown(torch.nn.Module):
         super(ImageDown, self).__init__()
         self.register_buffer('device_id', torch.zeros(1))
         self.__dict__.update(locals())
-        activ = discAct()
+        self.activ = discAct()
         max_down_rate = math.log(input_size, 2)
         assert down_rate <= max_down_rate, 'down rate is too large for this image'
         down_rate = min(down_rate, max_down_rate)
 
-        if input_size == 32:
-            _layers = conv_norm(num_chan, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 16
-            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 8
-            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  5,0,1)  # 4
-            _layers += conv_norm(hid_dim, out_dim,  norm, activ, 0, False,True,  4,0,1)  # 1                     
+  
         if input_size == 64:
-            _layers = conv_norm(num_chan, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 32
-            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 16
-            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 8
-            _layers += conv_norm(hid_dim, out_dim,  norm, activ, 0, False,True,  5,0,1)  # 4    
+            _layers = conv_norm(num_chan, hid_dim,     norm,  activ, 0, False,True, 3, 1, 2) # 32
+            _layers += conv_norm(hid_dim, hid_dim*2,   norm,  activ, 0, False,True, 3, 1, 2) # 16
+            _layers += conv_norm(hid_dim*2, out_dim,   norm,  activ, 0, False,False, 3, 1, 2) # 8
+            self.node_0  = nn.Sequential(*_layers)
+            self.node_1 = conv_norm(out_dim, out_dim,   norm,  activ,  2, False,False, 1,0,1)
 
         if input_size == 128:
-            _layers = conv_norm(num_chan, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 64
-            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 32
-            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 16
-            _layers += conv_norm(hid_dim, out_dim,  norm, activ, 0, False,True,  3,1,2)  # 8  
+            _layers  = conv_norm(num_chan, hid_dim*2,  norm, activ, 0, False,True, 3,1,2)  # 64
+            _layers += conv_norm(hid_dim*2, hid_dim*2,  norm, activ, 0, False,True,  3,1,2)  # 32
+            _layers += conv_norm(hid_dim*2, hid_dim*4,  norm, activ, 0, False,True,  3,1,2)  # 16
+            _layers += conv_norm(hid_dim*4, out_dim,  norm, activ, 0, False,False,  3,1,2)  # 8  
+            self.node_0  = nn.Sequential(*_layers)
+            self.node_1 = conv_norm(out_dim, out_dim,   norm,  activ,  2, True,False, 1,0,1)
 
         if input_size == 256:
-            _layers = conv_norm(num_chan, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 128
-            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 64
-            _layers += conv_norm(hid_dim, hid_dim,  norm, activ, 0, False,True,  3,1,2)  # 32
-            _layers += conv_norm(hid_dim, out_dim,  norm, activ, 0, False,True,  3,1,2)  # 16  
+            _layers  = conv_norm(num_chan, hid_dim*2,  norm, activ, 0, False,True, 3,1,2)  # 128
+            _layers += conv_norm(hid_dim*2, hid_dim*2,  norm, activ, 0, False,True,  3,1,2)  # 64
+            _layers += conv_norm(hid_dim*2, hid_dim*4,  norm, activ, 0, False,True,  3,1,2)  # 32
+            _layers += conv_norm(hid_dim*4, out_dim,  norm, activ, 0, False,True,  3,1,2)  # 16 
+            _layers += conv_norm(out_dim, out_dim,  norm, activ, 0, False,False,  3,1,2)  # 8   
+            self.node_0  = nn.Sequential(*_layers)
+            self.node_1 = conv_norm(out_dim, out_dim,   norm,  activ,  2, True,False, 1,0,1)
 
         self.node = nn.Sequential(*_layers)
 
     def forward(self, inputs):
         # inputs (B, C, H, W), must be dividable by 32
-        # return (B, C, row, col)
-        return self.node(inputs)
+        # return (B, C, row, col), and content_code
+        node_0 = self.node_0(inputs)
+        node_1 = self.node_1(node_0)
+        output =  self.activ(node_0 + node_1)
+        return output, node_0
 
 class Discriminator(torch.nn.Module):
     '''
@@ -216,7 +239,7 @@ class Discriminator(torch.nn.Module):
     '''
 
     def __init__(self, input_size, num_chan,  hid_dim, 
-                sent_dim,  enc_dim, emb_dim, norm='ln'):
+                sent_dim, emb_dim, norm='ln'):
         super(Discriminator, self).__init__()
         self.register_buffer('device_id', torch.zeros(1))
         self.__dict__.update(locals())
@@ -229,18 +252,19 @@ class Discriminator(torch.nn.Module):
         #_layers += [nn.BatchNorm1d(emb_dim*4*4)]
         #_layers += [discAct()]
         self.context_emb_pipe = nn.Sequential(*_layers)
+        enc_dim = hid_dim * 4
 
-        self.img_encoder_32  = ImageDown(32,  num_chan, hid_dim, enc_dim, 4, norm)  # 1
-        self.img_encoder_64  = ImageDown(64,  num_chan, hid_dim, enc_dim, 4, norm)  # 4
-        self.img_encoder_128 = ImageDown(128,  num_chan, hid_dim, enc_dim, 4, norm) # 8
-        self.img_encoder_256 = ImageDown(256, num_chan, hid_dim, enc_dim, 4, norm)  # 16
+        #self.img_encoder_32  = ImageDown(32,  num_chan, hid_dim, enc_dim, 4, norm)  # 1
+        self.img_encoder_64  = ImageDown(64,  num_chan,  hid_dim,  enc_dim, 4, norm)  # 2
+        self.img_encoder_128 = ImageDown(128,  num_chan, hid_dim,  enc_dim, 4, norm) # 4
+        self.img_encoder_256 = ImageDown(256, num_chan,  hid_dim,  enc_dim, 4, norm)  # 8
         
-        self.pair_disc_32   = catSentConv(enc_dim, emb_dim, 1,  norm, activ, 0)
+        #self.pair_disc_32   = catSentConv(enc_dim, emb_dim, 1,  norm, activ, 0)
         self.pair_disc_64   = catSentConv(enc_dim, emb_dim, 4,  norm, activ, 0)
         self.pair_disc_128  = catSentConv(enc_dim, emb_dim, 8,  norm, activ, 0)
         self.pair_disc_256  = catSentConv(enc_dim, emb_dim, 16, norm, activ, 1)
         
-        self.img_disc_32   = conv_norm(enc_dim, 1, norm, activ, 1, True, True, 1, 0, 1, False)
+        #self.img_disc_32   = conv_norm(enc_dim, 1, norm, activ, 1, True, True, 1, 0, 1, False)
         self.img_disc_64   = conv_norm(enc_dim, 1, norm, activ, 1, True, True, 1, 0, 1, False)
         self.img_disc_128  = conv_norm(enc_dim, 1, norm, activ, 1, True, True, 1, 0, 1, False)
         self.img_disc_256  = conv_norm(enc_dim, 1, norm, activ, 1, True, True, 1, 0, 1, False)
