@@ -40,7 +40,7 @@ if  __name__ == '__main__':
 
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--reuse_weigths', action='store_false', default = True,
+    parser.add_argument('--reuse_weigths', action='store_false', default = False,
                         help='continue from last checkout point')
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
@@ -79,8 +79,7 @@ if  __name__ == '__main__':
     img_size, lratio = 256, 4
     
     netG = Gen(input_size  = img_size, sent_dim= 1024, noise_dim = args.noise_dim, 
-               num_chan=3, emb_dim= 128, hid_dim= 128, norm='bn', 
-               branch=True, small_output=False)
+               num_chan=3, emb_dim= 128, hid_dim= 128, norm='bn')
 
     netD = Disc(input_size = img_size, num_chan = 3, hid_dim = 128, 
                 sent_dim=1024, emb_dim= 128,  norm='bn')

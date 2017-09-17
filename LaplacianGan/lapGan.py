@@ -102,7 +102,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
     train_sampler = dataset.train.next_batch
     test_sampler  = dataset.test.next_batch
-    num_test = 3 # number of testing samples to show
+    num_test = 2 # number of testing samples to show
     if args.wgan:
         optimizerD = optim.RMSprop(netD.parameters(), lr= args.d_lr,  weight_decay=args.weight_decay)
         optimizerG = optim.RMSprop(netG.parameters(), lr= args.g_lr,  weight_decay=args.weight_decay)

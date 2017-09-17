@@ -11,7 +11,7 @@ import functools
 class passthrough(nn.Module):
     def __init__(self, **kwargs):
         super(passthrough, self).__init__()
-    def forward(self,x, **kwargs):
+    def forward(self, x, **kwargs):
         return x
 
 class pretending_norm(nn.Module):
@@ -102,6 +102,9 @@ class connectSide(nn.Module):
                 conv_norm(in_dim, out_dim, norm,  activ, 0, True,True,  3,1,1)
             in_dim = out_dim
         
+        _dict['final_conv'] = \
+                conv_norm(out_dim + in_list[0], out_dim, norm,  activ, 0, True,True,  1, 0,1)
+
         for k, v in _dict.items():
             setattr(self, k, v)   
             
@@ -120,7 +123,6 @@ class connectSide(nn.Module):
 
         _conv_out = cat_vec_conv(sent_input, _this_out)
         
-
         for idx in range(self.down_rate):
             
             up_marker = 'up_{}'.format(idx)
@@ -139,7 +141,10 @@ class connectSide(nn.Module):
 
             _up_out    = up_layer(_cat_out)
             _conv_out  = conv_layer(_up_out)
-            
+        
+        _cat_out = torch.cat([_conv_out, down_res_list[0]], dim=1)
+        final_out = getattr(self, 'final_conv')(_cat_out)
+
         return _conv_out
 
 def up_conv(in_dim, out_dim, norm, activ, repeat=1, get_layer = False):
