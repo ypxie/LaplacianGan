@@ -183,8 +183,8 @@ def conv_norm(in_dim, out_dim, norm, activ=None, repeat=1, get_layer = False,
                             padding=padding, stride=stride, bias=True)]
     
     for _ in range(repeat):
-        _layers += [activ] 
         _layers += [getNormLayer(norm)(out_dim )]
+        _layers += [activ] 
         _layers += [nn.Conv2d(out_dim,  out_dim, kernel_size = kernel_size, 
                             padding=padding,bias=True)]
         
