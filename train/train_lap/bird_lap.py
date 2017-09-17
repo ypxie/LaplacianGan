@@ -33,9 +33,9 @@ if  __name__ == '__main__':
                         help='weight decay for training')
     parser.add_argument('--maxepoch', type=int, default=12800000, metavar='N',
                         help='number of epochs to train (default: 10)')
-    parser.add_argument('--g_lr', type=float, default = .0005, metavar='LR',
+    parser.add_argument('--g_lr', type=float, default = .001, metavar='LR',
                         help='learning rate (default: 0.01)')
-    parser.add_argument('--d_lr', type=float, default = .0005, metavar='LR',
+    parser.add_argument('--d_lr', type=float, default = .001, metavar='LR',
                         help='learning rate (default: 0.01)')
 
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',

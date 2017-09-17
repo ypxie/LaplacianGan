@@ -61,6 +61,24 @@ def cat_vec_conv(text_enc, img_enc):
     com_inp = torch.cat([img_enc, text_enc], 1)
     return com_inp
 
+class padConv2d(nn.Module):
+    def __init__(self, in_dim, out_dim, kernel_size=1, stride=1, bias=False):
+        super(padConv2d, self).__init__()
+
+        left_row  = (kernel_size - 1) //2 
+        right_row = (kernel_size - 1) - left_row
+        left_col  = (kernel_size - 1) //2
+        right_col = (kernel_size - 1) - left_col
+
+        self.padding = (left_row, right_row, left_col, right_col)
+        self.conv2d  = nn.Conv2d(in_dim, out_dim, kernel_size=kernel_size, 
+                                 padding=0, bias=bias, stride=stride)
+
+    def forward(self, inputs):
+        padding = F.pad(inputs, self.padding)
+        output  = self.conv2d(padding)
+        return output
+
 class connectSide(nn.Module):
     def __init__(self, side_in, side_out, hid_in, sent_in, out_dim, 
                  norm, activ, down_rate, repeat= 0):
@@ -149,14 +167,12 @@ class connectSide(nn.Module):
 
 def up_conv(in_dim, out_dim, norm, activ, repeat=1, get_layer = False):
     _layers = [nn.Upsample(scale_factor=2,mode='nearest')]
-    _layers += [nn.Conv2d(in_dim,  out_dim, 
-                kernel_size = 3, padding=1, bias=True)]
+    _layers += [padConv2d(in_dim,  in_dim, kernel_size = 3, stride=stride, bias=False)]
     _layers += [getNormLayer(norm)(out_dim )]
     _layers += [activ]
 
     for _ in range(repeat-1):
-        _layers += [nn.Conv2d(out_dim,  out_dim, 
-                    kernel_size = 1, padding=0)]
+        _layers += [nn.Conv2d(out_dim,  out_dim,  kernel_size = 1, padding=0)]
         _layers += [getNormLayer(norm)(out_dim )]
         _layers += [activ]
     
@@ -167,13 +183,11 @@ def up_conv(in_dim, out_dim, norm, activ, repeat=1, get_layer = False):
 
 def down_conv(in_dim, out_dim, norm, activ, repeat=1,
               kernel_size=3, get_layer = False):
-    _layers = [nn.Conv2d(in_dim,  out_dim, stride=2, 
-               kernel_size = 3, padding=1)]
+    _layers = [padConv2d(in_dim,  out_dim, kernel_size = 3, stride=2, bias=False)]
     _layers += [getNormLayer(norm)(out_dim )]
     _layers += [activ]
     for _ in range(repeat):
-        _layers += [nn.Conv2d(out_dim,  out_dim, 
-                    kernel_size = 1, padding=0, bias=True)]
+        _layers += [nn.Conv2d(out_dim,  out_dim, kernel_size = 1, padding=0, bias=False)]
         _layers += [getNormLayer(norm)(out_dim )]
         _layers += [activ]
     if get_layer:
@@ -184,14 +198,12 @@ def down_conv(in_dim, out_dim, norm, activ, repeat=1,
 def conv_norm(in_dim, out_dim, norm, activ=None, repeat=1, get_layer = False,
               last_active=True, kernel_size=1, padding=0, stride=1, last_norm=True):
     _layers = []
-    _layers += [nn.Conv2d(in_dim,  out_dim, kernel_size = kernel_size, 
-                            padding=padding, stride=stride, bias=True)]
-    
+    _layers += [padConv2d(in_dim,  out_dim, kernel_size = kernel_size, stride=stride, bias=False)]
+
     for _ in range(repeat):
         _layers += [getNormLayer(norm)(out_dim )]
         _layers += [activ] 
-        _layers += [nn.Conv2d(out_dim,  out_dim, kernel_size = kernel_size, 
-                            padding=padding,bias=True)]
+        _layers += [padConv2d(out_dim,  out_dim, kernel_size = kernel_size, bias=False)]
         
     if last_norm:
        _layers += [getNormLayer(norm)(out_dim )]
@@ -206,13 +218,12 @@ def conv_norm(in_dim, out_dim, norm, activ=None, repeat=1, get_layer = False,
 def brach_out(in_dim, out_dim, norm, activ, repeat= 1, get_layer = False):
     _layers = []
     for _ in range(repeat):
-        _layers += [nn.Conv2d(in_dim,  in_dim, 
-                    kernel_size = 3, padding=1, bias=True)]
+        _layers += [padConv2d(in_dim,  in_dim, kernel_size = 3, stride= 1, bias=False)]
         _layers += [getNormLayer(norm)(in_dim )]
         _layers += [activ]
     
     _layers += [nn.Conv2d(in_dim,  out_dim, 
-                kernel_size = 1, padding=0, bias=True)]    
+                kernel_size = 1, padding=0, bias=False)]    
     _layers += [nn.Tanh()]
 
     if get_layer:
