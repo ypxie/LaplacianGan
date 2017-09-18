@@ -9,7 +9,7 @@ class Dataset(object):
     def __init__(self, images, imsize, embeddings=None,
                  filenames=None, workdir=None,
                  labels=None, aug_flag=True,
-                 class_id=None, class_range=None):
+                 class_id=None, class_range=None, side_list=[64, 128]):
         self._images = images
         self._embeddings = embeddings
         self._filenames = filenames
