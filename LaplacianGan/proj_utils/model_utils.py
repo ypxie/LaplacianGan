@@ -163,7 +163,7 @@ class connectSide(nn.Module):
         _cat_out = torch.cat([_conv_out, down_res_list[0]], dim=1)
         final_out = getattr(self, 'final_conv')(_cat_out)
 
-        return _conv_out
+        return final_out
 
 def up_conv(in_dim, out_dim, norm, activ, repeat=1, get_layer = False):
     _layers = [nn.Upsample(scale_factor=2,mode='nearest')]
