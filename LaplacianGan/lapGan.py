@@ -134,7 +134,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     content_loss_plot = plot_scalar(name = "content_loss", env= mode_name, rate = args.display_freq)
     
     z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
-    z = to_device(z, netG.device_id, requires_grad = False)
+    z = to_device(z, netG.device_id, requires_grad=False)
 
     z_test = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     z_test = to_device(z_test, netG.device_id, volatile=True)
@@ -168,7 +168,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             if args.wgan:
                 for p in netD.parameters(): 
                     p.data.clamp_(-0.02, 0.02)
-                    
+
             # images should be dictionary. [64, final]
             images, wrong_images, embeddings, _, _ = train_sampler(args.batch_size, args.num_emb)
             
@@ -178,9 +178,10 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             z.data.normal_(0, 1)
             #z = tf.random_normal([self.batch_size, cfg.Z_DIM])
             # fake_images dictionary, same order as images
-            fake_images, _ = netG(embeddings, z)
-
+            g_emb = Variable(embeddings.data, volatile=False)
+            fake_images, _ = netG(g_emb, z)
             netD.zero_grad()
+
             discriminator_loss = 0
             for key, _ in fake_images.items():
                 # iterate over image of different sizes.
@@ -206,12 +207,14 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                                         fake_logit, args.wgan )
                 discriminator_loss += compute_d_img_loss(chose_img_real, 
                                         fake_img_logit, args.wgan )
-
+        
             d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
             d_loss_val = -d_loss_val if args.wgan else d_loss_val
             discriminator_loss.backward()
             optimizerD.step()    
+            netD.zero_grad()
             d_loss_plot.plot(d_loss_val)
+            real_dict, wrong_dict, fake_dict = None, None, None
 
         # (2) Update G network
         for p in netD.parameters():
@@ -249,14 +252,16 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                         content_loss_plot.plot(conten_loss.cpu().data.numpy().mean())
 
                 generator_loss += compute_g_loss(fake_pair_logit, fake_img_logit, args.wgan)               
-
+                
             generator_loss.backward()
             g_loss_val = generator_loss.cpu().data.numpy().mean()
             
             optimizerG.step()    
+            netG.zero_grad()
             g_loss_plot.plot(g_loss_val)
             gen_iterations += 1
-        
+            fake_dict, real_dict, fake_images= None, None, None
+
         # Calculate dev loss and generate samples every 100 iters
         if batch_count % args.display_freq == 0:
             print('save tmp images, :)')
