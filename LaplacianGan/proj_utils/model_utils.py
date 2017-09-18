@@ -62,15 +62,18 @@ def cat_vec_conv(text_enc, img_enc):
     return com_inp
 
 class padConv2d(nn.Module):
-    def __init__(self, in_dim, out_dim, kernel_size=1, stride=1, bias=False):
+    def __init__(self, in_dim, out_dim, kernel_size=1, stride=1, padding=None ,bias=False):
         super(padConv2d, self).__init__()
 
-        left_row  = (kernel_size - 1) //2 
-        right_row = (kernel_size - 1) - left_row
-        left_col  = (kernel_size - 1) //2
-        right_col = (kernel_size - 1) - left_col
+        if padding is None:
+            left_row  = (kernel_size - 1) //2 
+            right_row = (kernel_size - 1) - left_row
+            left_col  = (kernel_size - 1) //2
+            right_col = (kernel_size - 1) - left_col
+            self.padding = (left_row, right_row, left_col, right_col)
+        else:
+            self.padding = (padding, padding, padding, padding)
 
-        self.padding = (left_row, right_row, left_col, right_col)
         self.conv2d  = nn.Conv2d(in_dim, out_dim, kernel_size=kernel_size, 
                                  padding=0, bias=bias, stride=stride)
 
@@ -102,7 +105,7 @@ class connectSide(nn.Module):
         for idx in range(down_rate):
             marker = 'down_{}'.format(idx)
             _dict[marker] = \
-                conv_norm(in_dim,  out_dim, norm,  activ, 0, True,True,  3,1,2)
+                conv_norm(in_dim,  out_dim, norm,  activ, 0, True,True,  3,None,2)
             in_dim = out_dim
             in_list.append(in_dim)
 
@@ -117,7 +120,7 @@ class connectSide(nn.Module):
                 in_dim = in_dim + self.sent_in 
 
             _dict[marker] = \
-                conv_norm(in_dim, out_dim, norm,  activ, 0, True,True,  3,1,1)
+                conv_norm(in_dim, out_dim, norm,  activ, 0, True,True,  3,None,1)
             in_dim = out_dim
         
         _dict['final_conv'] = \
@@ -165,6 +168,45 @@ class connectSide(nn.Module):
 
         return final_out
 
+class connectSideBefore(nn.Module):
+    def __init__(self, side_in, side_out, hid_in, sent_in, out_dim, 
+                 norm, activ, up_rate, repeat= 0):
+        # side_in is transformed to side_out, concate with hid_in, 
+        # forward to down__rate smaller version concat with sent_in.
+        # and use unet to preserve information.
+        super(connectSideBefore, self).__init__()
+        self.__dict__.update(locals())
+
+        _layers = []
+        _layers += [nn.Conv2d(side_in, side_out, kernel_size = 1, padding=0, bias=True)]
+        _layers += [getNormLayer(norm)(side_out )]
+        _layers += [activ]
+        self.side_trans = nn.Sequential(*_layers)
+        
+        _dict = OrderedDict()
+        
+        in_dim = sent_in
+        _layers = []
+        for idx in range(up_rate):
+            sent_out = min(in_dim//2, 64)
+            _layers += [nn.Upsample(scale_factor=2, mode='nearest')]
+            _layers += [conv_norm(in_dim, sent_out, norm,  activ, 0, True,True, 3, None, 1)]
+            in_dim = sent_out
+            
+        self.up_sent = nn.Sequential(*_layers)
+        final_in_dim = sent_out + side_out + hid_in
+
+        self.final_conv = conv_norm(final_in_dim, out_dim, norm,  activ, 0, True,True,  1, 0,1)
+            
+    def forward(self, img_input, sent_input, hid_input):
+        img_trans = self.side_trans(img_input)
+        up_sent = self.up_sent(sent_input)
+        comp_input = torch.cat([img_trans, up_sent, hid_input], dim=1)
+        final_out = self.final_conv(comp_input)
+
+        return final_out
+
+
 def up_conv(in_dim, out_dim, norm, activ, repeat=1, get_layer = False):
     _layers = [nn.Upsample(scale_factor=2,mode='nearest')]
     _layers += [padConv2d(in_dim,  in_dim, kernel_size = 3, stride=stride, bias=False)]
@@ -196,14 +238,14 @@ def down_conv(in_dim, out_dim, norm, activ, repeat=1,
         return _layers
 
 def conv_norm(in_dim, out_dim, norm, activ=None, repeat=1, get_layer = False,
-              last_active=True, kernel_size=1, padding=0, stride=1, last_norm=True):
+              last_active=True, kernel_size=1, padding=None, stride=1, last_norm=True):
     _layers = []
-    _layers += [padConv2d(in_dim,  out_dim, kernel_size = kernel_size, stride=stride, bias=False)]
+    _layers += [padConv2d(in_dim,  out_dim, kernel_size = kernel_size,padding=padding, stride=stride, bias=False)]
 
     for _ in range(repeat):
         _layers += [getNormLayer(norm)(out_dim )]
         _layers += [activ] 
-        _layers += [padConv2d(out_dim,  out_dim, kernel_size = kernel_size, bias=False)]
+        _layers += [padConv2d(out_dim,  out_dim, kernel_size = kernel_size, padding=padding, bias=False)]
         
     if last_norm:
        _layers += [getNormLayer(norm)(out_dim )]

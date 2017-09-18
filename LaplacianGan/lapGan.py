@@ -50,14 +50,14 @@ def compute_d_img_loss(real_logit, fake_logit, wgan=False):
         dloss = fake_logit - real_logit 
         return torch.mean(dloss)
     else:
-        #ones_target  =  Variable(real_logit.data.new(real_logit.size()).fill_(1.0), 
+        # ones_target  =  Variable(real_logit.data.new(real_logit.size()).fill_(1.0), 
         #                         requires_grad=False)
-        #zeros_target =  Variable(real_logit.data.new(real_logit.size()).fill_(0.0), 
+        # zeros_target =  Variable(real_logit.data.new(real_logit.size()).fill_(0.0), 
         #                         requires_grad=False)
-        #real_d_loss =  F.binary_cross_entropy_with_logits( real_logit, ones_target)
-        #real_d_loss = torch.mean(real_d_loss)
-        #fake_d_loss =  F.binary_cross_entropy_with_logits(fake_logit, zeros_target)
-        #fake_d_loss =  torch.mean(fake_d_loss) 
+        # real_d_loss =  F.binary_cross_entropy_with_logits( real_logit, ones_target)
+        # real_d_loss = torch.mean(real_d_loss)
+        # fake_d_loss =  F.binary_cross_entropy_with_logits(fake_logit, zeros_target)
+        # fake_d_loss =  torch.mean(fake_d_loss) 
         
         real_d_loss =  torch.mean( ((real_logit) -1)**2)
         fake_d_loss =  torch.mean( ((fake_logit))**2)
@@ -69,13 +69,13 @@ def compute_g_loss(fake_pair_logit, fake_img_logit, wgan=False):
         #gloss = -fake_img_logit
         return torch.mean(gloss)
     else:      
-        #ones_target_pair  =  Variable(fake_pair_logit.data.new(fake_pair_logit.size()).
+        # ones_target_pair  =  Variable(fake_pair_logit.data.new(fake_pair_logit.size()).
         #                        fill_(1.0), requires_grad=False)
 
-        #ones_target_img  =  Variable(fake_img_logit.data.new(fake_img_logit.size()).
+        # ones_target_img  =  Variable(fake_img_logit.data.new(fake_img_logit.size()).
         #                        fill_(1.0), requires_grad=False)
 
-        #generator_loss = torch.mean(F.binary_cross_entropy_with_logits(fake_pair_logit, ones_target_pair) )\
+        # generator_loss = torch.mean(F.binary_cross_entropy_with_logits(fake_pair_logit, ones_target_pair) )\
         #               + torch.mean(F.binary_cross_entropy_with_logits(fake_img_logit,  ones_target_img) )
         
         generator_loss = torch.mean( ((fake_pair_logit) -1)**2 ) + \
