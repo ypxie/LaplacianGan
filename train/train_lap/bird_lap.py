@@ -16,7 +16,6 @@ from LaplacianGan.fuel.datasets import TextDataset
 
 
 home = os.path.expanduser('~')
-dropbox = os.path.join(home, 'Dropbox')
 data_root = os.path.join('..', '..', 'Data')
 
 model_root = os.path.join('..', '..', 'Models')
@@ -24,7 +23,7 @@ data_name = 'birds'
 datadir = os.path.join(data_root, data_name)
 
 
-device_id = 1
+device_id = 2
 
 if  __name__ == '__main__':
 
@@ -33,9 +32,9 @@ if  __name__ == '__main__':
                         help='weight decay for training')
     parser.add_argument('--maxepoch', type=int, default=12800000, metavar='N',
                         help='number of epochs to train (default: 10)')
-    parser.add_argument('--g_lr', type=float, default = .001, metavar='LR',
+    parser.add_argument('--g_lr', type=float, default = .0002, metavar='LR',
                         help='learning rate (default: 0.01)')
-    parser.add_argument('--d_lr', type=float, default = .001, metavar='LR',
+    parser.add_argument('--d_lr', type=float, default = .0002, metavar='LR',
                         help='learning rate (default: 0.01)')
 
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
@@ -50,7 +49,7 @@ if  __name__ == '__main__':
     parser.add_argument('--display_freq', type=int, default= 200, metavar='N',
                         help='plot the results every {} batches')
     
-    parser.add_argument('--batch_size', type=int, default= 8, metavar='N',
+    parser.add_argument('--batch_size', type=int, default= 6, metavar='N',
                         help='batch size.')
     parser.add_argument('--num_emb', type=int, default= 4, metavar='N',
                         help='number of emb chosen for each image.')

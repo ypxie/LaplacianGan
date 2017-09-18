@@ -98,7 +98,10 @@ def GaussianLogDensity(x, mu, log_var = 'I'):
 
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
     ngen = getattr(args, 'ngen', 1)
+    decay_count = getattr(args, 'decay_count', 20000) # when this iteration, decay lr by 2
     use_content_loss = getattr(args, 'use_content_loss', False)
+    d_lr = args.d_lr
+    g_lr = args.g_lr
 
     train_sampler = dataset.train.next_batch
     test_sampler  = dataset.test.next_batch
@@ -152,6 +155,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         else:
             ncritic = args.ncritic
         
+        if batch_count != 0 and batch_count%decay_count == 0:
+            d_lr = d_lr/2
+            g_lr = g_lr/2
+            set_lr(optimizerD, d_lr)
+            set_lr(optimizerG, g_lr)
+
         for p in netD.parameters():  # reset requires_grad
             p.requires_grad = True
         for _ in range(ncritic):
@@ -159,7 +168,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             if args.wgan:
                 for p in netD.parameters(): 
                     p.data.clamp_(-0.02, 0.02)
-
+                    
             # images should be dictionary. [64, final]
             images, wrong_images, embeddings, _, _ = train_sampler(args.batch_size, args.num_emb)
             

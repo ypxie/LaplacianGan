@@ -5,6 +5,12 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.nn as nn
 
+def set_lr(optimizer, lr):
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+    return optimizer
+    
 def multinomial(pred):
     shape = pred.size()
     valid_shape = list(pred.size())

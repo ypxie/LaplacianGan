@@ -79,15 +79,13 @@ class Generator(nn.Module):
         self.register_buffer('device_id', torch.zeros(1))
         self.condEmbedding = condEmbedding(sent_dim, emb_dim)
         # We need to know how many layers we will use at the beginning
-        self.s = 64 # we fix it to 64
-        self.s2, self.s4, self.s8, self.s16 =\
-            int(self.s / 2), int(self.s / 4), int(self.s / 8), int(self.s / 16)
+        
         activ = genAct()
         fake_active = passthrough()
 
-        node4_0 = sentConv(emb_dim+noise_dim, self.s16, self.s16, self.hid_dim*8, None, False)
-        _layers = conv_norm(self.hid_dim*8,  self.hid_dim*2, norm,  activ, 0, False,True,  1, 0)
-        _layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,True,  1, 1)
+        node4_0 = sentConv(emb_dim+noise_dim, 4, 4, self.hid_dim*8, None, False)
+        _layers = conv_norm(self.hid_dim*8,  self.hid_dim*2, norm,  activ, 0, False,True,   1, 0)
+        #_layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,True,   1, 0)
         _layers += conv_norm(self.hid_dim*2,  self.hid_dim*8, norm, activ, 0, False,False,  3, 1)
         node4_1 = nn.Sequential(*_layers)
         self.node_4  = resConn(node4_0, node4_1, activ)
@@ -96,7 +94,7 @@ class Generator(nn.Module):
         _layers += conv_norm(self.hid_dim*8,  self.hid_dim*4, norm, activ, 0, False,False,  3, 1)
         node8_0 = nn.Sequential(*_layers)
         _layers = conv_norm(self.hid_dim*4,  self.hid_dim*1, norm,  activ, 0, False,True,  1, 0)
-        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 1)
+        #_layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 0)
         _layers += conv_norm(self.hid_dim*1,  self.hid_dim*4, norm,  activ, 0, False,False, 3, 1)
         node8_1 = nn.Sequential(*_layers)
         self.node_8  = resConn(node8_0, node8_1, activ)
@@ -105,7 +103,7 @@ class Generator(nn.Module):
         _layers += conv_norm(self.hid_dim*4,  self.hid_dim*2, norm, activ, 0, False,False,  3, 1)
         node4_0 = nn.Sequential(*_layers)
         _layers = conv_norm(self.hid_dim*2,  self.hid_dim*1, norm,   activ, 0, False,True,  1, 0)
-        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 1)
+        #_layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 0)
         _layers += conv_norm(self.hid_dim*1,  self.hid_dim*2, norm,  activ, 0, False,False, 3, 1)
         node4_1 = nn.Sequential(*_layers)
         self.node_16  = resConn(node4_0, node4_1, activ)
@@ -114,7 +112,7 @@ class Generator(nn.Module):
         _layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,False,  3, 1)
         node32_0 = nn.Sequential(*_layers)
         _layers = conv_norm(self.hid_dim*2,  self.hid_dim*1, norm,   activ, 0, False,True,  1, 0)
-        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 1)
+        #_layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 0)
         _layers += conv_norm(self.hid_dim*1,  self.hid_dim*2, norm,  activ, 0, False,False, 3, 1)
         node32_1 = nn.Sequential(*_layers)
         self.node_32  = resConn(node32_0, node32_1, activ)
@@ -144,7 +142,7 @@ class Generator(nn.Module):
         if 128 in side_list:
             #self.condEmbedding_128 = condEmbedding(sent_dim, emb_dim)
             self.out_128  = brach_out(hid_dim, 3, norm, activ, repeat=1, get_layer =True)
-            self.side_128 = connectSideBefore(3, hid_dim//2, hid_dim//2, hid_dim*2, hid_dim, norm, activ, 2)
+            self.side_128 = connectSideBefore(3, hid_dim//2, hid_dim, hid_dim*2, hid_dim, norm, activ, 2)
             
         _layers = [nn.Upsample((256, 256), mode='nearest')]
         _layers += conv_norm(hid_dim,  hid_dim//2, norm, activ, 1, False, True,  3, 1)
@@ -167,6 +165,7 @@ class Generator(nn.Module):
         com_inp = torch.cat([sent_random, z], dim=1)
         node_4 = self.node_4(com_inp)
         node_8 = self.node_8(node_4)
+        
         node_16 = self.node_16(node_8)
         node_32 = self.node_32(node_16)
 
@@ -275,16 +274,16 @@ class Discriminator(torch.nn.Module):
             self.pair_disc_128  = catSentConv(enc_dim, emb_dim, 8,  norm, activ, 0)
             _layers  = conv_norm(enc_dim, hid_dim*4,   norm,  activ, 1, False, True,  1,0,1)
             _layers += conv_norm(hid_dim*4, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)
-            _layers += [nn.Conv2d(hid_dim*2, 1, kernel_size = 5, padding = 0, bias=True)]   # 4
+            _layers += [nn.Conv2d(hid_dim*2, 1, kernel_size = 2, padding = 0, bias=True)]  # 7
             self.img_disc_128 = nn.Sequential(*_layers)
         
-        enc_dim = hid_dim*4
-        self.img_encoder_256  = ImageDown(256, num_chan,  hid_dim,  enc_dim, 4, norm)  # 8
+        enc_dim = hid_dim*2
+        self.img_encoder_256  = ImageDown(256, num_chan,  hid_dim,  enc_dim, 4, norm)  # 16
         self.pair_disc_256  = catSentConv(enc_dim, emb_dim, 16,  norm, activ, 1)
         
         _layers  = conv_norm(enc_dim, hid_dim*4,   norm,  activ, 1, False, True, 1,0,1)
         _layers += conv_norm(hid_dim*4, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)
-        _layers += [padConv2d(hid_dim*2, 1, kernel_size = 3,  bias=True)]   # 16
+        _layers += [padConv2d(hid_dim*2, 1, kernel_size = 1, padding=0, bias=True)]   # 16
         self.img_disc_256 = nn.Sequential(*_layers)
 
     def forward(self, images, embdding):

@@ -78,7 +78,7 @@ class padConv2d(nn.Module):
                                  padding=0, bias=bias, stride=stride)
 
     def forward(self, inputs):
-        padding = F.pad(inputs, self.padding)
+        padding = F.pad(inputs, self.padding, mode='reflect')
         output  = self.conv2d(padding)
         return output
 
@@ -171,9 +171,8 @@ class connectSide(nn.Module):
 class connectSideBefore(nn.Module):
     def __init__(self, side_in, side_out, hid_in, sent_in, out_dim, 
                  norm, activ, up_rate, repeat= 0):
-        # side_in is transformed to side_out, concate with hid_in, 
-        # forward to down__rate smaller version concat with sent_in.
-        # and use unet to preserve information.
+        # side_in is transformed to side_out, concate with upsampled sent_in, 
+
         super(connectSideBefore, self).__init__()
         self.__dict__.update(locals())
 
@@ -192,16 +191,16 @@ class connectSideBefore(nn.Module):
             _layers += [nn.Upsample(scale_factor=2, mode='nearest')]
             _layers += [conv_norm(in_dim, sent_out, norm,  activ, 0, True,True, 3, None, 1)]
             in_dim = sent_out
-            
-        self.up_sent = nn.Sequential(*_layers)
-        final_in_dim = sent_out + side_out + hid_in
 
-        self.final_conv = conv_norm(final_in_dim, out_dim, norm,  activ, 0, True,True,  1, 0,1)
+        self.up_sent = nn.Sequential(*_layers)
+        final_in_dim = sent_out + side_out # + hid_in
+
+        self.final_conv = conv_norm(final_in_dim, out_dim, norm,  activ, 1, True,True,  3, 1, 1)
             
     def forward(self, img_input, sent_input, hid_input):
         img_trans = self.side_trans(img_input)
         up_sent = self.up_sent(sent_input)
-        comp_input = torch.cat([img_trans, up_sent, hid_input], dim=1)
+        comp_input = torch.cat([img_trans, up_sent], dim=1)
         final_out = self.final_conv(comp_input)
 
         return final_out
