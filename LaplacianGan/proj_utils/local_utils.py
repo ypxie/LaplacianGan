@@ -19,6 +19,8 @@ import scipy.ndimage
 from numba import jit, autojit
 from .generic_utils import get_from_module
 import random
+import scipy.misc as misc
+
 def get(identifier):
     return get_from_module(identifier, globals(), 'local_utils')
 
@@ -238,7 +240,8 @@ def imresize(img, resizeratio=1):
     if resizeratio == 1:
         return img
     outshape = ( int(img.shape[1] * resizeratio) , int(img.shape[0] * resizeratio))
-    temp = cv2.resize(img, outshape).astype(float)
+    # temp = cv2.resize(img, outshape).astype(float)
+    temp = misc.imresize(img, size=outshape).astype(float)
     if len(img.shape) == 3 and img.shape[2] == 1:
         temp = np.reshape(temp, temp.shape + (1,))
     return temp
@@ -259,7 +262,10 @@ def imresize_shape(img, outshape):
     outshape = ( int(outshape[1]) , int(outshape[0])  )
     if (img.shape[0], img.shape[1]) == outshape:
         return img
-    temp = cv2.resize(img, outshape).astype(float)
+    # temp = cv2.resize(img, outshape).astype(float)
+    temp = misc.imresize(img, size=outshape).astype(float)
+
+
     if len(img.shape) == 3 and img.shape[2] == 1:
         temp = np.reshape(temp, temp.shape + (1,))
     return temp

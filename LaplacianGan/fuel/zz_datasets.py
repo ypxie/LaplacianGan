@@ -3,8 +3,16 @@ import pickle
 import random
 from collections import OrderedDict
 import sys
-
+import scipy.misc as misc
 from ..proj_utils.local_utils import imresize_shape
+
+def resize_images(tensor, shape):
+    out = []
+    for k in range(tensor.shape[0]):
+        tmp = misc.imresize(tensor[k], shape)
+        out.append(tmp[np.newaxis,:,:,:])
+    return np.concatenate(out, axis=0).transpose((0,3,1,2))
+
 # bugs if you use batch size 1
 class Dataset(object):
     def __init__(self, images, imsize, embeddings=None,
@@ -113,6 +121,8 @@ class Dataset(object):
 
     def next_batch(self, batch_size, window):
         """Return the next `batch_size` examples from this data set."""
+
+
         start = self._index_in_epoch
         self._index_in_epoch += batch_size
 
@@ -145,20 +155,18 @@ class Dataset(object):
         sampled_wrong_images = self._images[fake_ids, :, :, :]
         sampled_images = sampled_images.astype(np.float32)
         sampled_wrong_images = sampled_wrong_images.astype(np.float32)
-        sampled_images = sampled_images * (2. / 255) - 1.
-        sampled_wrong_images = sampled_wrong_images * (2. / 255) - 1.
-
         sampled_images = self.transform(sampled_images)
         sampled_wrong_images = self.transform(sampled_wrong_images)
-        images_dict['output_256'] = sampled_images.transpose((0, 3, 1,2) )
-        images_dict['output_64'] = imresize_shape(sampled_images, (64, 64)).transpose((0, 3, 1,2) )
-        #images_dict['output_32'] = imresize_shape(sampled_images, (32, 32)).transpose((0, 3, 1,2) )
-        images_dict['output_128'] = imresize_shape(sampled_images, (128, 128)).transpose((0, 3, 1,2) )
+        images_dict = {}
+        wrongs_dict = {}
+        for size in [64, 128, 256]:
+            tmp = resize_images(sampled_images, shape=[size, size])
+            tmp = tmp * (2. / 255) - 1.
+            images_dict['output_{}'.format(size)] = tmp
+            tmp = resize_images(sampled_wrong_images, shape=[size, size])
+            tmp = tmp * (2. / 255) - 1.
+            wrongs_dict['output_{}'.format(size)] = tmp
 
-        wrongs_dict['output_256'] = sampled_wrong_images.transpose((0, 3, 1,2) )
-        wrongs_dict['output_64'] = imresize_shape(sampled_wrong_images,(64, 64)).transpose((0, 3, 1,2) )
-        #wrongs_dict['output_32'] = imresize_shape(sampled_wrong_images,(32, 32)).transpose((0, 3, 1,2) )
-        wrongs_dict['output_128'] = imresize_shape(sampled_wrong_images,(128, 128)).transpose((0, 3, 1,2) )
 
         ret_list = [images_dict, wrongs_dict]
 

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 from collections import OrderedDict
-from ..proj_utils.model_utils import *
+from ..proj_utils.model_utils import to_device, getNormLayer, weights_init
 import math
 
 
@@ -25,26 +25,12 @@ def KL_loss(mu, log_sigma):
 def sample_encoded_context(mean, logsigma, kl_loss=False):
     
     # epsilon = tf.random_normal(tf.shape(mean))
-    epsilon = to_device( torch.randn(mean.size()), mean, requires_grad=False) #tf.truncated_normal(tf.shape(mean))
+    epsilon = to_device( torch.randn(mean.size()), mean, requires_grad=False) 
     stddev  = torch.exp(logsigma)
     c = mean + stddev * epsilon
 
     kl_loss = KL_loss(mean, logsigma) if kl_loss else None
     return c, kl_loss
-
-class resConn(nn.Module):
-    def __init__(self, in_path, side_path, activ):
-        super(resConn, self).__init__()
-        self.in_path = in_path
-        self.side_path = side_path
-        self.activ = activ
-
-    def forward(self, inputs):
-        node_0 = self.in_path(inputs)
-        node_1 = self.side_path(node_0)
-        node2  = self.activ(node_0 + node_1)
-        return node2
-
 
 class condEmbedding(nn.Module):
     def __init__(self, noise_dim, emb_dim):
@@ -59,7 +45,7 @@ class condEmbedding(nn.Module):
         inputs: (B, dim)
         return: mean (B, dim), logsigma (B, dim)
         '''
-        out = F.leaky_relu( self.linear(inputs), 0.2 )
+        out = F.leaky_relu( self.linear(inputs), 0.2, inplace=True )
         mean = out[:, :self.emb_dim]
         log_sigma = out[:, self.emb_dim:]
 
@@ -67,21 +53,37 @@ class condEmbedding(nn.Module):
         return c, kl_loss
 
 def genAct():
-    return nn.ReLU()
+    return nn.ReLU(True)
 def discAct():
-    return nn.LeakyReLU(0.2)
+    return nn.LeakyReLU(0.2, True)
 
-def conv_norm2(dim_in, dim_out, norm_layer, kernel_size=3, use_activation=True, use_bias=False):
-     # nn.ReflectionPad2d(1) avoids use zero-padding in Conv2d
+def conv_norm2(dim_in, dim_out, norm_layer, kernel_size=3, use_activation=True, use_bias=False, activation=nn.ReLU(True)):
+    # designed fro generators
     seq = []
     if kernel_size != 1:
         seq += [nn.ReflectionPad2d(1)]
 
     seq += [nn.Conv2d(dim_in, dim_out, kernel_size=kernel_size, padding=0, bias=use_bias),
-          norm_layer(dim_out)]
+           norm_layer(dim_out)]
     
     if use_activation:
-        seq += [nn.ReLU(True)]
+        seq += [activation]
+    
+    return nn.Sequential(*seq)
+
+def conv_norm(dim_in, dim_out, norm_layer, kernel_size=3, stride=1, use_activation=True, use_bias=False, activation=nn.ReLU(True), use_norm=True):
+    # designed for discriminator\
+    if kernel_size == 3:
+        padding = 1
+    else:
+        padding = 0
+
+    seq = [nn.Conv2d(dim_in, dim_out, kernel_size=kernel_size, padding=padding, bias=use_bias, stride=stride),
+           ]
+    if use_norm:
+        seq += [norm_layer(dim_out)]
+    if use_activation:
+        seq += [activation]
     
     return nn.Sequential(*seq)
 
@@ -100,6 +102,7 @@ class ResnetBlock(nn.Module):
         
         return self.res_block(input) + input
 
+
 class MultiModalBlock(nn.Module):
     def __init__(self, text_dim, img_dim, norm, use_bias=False, upsample_factor=3):
         super(MultiModalBlock, self).__init__()
@@ -114,7 +117,7 @@ class MultiModalBlock(nn.Module):
 
         self.upsample_path = nn.Sequential(*seq)
         self.joint_path = nn.Sequential(*[
-            conv_norm2(cur_dim+img_dim, img_dim, norm_layer, kernel_size=1)
+            conv_norm2(cur_dim+img_dim, img_dim, norm_layer, kernel_size=1, use_activation=False)
         ])
     def forward(self, text, img ):
         upsampled_text = self.upsample_path(text)
@@ -122,20 +125,38 @@ class MultiModalBlock(nn.Module):
         out = self.joint_path(torch.cat([img, upsampled_text],1))
         return out
 
+class sentConv2(nn.Module):
+    def __init__(self, in_dim, row, col, channel, 
+                 activ = None, last_active = False, ):
+        super(sentConv2, self).__init__()
+        self.__dict__.update(locals())
+        out_dim = row*col*channel
+        _layers = [nn.Linear(in_dim, out_dim)]
+        _layers += [nn.BatchNorm1d(out_dim)]
+        if not last_active and  activ is not None:
+            _layers += [activ] 
+        
+        self.out = nn.Sequential(*_layers)    
+         
+    def forward(self, inputs):
+        output = self.out(inputs)
+        output = output.view(-1, self.channel, self.row, self.col)
+        return output
+
 
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='ln', output_size=256):
         super(Generator, self).__init__()
         self.__dict__.update(locals())
 
-        self.register_buffer('device_id', torch.zeros(1))
+        self.register_buffer('device_id', torch.IntTensor(1))
         self.condEmbedding = condEmbedding(sent_dim, emb_dim)
 
         # We need to know how many layers we will use at the beginning
        
         norm_layer = getNormLayer(norm)
 
-        self.vec_to_tensor = sentConv(emb_dim+noise_dim, 4, 4, self.hid_dim*8, None, False)
+        self.vec_to_tensor = sentConv2(emb_dim+noise_dim, 4, 4, self.hid_dim*8, None, False)
         
         '''user defefined'''
         self.output_size = output_size
@@ -148,7 +169,7 @@ class Generator(nn.Module):
         elif output_size == 128:
             num_scales = [4, 8, 16, 32, 64, 128]
 
-        print ('>> initialized a {} size generator with {} outputs'.format(output_size, log(output_size/64,2)))
+        print ('>> initialized a {} size generator'.format(output_size))
 
         reduce_dim_at = [8, 64, 256] 
         side_output_at = [64, 128, 256] 
@@ -177,7 +198,7 @@ class Generator(nn.Module):
 
             # add upsample module to concat with upper layers 
             if num_scales[i] in text_upsampling_at:
-                setattr(self, 'upsample_%d'%(num_scales[i]), MultiModalBlock(cur_dim, cur_dim//2, norm))
+                setattr(self, 'upsample_%d'%(num_scales[i]), MultiModalBlock(text_dim=cur_dim, img_dim=cur_dim//2, norm=norm))
             # configure side output module
             if num_scales[i] in side_output_at:
                 setattr(self, 'tensor_to_img_%d'%(num_scales[i]), branch_out2(cur_dim))
@@ -214,6 +235,179 @@ class Generator(nn.Module):
 
             out_dict['output_256'] = self.tensor_to_img_256(out_256)
 
-
         return out_dict, kl_loss
 
+
+
+class ImageDown(torch.nn.Module):
+    '''
+       This module encode image to 16*16 feat maps
+    '''
+    def __init__(self, input_size, num_chan, hid_dim, out_dim, norm='norm'):
+        super(ImageDown, self).__init__()
+        self.register_buffer('device_id', torch.zeros(1))
+        
+        self.__dict__.update(locals())
+        norm_layer = getNormLayer(norm)
+        activ = discAct()
+        
+        if input_size == 64:
+            _layers = []
+            cur_dim = 128 # for testing
+            _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 32
+            _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 16
+            _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 16
+            _layers += [conv_norm(cur_dim*4, cur_dim*4,  norm_layer, stride=2, use_activation=False)] # 16
+            cur_dim = cur_dim * 4
+            self.node = nn.Sequential(*_layers)
+            # add more layers
+            _layers = []
+            _layers += [conv_norm(cur_dim, cur_dim//4,  norm_layer, kernel_size=1, activation=activ)] # 16
+            _layers += [conv_norm(cur_dim//4, cur_dim//4, norm_layer, activation=activ)] # 16
+            _layers += [conv_norm(cur_dim//4, out_dim, norm_layer,  use_activation=False)] # 16
+            self.skip = nn.Sequential(*_layers)
+        # if input_size == 128:
+        #     _layers  = conv_norm(num_chan, hid_dim*2,  norm, activ, 0, False,True, 3,1,2)  # 64
+        #     _layers += conv_norm(hid_dim*2, hid_dim*2,  norm, activ, 0, False,True,  3,1,2)  # 32
+        #     _layers += conv_norm(hid_dim*2, hid_dim*4,  norm, activ, 0, False,True,  3,1,2)  # 16
+        #     _layers += conv_norm(hid_dim*4, out_dim,  norm, activ, 0, False,True,  3,1,2)  # 8  
+        #     #self.node_0  = nn.Sequential(*_layers)
+        #     #self.node_1 = conv_norm(out_dim, out_dim,   norm,  activ,  2, True,False, 1,0,1)
+        
+        # if input_size == 256:
+        #     _layers  = conv_norm(num_chan, hid_dim*2,  norm, activ, 0, False,True, 3,1,2)  # 128
+        #     _layers += conv_norm(hid_dim*2, hid_dim*2,  norm, activ, 0, False,True,  3,1,2)  # 64
+        #     _layers += conv_norm(hid_dim*2, hid_dim*4,  norm, activ, 0, False,True,  3,1,2)  # 32
+        #     _layers += conv_norm(hid_dim*4, out_dim,  norm, activ, 0, False,True,  3,1,2)  # 16 
+            #_layers += conv_norm(out_dim, out_dim,  norm, activ, 0, False,True,  3,1,2)  # 8   
+            #self.node_0  = nn.Sequential(*_layers)
+            #self.node_1 = conv_norm(out_dim, out_dim,   norm,  activ,  2, True,False, 1,0,1)
+        # self.node = nn.Sequential(*_layers)
+
+    def forward(self, inputs):
+        # inputs (B, C, H, W), must be dividable by 32
+        # return (B, C, row, col), and content_code
+        x = self.node(inputs)
+        out = F.leaky_relu(x + self.skip(x), 0.2, inplace=True)
+        #node_1 = self.node_1(content_code)
+        #output =  self.activ(content_code + node_1)
+        return out
+
+class catSentConv2(nn.Module):
+    def __init__(self, enc_dim, emb_dim, feat_size, 
+                 norm, activ):
+        '''
+          enc_dim: B*enc_dim*H*W
+          emb_dim: the dimension of feeded embedding
+          feat_size: the feature map size of the feature map. 
+        '''
+        super(catSentConv2, self).__init__()
+        self.__dict__.update(locals())
+        norm_layer = getNormLayer(norm)
+
+        inp_dim = enc_dim + emb_dim
+        new_feat_size = feat_size
+
+        _layers =  [nn.Conv2d(inp_dim, 1, kernel_size=new_feat_size, padding=0, bias=True)]
+
+        self.node = nn.Sequential(*_layers)
+
+    def forward(self,sent_code,  img_code):
+        sent_code =  sent_code.unsqueeze(-1).unsqueeze(-1)
+        dst_shape = list(sent_code.size())
+        #print(dst_shape, img_code.size())
+        dst_shape[1] =  sent_code.size()[1]
+        dst_shape[2] =  img_code.size()[2] 
+        dst_shape[3] =  img_code.size()[3] 
+        sent_code = sent_code.expand(dst_shape)
+        #sent_code = sent_code.view(*dst_shape)
+        #print(img_code.size(), sent_code.size())
+        comp_inp = torch.cat([img_code, sent_code], dim=1)
+        output = self.node(comp_inp)
+        chn  = output.size()[1]
+        output = output.view(-1, chn)
+
+        return output
+
+class Discriminator(torch.nn.Module):
+    '''
+    enc_dim: Reduce images inputs to (B, enc_dim, H, W)
+    emb_dim: The sentence embedding dimension.
+    '''
+
+    def __init__(self, input_size, num_chan,  hid_dim, 
+                sent_dim, emb_dim, norm='ln'):
+        super(Discriminator, self).__init__()
+        self.register_buffer('device_id', torch.IntTensor(1))
+        self.__dict__.update(locals())
+        activ = discAct()
+
+        _layers = [nn.Linear(sent_dim, emb_dim)]
+        _layers += [discAct()]
+        self.context_emb_pipe = nn.Sequential(*_layers)
+
+        
+        enc_dim = hid_dim * 4
+        self.img_encoder_64   = ImageDown(64,  num_chan,  hid_dim,  enc_dim, norm)  # 4x4
+        self.pair_disc_64   = catSentConv2(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
+        _layers =  [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]
+        self.img_disc_64 = nn.Sequential(*_layers)
+        self.max_out_size = 64
+
+        # if input_size > 64:
+        #     enc_dim = hid_dim*2
+        #     self.img_encoder_128  = ImageDown(128,  num_chan, hid_dim,  enc_dim, 4, norm)  # 8
+        #     self.pair_disc_128  = catSentConv(enc_dim, emb_dim, 8,  norm, activ, 0)
+        #     _layers  = conv_norm(enc_dim, hid_dim*4,   norm,  activ, 1, False, True,  1,0,1)
+        #     _layers += conv_norm(hid_dim*4, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)
+        #     _layers += [nn.Conv2d(hid_dim*2, 1, kernel_size = 5, padding = 0, bias=True)]   # 4
+        #     self.img_disc_128 = nn.Sequential(*_layers)
+        #     self.max_out_size = 128
+
+        # if input_size > 128:
+        #     enc_dim = hid_dim*4
+        #     self.img_encoder_256  = ImageDown(256, num_chan,  hid_dim,  enc_dim, 4, norm)  # 8
+        #     self.pair_disc_256  = catSentConv(enc_dim, emb_dim, 16,  norm, activ, 1)
+            
+        #     _layers  = conv_norm(enc_dim, hid_dim*4,   norm,  activ, 1, False, True, 1,0,1)
+        #     _layers += conv_norm(hid_dim*4, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)
+        #     _layers += [padConv2d(hid_dim*2, 1, kernel_size = 3,  bias=True)]   # 16
+        #     self.img_disc_256 = nn.Sequential(*_layers)
+        #     self.max_out_size = 256
+        
+        self.apply(weights_init)
+        print ('>> initialized a {} size discriminator'.format(input_size))
+
+    def forward(self, images, embdding):
+        '''
+        images: (B, C, H, W)
+        embdding : (B, sent_dim)
+        outptuts:
+        -----------
+        img_code B*chan*col*row
+        pair_disc_out: B*1
+        img_disc: B*1*col*row
+        '''
+        out_dict = OrderedDict()
+        img_size = images.size()[3]
+        assert img_size in [32, 64, 128, 256], 'wrong input size {} in image discriminator'.format(img_size)
+        assert self.max_out_size >= img_size, 'image size {} exceeds expected maximum size {}'.format(img_size, self.max_out_size)
+
+        img_encoder_sym  = 'img_encoder_{}'.format(img_size)
+        img_disc_sym = 'img_disc_{}'.format(img_size)
+        pair_disc_sym = 'pair_disc_{}'.format(img_size)
+
+        img_encoder = getattr(self, img_encoder_sym)
+        img_disc    = getattr(self, img_disc_sym)
+        pair_disc   = getattr(self, pair_disc_sym)
+
+        sent_code = self.context_emb_pipe(embdding)
+        
+        img_code = img_encoder(images)
+        pair_disc_out = pair_disc(sent_code, img_code)
+        img_disc_out  = img_disc(img_code)
+        
+        out_dict['pair_disc']     = pair_disc_out
+        out_dict['img_disc']      = img_disc_out
+        out_dict['content_code']  = img_code # useless
+        return out_dict
