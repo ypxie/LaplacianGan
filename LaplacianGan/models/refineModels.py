@@ -174,7 +174,7 @@ class Generator(nn.Module):
         if 64 in self.side_list:
             #sent_random, _kl_loss  = self.condEmbedding_64(sent_embeddings)
             out_64  = self.out_64(node_64)
-            node_64 = self.side_64(out_64, node_16, node_64)
+            node_64 = self.side_64(Variable(out_64.data), node_16, node_64)
             out_dict['output_64']  = out_64
             #kl_loss += _kl_loss
 
@@ -183,7 +183,7 @@ class Generator(nn.Module):
         if 128 in self.side_list:
             #sent_random, _kl_loss  = self.condEmbedding_128(sent_embeddings)
             out_128  = self.out_128(node_128)
-            node_128 = self.side_128(out_128, node_32, node_128)
+            node_128 = self.side_128(Variable(out_128.data), node_32, node_128)
             out_dict['output_128']  = out_128
             #kl_loss += _kl_loss
 
@@ -285,7 +285,7 @@ class Discriminator(torch.nn.Module):
         _layers += conv_norm(hid_dim*4, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)
         _layers += [padConv2d(hid_dim*2, 1, kernel_size = 1, padding=0, bias=True)]   # 16
         self.img_disc_256 = nn.Sequential(*_layers)
-
+        self.apply(weights_init)
     def forward(self, images, embdding):
         '''
         images: (B, C, H, W)
