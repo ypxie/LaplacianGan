@@ -39,7 +39,7 @@ if  __name__ == '__main__':
 
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--reuse_weigths', action='store_false', default = True,
+    parser.add_argument('--reuse_weigths', action='store_false', default = False,
                         help='continue from last checkout point')
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
@@ -76,12 +76,12 @@ if  __name__ == '__main__':
 
     args.cuda = torch.cuda.is_available()
     img_size, lratio = 256, 4
-    
+    norm = 'instance'
     netG = Gen(input_size  = img_size, sent_dim= 1024, noise_dim = args.noise_dim, 
-               num_chan=3, emb_dim= 128, hid_dim= 128, norm='bn')
+               num_chan=3, emb_dim= 128, hid_dim= 128, norm=norm)
 
     netD = Disc(input_size = img_size, num_chan = 3, hid_dim = 128, 
-                sent_dim=1024, emb_dim= 128,  norm='bn')
+                sent_dim=1024, emb_dim= 128,  norm=norm)
 
     print(netG)
     print(netD)
@@ -99,5 +99,5 @@ if  __name__ == '__main__':
     filename_train = os.path.join(datadir, 'train')
     dataset.train = dataset.get_data(filename_train)
 
-    model_name ='real_lapgan_{}_{}'.format(data_name, img_size)
+    model_name ='real_lapgan_{}_{}_{}'.format(data_name, img_size, norm)
     train_gans(dataset, model_root, model_name, netG, netD,args)

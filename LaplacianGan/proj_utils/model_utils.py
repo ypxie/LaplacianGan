@@ -40,7 +40,7 @@ class sentConv(nn.Module):
         self.__dict__.update(locals())
         out_dim = row*col*channel
         _layers = [nn.Linear(in_dim, out_dim)]
-        _layers += [nn.BatchNorm1d(out_dim)]
+        #_layers += [nn.BatchNorm1d(out_dim)]
         if not last_active and  activ is not None:
             _layers += [activ] 
         
@@ -193,14 +193,14 @@ class connectSideBefore(nn.Module):
             in_dim = sent_out
 
         self.up_sent = nn.Sequential(*_layers)
-        final_in_dim = sent_out + side_out # + hid_in
+        final_in_dim = sent_out + side_out  + hid_in
 
         self.final_conv = conv_norm(final_in_dim, out_dim, norm,  activ, 1, True,True,  3, 1, 1)
             
     def forward(self, img_input, sent_input, hid_input):
         img_trans = self.side_trans(img_input)
         up_sent = self.up_sent(sent_input)
-        comp_input = torch.cat([img_trans, up_sent], dim=1)
+        comp_input = torch.cat([img_trans, up_sent, hid_input], dim=1)
         final_out = self.final_conv(comp_input)
 
         return final_out
