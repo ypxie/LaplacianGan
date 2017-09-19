@@ -83,7 +83,7 @@ class Generator(nn.Module):
         activ = genAct()
         fake_active = passthrough()
         
-        node4_0 = sentConv(emb_dim+noise_dim, 4, 4, self.hid_dim*8, None, False)
+        node4_0 = sentConv(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm, None, False)
         _layers = conv_norm(self.hid_dim*8,  self.hid_dim*2, norm,  activ, 0, False,True, 1, 0)
         #_layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,True,   1, 0)
         _layers += conv_norm(self.hid_dim*2,  self.hid_dim*8, norm, activ, 0, False,False,  3, 1)
