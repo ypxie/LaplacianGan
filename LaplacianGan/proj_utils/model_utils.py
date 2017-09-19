@@ -34,21 +34,24 @@ def weights_init(m):
         m.bias.data.fill_(0)
 
 class sentConv(nn.Module):
-    def __init__(self, in_dim, row, col, channel, 
+    def __init__(self, in_dim, row, col, channel, norm,
                  activ = None, last_active = False):
         super(sentConv, self).__init__()
         self.__dict__.update(locals())
         out_dim = row*col*channel
-        _layers = [nn.Linear(in_dim, out_dim)]
-        _layers += [nn.BatchNorm1d(out_dim)]
-        if not last_active and  activ is not None:
+        
+        self.linear = nn.Linear(in_dim, out_dim)
+        
+        _layers = [getNormLayer(norm)(channel)]
+        if last_active and  activ is not None:
             _layers += [activ] 
         
         self.out = nn.Sequential(*_layers)    
          
     def forward(self, inputs):
-        output = self.out(inputs)
-        output = output.view(-1, self.channel, self.row, self.col)
+        linear_out = self.linear(inputs)
+        output = linear_out.view(-1, self.channel, self.row, self.col)
+        output = self.out(output)
         return output
 
 def cat_vec_conv(text_enc, img_enc):
@@ -193,14 +196,14 @@ class connectSideBefore(nn.Module):
             in_dim = sent_out
 
         self.up_sent = nn.Sequential(*_layers)
-        final_in_dim = sent_out + side_out # + hid_in
+        final_in_dim = sent_out + side_out  + hid_in
 
         self.final_conv = conv_norm(final_in_dim, out_dim, norm,  activ, 1, True,True,  3, 1, 1)
             
     def forward(self, img_input, sent_input, hid_input):
         img_trans = self.side_trans(img_input)
         up_sent = self.up_sent(sent_input)
-        comp_input = torch.cat([img_trans, up_sent], dim=1)
+        comp_input = torch.cat([img_trans, up_sent, hid_input], dim=1)
         final_out = self.final_conv(comp_input)
 
         return final_out
@@ -360,15 +363,24 @@ class Bottleneck(nn.Module):
 
         return out
 
-def getNormLayer(norm='bn'):
-    if norm is 'bn':
-        norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
-    if norm is 'instance':
-        norm_layer = functools.partial(nn.InstanceNorm2d, affine=False)
+def getNormLayer(norm='bn', dim=2):
+    
     if norm is 'ln' or norm is 'layer':
         return LayerNormal
-    if norm is 'no':
+    elif norm is 'no':
         return pretending_norm
+
+    if dim == 2:
+        if norm is 'bn':
+            norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
+        elif norm is 'instance':
+            norm_layer = functools.partial(nn.InstanceNorm2d, affine=False)
+    elif dim == 1:
+        if norm is 'bn':
+            norm_layer = functools.partial(nn.BatchNorm1d, affine=True)
+        elif norm is 'instance':
+            norm_layer = functools.partial(nn.InstanceNorm1d, affine=False)
+    
     return norm_layer
 
 def batch_forward(cls, BatchData, batch_size,**kwards):

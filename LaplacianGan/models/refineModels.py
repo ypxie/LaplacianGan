@@ -82,9 +82,9 @@ class Generator(nn.Module):
         
         activ = genAct()
         fake_active = passthrough()
-
-        node4_0 = sentConv(emb_dim+noise_dim, 4, 4, self.hid_dim*8, None, False)
-        _layers = conv_norm(self.hid_dim*8,  self.hid_dim*2, norm,  activ, 0, False,True,   1, 0)
+        
+        node4_0 = sentConv(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm, None, False)
+        _layers = conv_norm(self.hid_dim*8,  self.hid_dim*2, norm,  activ, 0, False,True, 1, 0)
         #_layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,True,   1, 0)
         _layers += conv_norm(self.hid_dim*2,  self.hid_dim*8, norm, activ, 0, False,False,  3, 1)
         node4_1 = nn.Sequential(*_layers)
@@ -174,7 +174,7 @@ class Generator(nn.Module):
         if 64 in self.side_list:
             #sent_random, _kl_loss  = self.condEmbedding_64(sent_embeddings)
             out_64  = self.out_64(node_64)
-            node_64 = self.side_64(Variable(out_64.data), node_16, node_64)
+            node_64 = self.side_64(out_64, node_16, node_64)
             out_dict['output_64']  = out_64
             #kl_loss += _kl_loss
 
@@ -183,7 +183,7 @@ class Generator(nn.Module):
         if 128 in self.side_list:
             #sent_random, _kl_loss  = self.condEmbedding_128(sent_embeddings)
             out_128  = self.out_128(node_128)
-            node_128 = self.side_128(Variable(out_128.data), node_32, node_128)
+            node_128 = self.side_128(out_128, node_32, node_128)
             out_dict['output_128']  = out_128
             #kl_loss += _kl_loss
 
@@ -208,7 +208,7 @@ class ImageDown(torch.nn.Module):
         assert down_rate <= max_down_rate, 'down rate is too large for this image'
 
         if input_size == 64:
-            _layers = conv_norm(num_chan, hid_dim,     norm,  activ, 0, False,True, 3, 1, 2) # 32
+            _layers = conv_norm(num_chan, hid_dim,     norm,  activ, 0, False,True, 3, 1, 2, last_norm=False) # 32
             _layers += conv_norm(hid_dim, hid_dim*2,   norm,  activ, 0, False,True, 3, 1, 2) # 16
             _layers += conv_norm(hid_dim*2, out_dim,   norm,  activ, 0, False,True, 3, 1, 2) # 8
             _layers += conv_norm(out_dim, out_dim,   norm,    activ, 0, False,True, 5, 0, 1) # 4
@@ -216,7 +216,7 @@ class ImageDown(torch.nn.Module):
             #self.node_1 = conv_norm(out_dim, out_dim,   norm,  activ,  2, True,False, 1,0,1)
 
         if input_size == 128:
-            _layers  = conv_norm(num_chan, hid_dim*2,  norm, activ, 0, False,True, 3,1,2)  # 64
+            _layers  = conv_norm(num_chan, hid_dim*2,  norm, activ, 0, False,True, 3,1,2, last_norm=False)  # 64
             _layers += conv_norm(hid_dim*2, hid_dim*2,  norm, activ, 0, False,True,  3,1,2)  # 32
             _layers += conv_norm(hid_dim*2, hid_dim*4,  norm, activ, 0, False,True,  3,1,2)  # 16
             _layers += conv_norm(hid_dim*4, out_dim,  norm, activ, 0, False,True,  3,1,2)  # 8  
@@ -224,7 +224,7 @@ class ImageDown(torch.nn.Module):
             #self.node_1 = conv_norm(out_dim, out_dim,   norm,  activ,  2, True,False, 1,0,1)
         
         if input_size == 256:
-            _layers  = conv_norm(num_chan, hid_dim*2,  norm, activ, 0, False,True, 3,1,2)  # 128
+            _layers  = conv_norm(num_chan, hid_dim*2,  norm, activ, 0, False,True, 3,1,2, last_norm=False)  # 128
             _layers += conv_norm(hid_dim*2, hid_dim*2,  norm, activ, 0, False,True,  3,1,2)  # 64
             _layers += conv_norm(hid_dim*2, hid_dim*4,  norm, activ, 0, False,True,  3,1,2)  # 32
             _layers += conv_norm(hid_dim*4, out_dim,  norm, activ, 0, False,True,  3,1,2)  # 16 
@@ -261,19 +261,20 @@ class Discriminator(torch.nn.Module):
         if 64 in side_list:
             enc_dim = hid_dim
             self.img_encoder_64   = ImageDown(64,  num_chan,  hid_dim,  enc_dim, 4, norm)  # 8
-            self.pair_disc_64   = catSentConv(enc_dim, emb_dim, 4,  norm, activ, 0)
-
-            _layers  = conv_norm(enc_dim, hid_dim*4,   norm,  activ, 1, False, True, 1,0,1)
-            _layers += conv_norm(hid_dim*4, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)
-            _layers += [nn.Conv2d(hid_dim*2, 1, kernel_size = 4, padding = 0, bias=True)]   # 1
+            self.pair_disc_64     = catSentConv(enc_dim, emb_dim, 4,  norm, activ, 0)
+            
+            _layers  = conv_norm(enc_dim, hid_dim,   norm,  activ, 1, False, True, 1,0,1)
+            #_layers += conv_norm(hid_dim, hid_dim,   norm,  activ, 0, False,True, 1,0,1)
+            _layers  += [nn.Conv2d(hid_dim, 1, kernel_size = 4, padding = 0, bias=True)]   # 1
             self.img_disc_64 = nn.Sequential(*_layers)
             
         if 128 in side_list:
             enc_dim = hid_dim*2
             self.img_encoder_128  = ImageDown(128,  num_chan, hid_dim,  enc_dim, 4, norm)  # 8
             self.pair_disc_128  = catSentConv(enc_dim, emb_dim, 8,  norm, activ, 0)
-            _layers  = conv_norm(enc_dim, hid_dim*4,   norm,  activ, 1, False, True,  1,0,1)
-            _layers += conv_norm(hid_dim*4, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)
+            
+            _layers  = conv_norm(enc_dim, hid_dim*2,   norm,  activ, 1, False, True,  1,0,1)
+            #_layers += conv_norm(hid_dim*4, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)
             _layers += [nn.Conv2d(hid_dim*2, 1, kernel_size = 2, padding = 0, bias=True)]  # 7
             self.img_disc_128 = nn.Sequential(*_layers)
         
@@ -281,8 +282,8 @@ class Discriminator(torch.nn.Module):
         self.img_encoder_256  = ImageDown(256, num_chan,  hid_dim,  enc_dim, 4, norm)  # 16
         self.pair_disc_256  = catSentConv(enc_dim, emb_dim, 16,  norm, activ, 1)
         
-        _layers  = conv_norm(enc_dim, hid_dim*4,   norm,  activ, 1, False, True, 1,0,1)
-        _layers += conv_norm(hid_dim*4, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)
+        _layers  = conv_norm(enc_dim, hid_dim*2,   norm,  activ, 1, False, True, 1,0,1)
+        #_layers += conv_norm(hid_dim*4, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)
         _layers += [padConv2d(hid_dim*2, 1, kernel_size = 1, padding=0, bias=True)]   # 16
         self.img_disc_256 = nn.Sequential(*_layers)
         self.apply(weights_init)
