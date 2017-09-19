@@ -34,13 +34,14 @@ def weights_init(m):
         m.bias.data.fill_(0)
 
 class sentConv(nn.Module):
-    def __init__(self, in_dim, row, col, channel, 
+    def __init__(self, in_dim, row, col, channel, norm,
                  activ = None, last_active = False):
         super(sentConv, self).__init__()
         self.__dict__.update(locals())
         out_dim = row*col*channel
         _layers = [nn.Linear(in_dim, out_dim)]
-        #_layers += [nn.BatchNorm1d(out_dim)]
+        _layers += [getNormLayer(norm, 1)(out_dim )]
+        
         if not last_active and  activ is not None:
             _layers += [activ] 
         
@@ -360,11 +361,18 @@ class Bottleneck(nn.Module):
 
         return out
 
-def getNormLayer(norm='bn'):
-    if norm is 'bn':
-        norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
-    if norm is 'instance':
-        norm_layer = functools.partial(nn.InstanceNorm2d, affine=False)
+def getNormLayer(norm='bn', dim=2):
+    if dim == 2:
+        if norm is 'bn':
+            norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
+        if norm is 'instance':
+            norm_layer = functools.partial(nn.InstanceNorm2d, affine=False)
+    if dim == 1:
+        if norm is 'bn':
+            norm_layer = functools.partial(nn.BatchNorm1d, affine=True)
+        if norm is 'instance':
+            norm_layer = functools.partial(nn.InstanceNorm1d, affine=False)
+
     if norm is 'ln' or norm is 'layer':
         return LayerNormal
     if norm is 'no':
