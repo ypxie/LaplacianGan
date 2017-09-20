@@ -13,7 +13,7 @@ from LaplacianGan.models.refineModels import Generator as Gen
 from LaplacianGan.lapGan import train_gans
 #from LaplacianGan.zzGan import train_gans
 
-from LaplacianGan.fuel.zz_datasets import TextDataset
+from LaplacianGan.fuel.datasets import TextDataset
 
 
 home = os.path.expanduser('~')
@@ -40,7 +40,7 @@ if  __name__ == '__main__':
 
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--reuse_weigths', action='store_false', default = False,
+    parser.add_argument('--reuse_weigths', action='store_false', default = True,
                         help='continue from last checkout point')
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
@@ -87,27 +87,11 @@ if  __name__ == '__main__':
     img_size, lratio = 256, 4
     norm = 'bn'
 
-    netG = Gen( sent_dim= 1024, noise_dim = args.noise_dim, 
-                emb_dim= 128, hid_dim= 128, norm=norm, side_list=[64])
-    # output_size = 64
-    netD = Disc(input_size = img_size, num_chan = 3, hid_dim = 128, 
-                sent_dim=1024, emb_dim= 128,  norm=norm, side_list=[64])
-
-    print(netG)
-    print(netD)
-
-    if args.cuda:
-        netD = netD.cuda(device_id)
-        netG = netG.cuda(device_id)
-        import torch.backends.cudnn as cudnn
-        cudnn.benchmark = True
-        
     dataset = TextDataset(datadir, 'cnn-rnn', lratio)
     filename_test = os.path.join(datadir, 'test')
     dataset.test = dataset.get_data(filename_test)
-
     filename_train = os.path.join(datadir, 'train')
     dataset.train = dataset.get_data(filename_train)
+    train_sampler = dataset.train.next_batch
 
-    model_name ='64_lapgan_{}_{}_{}'.format(data_name, img_size, norm)
-    train_gans(dataset, model_root, model_name, netG, netD,args)
+    train_sampler(4, 4)

@@ -246,7 +246,6 @@ def imresize(img, resizeratio=1):
         temp = np.reshape(temp, temp.shape + (1,))
     return temp
 
-scipy.misc.imresize
 
 def imresize_shape(img, outshape):
     if len(img.shape) == 3:
