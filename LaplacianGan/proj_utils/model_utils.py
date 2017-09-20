@@ -40,18 +40,18 @@ class sentConv(nn.Module):
         self.__dict__.update(locals())
         out_dim = row*col*channel
         
-        self.linear = nn.Linear(in_dim, out_dim)
+        _layers = [nn.Linear(in_dim, out_dim)]
         
-        _layers = [getNormLayer(norm)(channel)]
+        _layers += [getNormLayer(norm, 1)(out_dim)]
         if last_active and  activ is not None:
             _layers += [activ] 
         
         self.out = nn.Sequential(*_layers)    
          
     def forward(self, inputs):
-        linear_out = self.linear(inputs)
+        linear_out = self.out(inputs)
         output = linear_out.view(-1, self.channel, self.row, self.col)
-        output = self.out(output)
+        #output = self.out(output)
         return output
 
 def cat_vec_conv(text_enc, img_enc):
@@ -288,13 +288,15 @@ class catSentConv(nn.Module):
         self.__dict__.update(locals())
 
         inp_dim = enc_dim + emb_dim
-        _layers =  conv_norm(inp_dim, enc_dim, norm, activ, 1, False, True, 1, 0)
+        _layers = []
+        #_layers =  conv_norm(inp_dim, enc_dim, norm, activ, 0, False, True, 1, 0, last_norm=False)
         for _ in range(down_rate):
             _layers +=  \
-            conv_norm(enc_dim, enc_dim, norm, activ, 0, False, True, 3, 1, 2)
-        
+            conv_norm(inp_dim, enc_dim, norm, activ, 0, False, True, 3, 1, 2, last_norm=False)
+            inp_dim = enc_dim
+
         new_feat_size = feat_size//int(2**down_rate)
-        _layers += [nn.Conv2d(enc_dim, 1, kernel_size = new_feat_size, padding =0)]
+        _layers += [nn.Conv2d(inp_dim, 1, kernel_size = new_feat_size, padding =0)]
         self.node = nn.Sequential(*_layers)
 
     def forward(self,sent_code,  img_code):

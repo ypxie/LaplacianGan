@@ -147,14 +147,16 @@ class Dataset(object):
         sampled_wrong_images = sampled_wrong_images.astype(np.float32)
         sampled_images = sampled_images * (2. / 255) - 1.
         sampled_wrong_images = sampled_wrong_images * (2. / 255) - 1.
-
+        
         sampled_images = self.transform(sampled_images)
         sampled_wrong_images = self.transform(sampled_wrong_images)
         images_dict['output_256'] = sampled_images.transpose((0, 3, 1,2) )
         images_dict['output_64'] = imresize_shape(sampled_images, (64, 64)).transpose((0, 3, 1,2) )
         #images_dict['output_32'] = imresize_shape(sampled_images, (32, 32)).transpose((0, 3, 1,2) )
         images_dict['output_128'] = imresize_shape(sampled_images, (128, 128)).transpose((0, 3, 1,2) )
-
+        
+        #inves = images_dict['output_64']
+        #print(inves.shape, np.min(inves), np.max(inves))
         wrongs_dict['output_256'] = sampled_wrong_images.transpose((0, 3, 1,2) )
         wrongs_dict['output_64'] = imresize_shape(sampled_wrong_images,(64, 64)).transpose((0, 3, 1,2) )
         #wrongs_dict['output_32'] = imresize_shape(sampled_wrong_images,(32, 32)).transpose((0, 3, 1,2) )
