@@ -11,6 +11,8 @@ from torch.nn.utils import clip_grad_norm
 from .proj_utils.plot_utils import *
 from .proj_utils.torch_utils import *
 
+from collections import OrderedDict
+
 TINY = 1e-8
 
 
@@ -222,8 +224,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         
         for _ in range(ngen):
             netG.zero_grad()
-            images, wrong_images, embeddings, _, _ = train_sampler(args.batch_size, args.num_emb)
-            embeddings = to_device(embeddings, netD.device_id, requires_grad=False)
+            #images, wrong_images, embeddings, _, _ = train_sampler(args.batch_size, args.num_emb)
+            #embeddings = to_device(embeddings, netD.device_id, requires_grad=False)
             #sent_random, kl_loss =  netG.condEmbedding(embeddings, kl_loss=True)
             # fake_images dictionary, same order as images
             z.data.normal_(0, 1)
@@ -266,33 +268,44 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         if batch_count % args.display_freq == 0:
             # print('save tmp images, :)')
             #z1   = z_sampler(batch_size, args.noise_dim)
+            all_imgs_dict = OrderedDict()   # should be of order (True, fake_1, fake_2,..)
+
             for idx_test in range(num_test):
                 #sent_emb_test, _ =  netG.condEmbedding(test_embeddings)
                 z.data.normal_(0, 1)
                 #c_test    =  Variable(c_test.data, volatile=True)
-                netG.eval()
+                tmp_fake_list = []
                 samples, _ = netG(test_embeddings, z)
-                for key, val in samples.items():
-                    this_fake = val.cpu().data.numpy()
-                    this_real = test_images[key]
 
-                    fake_imgs = save_images(
-                                this_fake,
-                                os.path.join(args.save_folder,'samples_{}_{}.png'.format(key, batch_count) )
-                                            ,save=False,dim_ordering = 'th'
-                                )
-                    #print(this_fake.shape)
-                    plot_img(X=fake_imgs, win='sample_img_{}_{}'.format(key, idx_test), env=mode_name)
-                    
+                if idx_test == 0:
+                    for key, _ in samples.items():
+                        this_key = key + '_img'
+                        all_imgs_dict[this_key] = []
+
+                for key, val in samples.items():
+                    this_fake = val.cpu().data.numpy()    
+                    this_key  = key + '_img'
                     if idx_test == 0: # for real, we only plot once
-                        true_imgs = save_images(this_real, save=False,dim_ordering = 'th')
-                        plot_img(X=true_imgs, win='real_img_{}'.format(key), env=mode_name)
-            
+                        this_real = test_images[key]
+                        all_imgs_dict[this_key].append(this_real)
+                        
+                    all_imgs_dict[this_key].append(this_fake)
+
+            for key, _ in samples.items():
+                this_key = key + '_img'
+                all_list = all_imgs_dict[this_key] 
+                all_imgs = save_images(
+                                all_list,
+                                os.path.join(args.save_folder,'samples_{}_{}.png'.format(key, batch_count) )
+                                ,save=False,dim_ordering = 'th'
+                                )
+                plot_img(X=all_imgs, win='sample_img_{}_{}'.format(key, idx_test), env=mode_name)
+
         if batch_count % args.save_freq == 0:
             D_cur_weights = netD.state_dict()
             G_cur_weights = netG.state_dict()
             torch.save(D_cur_weights, D_weightspath)
             torch.save(G_cur_weights, G_weightspath)
-            # print('save weights to {} and {}'.format(D_weightspath, 
-            #        G_weightspath), batch_count,args.save_freq)
+            print('save weights to {} and {}'.format(D_weightspath, 
+                   G_weightspath), batch_count,args.save_freq)
 

@@ -108,7 +108,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
     def fake_sampler(bz, n ):
         x = {}
-        x['output_64'] = np.random.rand(bz, 3, 64, 64)
+        x['output_64']  = np.random.rand(bz, 3, 64, 64)
         x['output_128'] = np.random.rand(bz, 3, 128, 128)
         x['output_256'] = np.random.rand(bz, 3, 256, 256)
         return x, x, np.random.rand(bz, 1024), None, None
@@ -288,7 +288,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             tmp_img_samples = np.concatenate(tmp2, axis=0)
             plot_imgs(tmp_gen_samples, epoch, t, 'test_samples', path=model_folder)
             plot_imgs(tmp_img_samples, epoch, t, 'test_images', path=model_folder)
-    
+            
         # save weights      
         if epoch % args.save_freq == 0:
             torch.save(netD.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))

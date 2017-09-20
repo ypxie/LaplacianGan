@@ -24,7 +24,7 @@ data_name = 'birds'
 datadir = os.path.join(data_root, data_name)
 
 
-device_id = 2
+device_id = 1
 
 if  __name__ == '__main__':
 
@@ -50,7 +50,7 @@ if  __name__ == '__main__':
     parser.add_argument('--display_freq', type=int, default= 200, metavar='N',
                         help='plot the results every {} batches')
     
-    parser.add_argument('--batch_size', type=int, default= 16, metavar='N',
+    parser.add_argument('--batch_size', type=int, default= 8, metavar='N',
                         help='batch size.')
     parser.add_argument('--num_emb', type=int, default= 4, metavar='N',
                         help='number of emb chosen for each image.')
@@ -88,10 +88,10 @@ if  __name__ == '__main__':
     norm = 'bn'
 
     netG = Gen( sent_dim= 1024, noise_dim = args.noise_dim, 
-                emb_dim= 128, hid_dim= 128, norm=norm, side_list=[64])
+                emb_dim= 128, hid_dim= 128, norm=norm, side_list=[64,128,256])
     # output_size = 64
     netD = Disc(input_size = img_size, num_chan = 3, hid_dim = 128, 
-                sent_dim=1024, emb_dim= 128,  norm=norm, side_list=[64])
+                sent_dim=1024, emb_dim= 128,  norm=norm, side_list=[64,128,256])
 
     print(netG)
     print(netD)
@@ -109,5 +109,5 @@ if  __name__ == '__main__':
     filename_train = os.path.join(datadir, 'train')
     dataset.train = dataset.get_data(filename_train)
 
-    model_name ='64_lapgan_{}_{}_{}'.format(data_name, img_size, norm)
+    model_name ='real_lapgan_{}_{}_{}'.format(data_name, img_size, norm)
     train_gans(dataset, model_root, model_name, netG, netD,args)

@@ -166,43 +166,81 @@ def display_timeseries(strumodel, BatchData, BatchLabel, plot=None, name='defaul
     #       opts=dict(title = name + '_diff_ratio'), env = name)
 
 def save_images(X, save_path=None, save=True, dim_ordering='tf'):
+    # X: B*C*H*W or list of X
+    if type(X) is list: 
+        return save_images_list(X, save_path, save, dim_ordering)
+    else:
+        n_samples = X.shape[0]
+        rows = int(np.sqrt(n_samples))
+        while n_samples % rows != 0:
+            rows -= 1
+        nh, nw = rows, n_samples//rows
+        if X.ndim == 4:
+            # BCHW -> BHWC
+            if dim_ordering == 'tf':
+                pass
+            else:           
+                X = X.transpose(0,2,3,1)
+            h, w, c = X[0].shape[:3]
+            hgap, wgap = int(0.1*h), int(0.1*w)
+            img = np.zeros(((h+hgap)*nh - hgap, (w+wgap)*nw-wgap,c))
+        elif X.ndim == 3:
+            h, w = X[0].shape[:2]
+            hgap, wgap = int(0.1*h), int(0.1*w)
+            img = np.zeros(((h+hgap)*nh - hgap, (w+wgap)*nw - wgap))
+        else:
+            assert 0, 'you have wrong number of dimension input {}'.format(X.ndim) 
+        for n, x in enumerate(X):
+            i = n%nw
+            j = n // nw
+            rs, cs = j*(h+hgap), i*(w+wgap)
+            img[rs:rs+h, cs:cs+w] = x
+        if c == 1:
+            img = img[:,:,0]
+        if save:
+            writeImg(normalize_img(img), save_path)
+        return img
 
-    # [0, 1] -> [0,255]
-    #if isinstance(X.flatten()[0], np.floating):
-    #    X = (255.99*X).astype('uint8')
+def save_images_list(X_list, save_path=None, save=True, dim_ordering='tf'):
+    
+    # X_list: list of X
+    # X: B*C*H*W
+
+    X = X_list[0]
     n_samples = X.shape[0]
-    rows = int(np.sqrt(n_samples))
-    while n_samples % rows != 0:
-        rows -= 1
-
-    nh, nw = rows, n_samples//rows
+    nh = n_samples
+    nw = len(X_list)
+    
 
     if X.ndim == 4:
         # BCHW -> BHWC
         if dim_ordering == 'tf':
             pass
-        else:           
-            X = X.transpose(0,2,3,1)
+        else:  
+            for idx, X in enumerate(X_list) :       
+                X_list[idx] = X.transpose(0,2,3,1)
+        
+        X = X_list[0]
         h, w, c = X[0].shape[:3]
         hgap, wgap = int(0.1*h), int(0.1*w)
         img = np.zeros(((h+hgap)*nh - hgap, (w+wgap)*nw-wgap,c))
+
     elif X.ndim == 3:
         h, w = X[0].shape[:2]
         hgap, wgap = int(0.1*h), int(0.1*w)
         img = np.zeros(((h+hgap)*nh - hgap, (w+wgap)*nw - wgap))
     else:
         assert 0, 'you have wrong number of dimension input {}'.format(X.ndim) 
-    for n, x in enumerate(X):
-        i = n%nw
-        j = n // nw
-        rs, cs = j*(h+hgap), i*(w+wgap)
-        #print(i,j, h,w, x.shape, img.shape, rs,cs, rs+h,cs+w )
-        img[rs:rs+h, cs:cs+w] = x
+    
+    for n, x_tuple in enumerate(zip(*X_list)):
+        
+        i = n
+        for j, x in enumerate(x_tuple):
+            rs, cs = i*(h+hgap), j*(w+wgap)
+            img[rs:rs+h, cs:cs+w] = x
 
     if c == 1:
         img = img[:,:,0]
-    #imshow(img)
-    #print(save_path)
     if save:
         writeImg(img.astype(np.uint8), save_path)
     return img

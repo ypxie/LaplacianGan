@@ -91,7 +91,7 @@ class ResnetBlock(nn.Module):
     def __init__(self, dim, norm, use_bias=False):
         super(ResnetBlock, self).__init__()
         norm_layer = getNormLayer(norm)
-
+        
         seq = [conv_norm2(dim, dim, norm_layer, use_bias=use_bias), 
                conv_norm2(dim, dim, norm_layer, use_activation=False, use_bias=use_bias)]
         self.res_block = nn.Sequential(*seq)
@@ -113,7 +113,7 @@ class MultiModalBlock(nn.Module):
         for i in range(upsample_factor):
             seq += [nn.Upsample(scale_factor=2, mode='nearest')]
             seq += [conv_norm2(cur_dim, cur_dim//2, norm_layer)]
-            cur_dim /= 2
+            cur_dim = cur_dim//2
 
         self.upsample_path = nn.Sequential(*seq)
         self.joint_path = nn.Sequential(*[
@@ -145,7 +145,8 @@ class sentConv2(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='ln', output_size=256):
+    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='ln', 
+                 output_size=256,side_list=[64, 128, 256]):
         super(Generator, self).__init__()
         self.__dict__.update(locals())
 
@@ -188,7 +189,7 @@ class Generator(nn.Module):
             # if need to reduce dimension
             if num_scales[i] in reduce_dim_at:
                 seq += [conv_norm2(cur_dim, cur_dim//2, norm_layer)]
-                cur_dim /= 2
+                cur_dim = cur_dim//2
             # print ('scale {} cur_dim {}'.format(num_scales[i], cur_dim))
             # add residual blocks
             for n in range(num_resblock):
@@ -336,7 +337,7 @@ class Discriminator(torch.nn.Module):
     '''
 
     def __init__(self, input_size, num_chan,  hid_dim, 
-                sent_dim, emb_dim, norm='ln'):
+                sent_dim, emb_dim, norm='ln', side_list=[64, 128, 256]):
         super(Discriminator, self).__init__()
         self.register_buffer('device_id', torch.IntTensor(1))
         self.__dict__.update(locals())

@@ -246,6 +246,8 @@ def imresize(img, resizeratio=1):
         temp = np.reshape(temp, temp.shape + (1,))
     return temp
 
+scipy.misc.imresize
+
 def imresize_shape(img, outshape):
     if len(img.shape) == 3:
         if img.shape[0] == 1 or img.shape[0] == 3:
@@ -262,9 +264,8 @@ def imresize_shape(img, outshape):
     outshape = ( int(outshape[1]) , int(outshape[0])  )
     if (img.shape[0], img.shape[1]) == outshape:
         return img
-    # temp = cv2.resize(img, outshape).astype(float)
-    temp = misc.imresize(img, size=outshape).astype(float)
-
+    #temp = cv2.resize(img, outshape).astype(float)
+    temp = misc.imresize(img, size=outshape, interp='bilinear').astype(float)
 
     if len(img.shape) == 3 and img.shape[2] == 1:
         temp = np.reshape(temp, temp.shape + (1,))

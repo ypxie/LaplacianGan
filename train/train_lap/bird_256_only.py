@@ -11,12 +11,12 @@ from torch.nn.utils import weight_norm
 from LaplacianGan.models.refineModels import Discriminator as Disc
 from LaplacianGan.models.refineModels import Generator as Gen
 from LaplacianGan.lapGan import train_gans
+#from LaplacianGan.zzGan import train_gans
 
 from LaplacianGan.fuel.datasets import TextDataset
 
 
 home = os.path.expanduser('~')
-dropbox = os.path.join(home, 'Dropbox')
 data_root = os.path.join('..', '..', 'Data')
 
 model_root = os.path.join('..', '..', 'Models')
@@ -24,7 +24,7 @@ data_name = 'birds'
 datadir = os.path.join(data_root, data_name)
 
 
-device_id = 2
+device_id = 1
 
 if  __name__ == '__main__':
 
@@ -33,9 +33,9 @@ if  __name__ == '__main__':
                         help='weight decay for training')
     parser.add_argument('--maxepoch', type=int, default=12800000, metavar='N',
                         help='number of epochs to train (default: 10)')
-    parser.add_argument('--g_lr', type=float, default = .001, metavar='LR',
+    parser.add_argument('--g_lr', type=float, default = .0002, metavar='LR',
                         help='learning rate (default: 0.01)')
-    parser.add_argument('--d_lr', type=float, default = .001, metavar='LR',
+    parser.add_argument('--d_lr', type=float, default = .0002, metavar='LR',
                         help='learning rate (default: 0.01)')
 
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
@@ -50,7 +50,7 @@ if  __name__ == '__main__':
     parser.add_argument('--display_freq', type=int, default= 200, metavar='N',
                         help='plot the results every {} batches')
     
-    parser.add_argument('--batch_size', type=int, default= 8, metavar='N',
+    parser.add_argument('--batch_size', type=int, default= 3, metavar='N',
                         help='batch size.')
     parser.add_argument('--num_emb', type=int, default= 4, metavar='N',
                         help='number of emb chosen for each image.')
@@ -72,18 +72,26 @@ if  __name__ == '__main__':
                         help='whether or not to use content loss.')
     parser.add_argument('--save_folder', type=str, default= 'tmp_images', metavar='N',
                         help='folder to save the temper images.')
+    
+    ## add more
+    parser.add_argument('--imsize', type=int, default=256, 
+                        help='output image size')
+    parser.add_argument('--epoch_decay', type=float, default=100, 
+                        help='decay epoch image size')
+    parser.add_argument('--load_from_epoch', type=int, default=0, 
+                        help='load from epoch')
 
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
     img_size, lratio = 256, 4
-    side_list = []
-    
-    netG = Gen(input_size  = img_size, sent_dim= 1024, noise_dim = args.noise_dim, 
-               num_chan=3, emb_dim= 128, hid_dim= 128, norm='bn', side_list=side_list)
+    norm = 'bn'
 
+    netG = Gen( sent_dim= 1024, noise_dim = args.noise_dim, 
+                emb_dim= 128, hid_dim= 128, norm=norm, side_list=[64,12,8,256])
+    # output_size = 64
     netD = Disc(input_size = img_size, num_chan = 3, hid_dim = 128, 
-                sent_dim=1024, emb_dim= 128,  norm='bn', side_list=side_list)
+                sent_dim=1024, emb_dim= 128,  norm=norm, side_list=[64,128,256])
 
     print(netG)
     print(netD)
@@ -101,5 +109,5 @@ if  __name__ == '__main__':
     filename_train = os.path.join(datadir, 'train')
     dataset.train = dataset.get_data(filename_train)
 
-    model_name ='lapgan_{}_{}_only'.format(data_name, img_size)
+    model_name ='real_lapgan_{}_{}_{}'.format(data_name, img_size, norm)
     train_gans(dataset, model_root, model_name, netG, netD,args)
