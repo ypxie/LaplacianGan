@@ -100,7 +100,6 @@ if  __name__ == '__main__':
     dataset = TextDataset(datadir, 'cnn-rnn', 4)
     filename_test = os.path.join(datadir, 'test')
     dataset.test = dataset.get_data(filename_test)
-
     filename_train = os.path.join(datadir, 'train')
     dataset.train = dataset.get_data(filename_train)
 

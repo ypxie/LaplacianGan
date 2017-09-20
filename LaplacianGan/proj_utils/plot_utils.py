@@ -204,5 +204,6 @@ def save_images(X, save_path=None, save=True, dim_ordering='tf'):
     #imshow(img)
     #print(save_path)
     if save:
-        writeImg(img.astype(np.uint8), save_path)
+        save_image = (img.copy() + 1) /2 * 255 
+        writeImg(save_image.astype(np.uint8), save_path)
     return img

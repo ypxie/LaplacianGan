@@ -190,33 +190,37 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             netD.zero_grad()
 
             g_emb = Variable(embeddings.data, volatile=False)
-            fake_images, _ = netG(g_emb, z)
-            # import pdb; pdb.set_trace()
+            fake_images, _ = netG(g_emb, z) # forward generator
+
             discriminator_loss = 0
             for key, _ in fake_images.items():
                 # iterate over image of different sizes.
                 this_img   = to_device(images[key], netD.device_id)
                 this_wrong = to_device(wrong_images[key], netD.device_id)
-
                 this_fake  = Variable(fake_images[key].data) # to cut connection to netG
+
                 # TODO do we need multiple embeddings?
+                # A faster implementation it is ok right?
+                # joint_inputs = torch.cat([this_img, this_wrong, this_fake], 0)
+                # joint_embeddings = torch.cat([embeddings, embeddings, embeddings], 0)
+                # all_dict = netD(joint_inputs)
+                # bz = joint_inputs.size(0) / 3 # the size for each type [this_img, this_wrong, this_fake]
+
+                # real_logit, real_img_logit  =  real_dict['pair_disc'][:bz], real_dict['img_disc'][:bz]
+                # wrong_logit, wrong_img_logit =  wrong_dict['pair_disc'][bz:bz*2], wrong_dict['img_disc'][bz:bz*2]
+                # fake_logit, fake_img_logit =  fake_dict['pair_disc'][bz*2:], fake_dict['img_disc'][bz*2:]
+
                 real_dict   = netD(this_img,   embeddings)
                 wrong_dict  = netD(this_wrong, embeddings)
                 fake_dict   = netD(this_fake,  embeddings)
+                real_logit, real_img_logit  =  real_dict['pair_disc'], real_dict['img_disc']
+                wrong_logit, wrong_img_logit =  wrong_dict['pair_disc'], wrong_dict['img_disc']
+                fake_logit, fake_img_logit =  fake_dict['pair_disc'], fake_dict['img_disc']
 
-                real_logit, real_img_logit  = \
-                                 real_dict['pair_disc'], real_dict['img_disc']
-                wrong_logit, wrong_img_logit = \
-                                 wrong_dict['pair_disc'], wrong_dict['img_disc']
-                fake_logit, fake_img_logit =  \
-                                 fake_dict['pair_disc'], fake_dict['img_disc']
-
+                # compute loss
                 chose_img_real = wrong_img_logit if random.random() > 0.5 else real_img_logit
-                
-                discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit,
-                                        fake_logit, args.wgan )
-                discriminator_loss += compute_d_img_loss(chose_img_real, 
-                                        fake_img_logit, args.wgan )
+                discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan )
+                discriminator_loss += compute_d_img_loss(chose_img_real, fake_img_logit, args.wgan )
         
             d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
             d_loss_val = -d_loss_val if args.wgan else d_loss_val
@@ -224,7 +228,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             optimizerD.step()    
             netD.zero_grad()
             d_loss_plot.plot(d_loss_val)
-            # real_dict, wrong_dict, fake_dict = None, None, None
 
             ''' update G '''
             for p in netD.parameters(): 
@@ -250,7 +253,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             netG.zero_grad()
             g_loss_plot.plot(g_loss_val)
             lr_plot.plot(g_lr)
-            # fake_dict, real_dict, fake_images= None, None, None
 
             global_iter += 1
 
@@ -270,7 +272,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             test_images, _, test_embeddings, _, _ = test_sampler(args.batch_size, 1)
             test_embeddings = to_device(test_embeddings, netG.device_id, requires_grad=False)
             z.data.normal_(0, 1)
-            #c_test    =  Variable(c_test.data, volatile=True)
             samples, _ = netG(test_embeddings, z)
             gen_samples.append(samples)
             img_samples.append(test_images)
