@@ -365,24 +365,57 @@ class Bottleneck(nn.Module):
 
         return out
 
-def getNormLayer(norm='bn', dim=2):
-    
-    if norm is 'ln' or norm is 'layer':
-        return LayerNormal
-    elif norm is 'no':
-        return pretending_norm
+class LayerNorm1d(nn.Module):
 
+    def __init__(self, features, eps=1e-6):
+        super(LayerNorm1d, self).__init__()
+        self.gamma = nn.Parameter(torch.ones(features))
+        self.beta = nn.Parameter(torch.zeros(features))
+        self.eps = eps
+
+    def forward(self, x):
+        mean = x.mean(-1, keepdim=True)
+        std = x.std(-1, keepdim=True)
+        return self.gamma * (x - mean) / (std + self.eps) + self.beta  
+
+class LayerNorm2d(nn.Module):
+    ''' 2D Layer normalization module '''
+
+    def __init__(self, features, eps=1e-6):
+        super(LayerNorm2d, self).__init__()
+        self.gamma = nn.Parameter(torch.ones(1, features, 1, 1))
+        self.beta = nn.Parameter(torch.zeros(1, features, 1, 1))
+        self.eps = eps
+
+    def forward(self, input):
+        b,c,h,w = input.size()
+        x = input.view(b, -1)
+        mean = x.mean(-1, keepdim=True).view(b,1,1,1)
+        std = x.std(-1, keepdim=True).view(b,1,1,1)
+
+        out = self.gamma * (input -  mean)
+        factor = (std + self.eps) + self.beta  
+        out = out / factor
+        return out
+
+def getNormLayer(norm='bn', dim=2):
+
+    norm_layer = None
     if dim == 2:
-        if norm is 'bn':
+        if norm == 'bn':
             norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
-        elif norm is 'instance':
+        elif norm == 'instance':
             norm_layer = functools.partial(nn.InstanceNorm2d, affine=False)
+        elif norm == 'ln':
+            norm_layer = functools.partial(LayerNorm2d)
     elif dim == 1:
-        if norm is 'bn':
+        if norm == 'bn':
             norm_layer = functools.partial(nn.BatchNorm1d, affine=True)
-        elif norm is 'instance':
+        elif norm == 'instance':
             norm_layer = functools.partial(nn.InstanceNorm1d, affine=False)
-    
+        elif norm == 'ln':
+            norm_layer = functools.partial(LayerNorm1d)
+    assert(norm_layer != None)
     return norm_layer
 
 def batch_forward(cls, BatchData, batch_size,**kwards):
