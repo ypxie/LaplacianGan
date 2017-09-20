@@ -85,7 +85,7 @@ if  __name__ == '__main__':
 
     args.cuda = torch.cuda.is_available()
     img_size, lratio = 256, 4
-    norm = 'bn'
+    norm = 'ln'
 
     netG = Gen( sent_dim= 1024, noise_dim = args.noise_dim, 
                 emb_dim= 128, hid_dim= 128, norm=norm, side_list=[64])
