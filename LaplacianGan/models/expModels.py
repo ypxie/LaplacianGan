@@ -209,7 +209,8 @@ class Generator(nn.Module):
 
             # add upsample module to concat with upper layers 
             if num_scales[i] in text_upsampling_at:
-                setattr(self, 'upsample_%d'%(num_scales[i]), MultiModalBlock(text_dim=cur_dim, img_dim=cur_dim//2, norm=norm, activation=activation))
+                setattr(self, 'upsample_%d'%(num_scales[i]), 
+                MultiModalBlock(text_dim=cur_dim, img_dim=cur_dim//2, norm=norm, activation=activation))
             # configure side output module
             if num_scales[i] in side_output_at:
                 setattr(self, 'tensor_to_img_%d'%(num_scales[i]), branch_out2(cur_dim))

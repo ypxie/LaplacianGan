@@ -29,9 +29,9 @@ if  __name__ == '__main__':
                         help='weight decay for training')
     parser.add_argument('--maxepoch', type=int, default=600, metavar='N',
                         help='number of epochs to train (default: 10)')
-    parser.add_argument('--g_lr', type=float, default = .0002, metavar='LR',
+    parser.add_argument('--g_lr', type=float, default = .0006, metavar='LR',
                         help='learning rate (default: 0.01)')
-    parser.add_argument('--d_lr', type=float, default = .0002, metavar='LR',
+    parser.add_argument('--d_lr', type=float, default = .0006, metavar='LR',
                         help='learning rate (default: 0.01)')
 
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
@@ -46,7 +46,7 @@ if  __name__ == '__main__':
     parser.add_argument('--display_freq', type=int, default= 200, metavar='N',
                         help='plot the results every {} batches')
     
-    parser.add_argument('--batch_size', type=int, default=8, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=16, metavar='N',
                         help='batch size.')
     parser.add_argument('--num_emb', type=int, default=4, metavar='N',
                         help='number of emb chosen for each image.')
@@ -64,13 +64,13 @@ if  __name__ == '__main__':
                         help='the channel of each image.')
     parser.add_argument('--KL_COE', type=float, default= 4, metavar='N',
                         help='kl divergency coefficient.')
-    parser.add_argument('--use_content_loss', type=bool, default= False, metavar='N',
+    parser.add_argument('--use_content_loss', type=bool, default= True, metavar='N',
                         help='whether or not to use content loss.')
     parser.add_argument('--save_folder', type=str, default= 'tmp_images', metavar='N',
                         help='folder to save the temper images.')
 
     ## add more
-    parser.add_argument('--imsize', type=int, default=256, 
+    parser.add_argument('--imsize', type=int, default=64, 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
                         help='decay epoch image size')
