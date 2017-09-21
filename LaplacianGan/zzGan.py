@@ -10,6 +10,7 @@ from torch.autograd import Variable
 from torch.nn.utils import clip_grad_norm
 from .proj_utils.plot_utils import *
 from .proj_utils.torch_utils import *
+import time
 
 TINY = 1e-8
 
@@ -116,17 +117,18 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     d_lr = args.d_lr
     g_lr = args.g_lr
     tot_epoch = args.maxepoch
+    if not args.debug_mode:
+        train_sampler = dataset.train.next_batch
+        test_sampler  = dataset.test.next_batch
+        number_example = dataset.train._num_examples
+        updates_per_epoch = int(number_example / args.batch_size)
+    else:
+        train_sampler = fake_sampler
+        test_sampler = fake_sampler
+        number_example = 16
+        updates_per_epoch = 10
 
-    train_sampler = dataset.train.next_batch
-    test_sampler  = dataset.test.next_batch
-    number_example = dataset.train._num_examples
-
-    # train_sampler = fake_sampler
-    # test_sampler = fake_sampler
-    # number_example = 16
-    # updates_per_epoch = 10
     ''' configure optimizer '''
-    updates_per_epoch = int(number_example / args.batch_size)
     num_test_forward = 1 # 64 // args.batch_size // args.test_sample_num # number of testing samples to show
     if args.wgan:
         optimizerD = optim.RMSprop(netD.parameters(), lr= d_lr,  weight_decay=args.weight_decay)
@@ -168,7 +170,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
     global_iter = 0
     for epoch in range(start_epoch, tot_epoch):
-        
+        start_timer = time.time()
         # learning rate
         if epoch % args.epoch_decay == 0:
             d_lr = d_lr/2
@@ -269,6 +271,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         gen_samples = []
         img_samples = []
         vis_samples = {'output_64': [], 'output_128': [], 'output_256': []}
+
         for k in vis_samples.keys():
             vis_samples[k] = [None for i in range(args.test_sample_num + 1)] # +1 to fill real image
         for idx_test in range(num_test_forward):
@@ -277,7 +280,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             test_embeddings = to_device(test_embeddings, netG.device_id, volatile=True)
             testing_z = Variable(z.data, volatile=True)
             tmp_samples = {}
-
 
             for t in range(args.test_sample_num):
                 testing_z.data.normal_(0, 1)
@@ -299,11 +301,11 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                     else:
                         vis_samples[k][t+1] = np.concatenate([vis_samples[k][t+1], cpu_data], 0)
 
-
+        end_timer = time.time() - start_timer
         # visualize samples
-        # import pdb; pdb.set_trace()
         for typ, v in vis_samples.items():
-            plot_imgs(v, epoch, typ, 'test_samples', path=model_folder)
+            if v[0] != None:
+                plot_imgs(v, epoch, typ, 'test_samples', path=model_folder)
     
         # save weights      
         if epoch % args.save_freq == 0:
@@ -311,4 +313,4 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
             print('save weights at {}'.format(model_folder))
         
-        print ('epoch {}/{} finished ...'.format(epoch, tot_epoch))
+        print ('epoch {}/{} finished [time={}] ...'.format(epoch, tot_epoch, end_timer))

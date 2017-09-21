@@ -56,9 +56,6 @@ def genAct():
     return nn.ReLU(True)
 def discAct():
     return nn.LeakyReLU(0.2, True)
-
-
-
 def get_activation_layer(name):
     if name == 'lrelu':
         act_layer = nn.LeakyReLU(0.2, inplace=True)
@@ -136,9 +133,10 @@ class MultiModalBlock(nn.Module):
         out = self.joint_path(torch.cat([img, upsampled_text],1))
         return out
 
+
 class sentConv2(nn.Module):
     def __init__(self, in_dim, row, col, channel, norm='bn',
-                 activ = None, last_active = False, ):
+                 activ = None, last_active = False):
         super(sentConv2, self).__init__()
         self.__dict__.update(locals())
         out_dim = row*col*channel
@@ -157,18 +155,18 @@ class sentConv2(nn.Module):
         return output
 
 
+
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
-                 output_size=256, side_list=[64, 128, 256]):
+                 output_size=256):
         super(Generator, self).__init__()
         self.__dict__.update(locals())
-
-        self.register_buffer('device_id', torch.IntTensor(1))
-        self.condEmbedding = condEmbedding(sent_dim, emb_dim)
-
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
 
+
+        self.register_buffer('device_id', torch.IntTensor(1))
+        self.condEmbedding = condEmbedding(sent_dim, emb_dim)
         self.vec_to_tensor = sentConv2(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm=norm)
         
         '''user defefined'''
@@ -220,6 +218,7 @@ class Generator(nn.Module):
         self.apply(weights_init)
 
     def forward(self, sent_embeddings, z=None):
+        # sent_embeddings: [B, 1024]
         out_dict = OrderedDict()
         sent_random, kl_loss  = self.condEmbedding(sent_embeddings)
         text = torch.cat([sent_random, z], dim=1)
@@ -250,6 +249,53 @@ class Generator(nn.Module):
 
         return out_dict, kl_loss
 
+class GeneratorSimpleSkip(Generator):
+    # very simple skip connection to embed text code in multiscale outputs
+    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
+                 output_size=256):
+        super(GeneratorSimpleSkip, self).__init__(sent_dim, noise_dim, emb_dim, hid_dim, norm, activation, output_size)
+        self.upsample_4 = None
+        if self.output_size > 64:
+            self.upsample_8  = None
+        if self.output_size > 128:
+            self.upsample_16 = None
+
+    def forward(self, sent_embeddings, z=None):
+        # sent_embeddings: [B, 1024]
+        
+        out_dict = OrderedDict()
+        sent_random, kl_loss  = self.condEmbedding(sent_embeddings)
+        text = torch.cat([sent_random, z], dim=1)
+        
+        # replicate sent_random
+        text_hidden =  sent_random.unsqueeze(-1).unsqueeze(-1)
+        b, text_dim = sent_random.size()
+
+        x = self.vec_to_tensor(text)
+        x_4 = self.scale_4(x)
+        x_8 = self.scale_8(x_4)
+        x_16 = self.scale_16(x_8)
+        x_32 = self.scale_32(x_16)
+        
+        # concat text_hiddent to x_32
+        x_32_4 = torch.cat([x_32, text_hidden.expand((b,text_dim,32,32))], 1)
+        x_64 = self.scale_64(x_32_4)
+        out_dict['output_64'] = self.tensor_to_img_64(x_64)
+        
+        if self.output_size > 64:
+            # skip 8x8 feature map to 64 and send to 128
+            x_64_8 = torch.cat([x_64, text_hidden.expand((b,text_dim,64,64))], 1)
+            x_128 = self.scale_128(x_64_8)
+            out_dict['output_128'] = self.tensor_to_img_128(x_128)
+
+        if self.output_size > 128:
+            # skip 16x16 feature map to 128 and send to 256
+            x_128_16 = torch.cat([x_128, text_hidden.expand((b,text_dim,128,128))], 1)
+            out_256 = self.scale_256(x_128_16)
+
+            out_dict['output_256'] = self.tensor_to_img_256(out_256)
+
+        return out_dict, kl_loss  
 
 
 class ImageDown(torch.nn.Module):
@@ -308,15 +354,14 @@ class ImageDown(torch.nn.Module):
         #output =  self.activ(content_code + node_1)
         return out
 
-class catSentConv2(nn.Module):
-    def __init__(self, enc_dim, emb_dim, feat_size, 
-                 norm, activ):
+class DiscClassifier(nn.Module):
+    def __init__(self, enc_dim, emb_dim, feat_size, norm, activ):
         '''
           enc_dim: B*enc_dim*H*W
           emb_dim: the dimension of feeded embedding
           feat_size: the feature map size of the feature map. 
         '''
-        super(catSentConv2, self).__init__()
+        super(DiscClassifier, self).__init__()
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
 
@@ -358,27 +403,27 @@ class Discriminator(torch.nn.Module):
         activ = discAct()
 
         _layers = [nn.Linear(sent_dim, emb_dim)]
-        _layers += [discAct()]
+        _layers += [activ]
         self.context_emb_pipe = nn.Sequential(*_layers)
 
         
         enc_dim = hid_dim * 4 # the ImageDown output dimension
         self.img_encoder_64   = ImageDown(64,  num_chan,  hid_dim,  enc_dim, norm)  # 4x4
-        self.pair_disc_64   = catSentConv2(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
+        self.pair_disc_64   = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
         _layers =  [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]
         self.img_disc_64 = nn.Sequential(*_layers)
         self.max_out_size = 64
 
         if input_size > 64:
             self.img_encoder_128  = ImageDown(128,  num_chan, hid_dim,  enc_dim, norm)  # 8
-            self.pair_disc_128  = catSentConv2(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
+            self.pair_disc_128  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
             _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 4
             self.img_disc_128 = nn.Sequential(*_layers)
             self.max_out_size = 128
 
         if input_size > 128:
             self.img_encoder_256  = ImageDown(256, num_chan,  hid_dim,  enc_dim, norm)  # 8
-            self.pair_disc_256  = catSentConv2(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
+            self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
             _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding = 0, bias=True)]   # 4
             self.img_disc_256 = nn.Sequential(*_layers)
             self.max_out_size = 256
