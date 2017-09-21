@@ -248,6 +248,18 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 fake_pair_logit, fake_img_logit, fake_img_code  = \
                 fake_dict['pair_disc'], fake_dict['img_disc'], fake_dict['content_code']
                 generator_loss += compute_g_loss(fake_pair_logit, fake_img_logit, args.wgan)               
+                
+                if use_content_loss:
+                    if epoch > 100:
+                        this_img   = to_device(images[key], netD.device_id)
+                        real_dict   = netD(this_img,   embeddings)
+                        real_img_code = real_dict['content_code']
+                        #l2 = torch.mean((real_img_code - fake_img_code)**2) 
+                        #l1 =
+                        #conten_loss = GaussianLogDensity(real_img_code, fake_img_code)
+                        conten_loss = torch.mean(torch.abs(fake_img_code - real_img_code))* 4
+                        generator_loss += conten_loss
+                        content_loss_plot.plot(conten_loss.cpu().data.numpy().mean())
 
             generator_loss.backward()
             g_loss_val = generator_loss.cpu().data.numpy().mean()
