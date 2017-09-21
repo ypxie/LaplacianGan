@@ -8,30 +8,26 @@ import argparse, os
 import torch, h5py
 from torch.nn.utils import weight_norm
 
-from LaplacianGan.models.refineModels import Discriminator as Disc
-from LaplacianGan.models.refineModels import Generator as Gen
-from LaplacianGan.lapGan import train_gans
-#from LaplacianGan.zzGan import train_gans
-
+from LaplacianGan.models.expModels import Discriminator as Disc
+from LaplacianGan.models.expModels import Generator as Gen
+from LaplacianGan.models.expModels import GeneratorSimpleSkip 
+from LaplacianGan.zzGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
-
 
 home = os.path.expanduser('~')
 data_root = os.path.join('..', '..', 'Data')
-
 model_root = os.path.join('..', '..', 'Models')
 data_name = 'birds'
 datadir = os.path.join(data_root, data_name)
 
-
-device_id = 2
+device_id = 3
 
 if  __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')
-    parser.add_argument('--maxepoch', type=int, default=12800000, metavar='N',
+    parser.add_argument('--maxepoch', type=int, default=600, metavar='N',
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--g_lr', type=float, default = .0002, metavar='LR',
                         help='learning rate (default: 0.01)')
@@ -45,14 +41,14 @@ if  __name__ == '__main__':
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
     
-    parser.add_argument('--save_freq', type=int, default= 500, metavar='N',
+    parser.add_argument('--save_freq', type=int, default= 20, metavar='N',
                         help='how frequent to save the model')
     parser.add_argument('--display_freq', type=int, default= 200, metavar='N',
                         help='plot the results every {} batches')
     
-    parser.add_argument('--batch_size', type=int, default= 16, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=8, metavar='N',
                         help='batch size.')
-    parser.add_argument('--num_emb', type=int, default= 4, metavar='N',
+    parser.add_argument('--num_emb', type=int, default=4, metavar='N',
                         help='number of emb chosen for each image.')
 
     parser.add_argument('--gp_lambda', type=int, default=10, metavar='N',
@@ -72,7 +68,7 @@ if  __name__ == '__main__':
                         help='whether or not to use content loss.')
     parser.add_argument('--save_folder', type=str, default= 'tmp_images', metavar='N',
                         help='folder to save the temper images.')
-    
+
     ## add more
     parser.add_argument('--imsize', type=int, default=256, 
                         help='output image size')
@@ -80,34 +76,44 @@ if  __name__ == '__main__':
                         help='decay epoch image size')
     parser.add_argument('--load_from_epoch', type=int, default=0, 
                         help='load from epoch')
+    parser.add_argument('--model_name', type=str, default='zz_gan', 
+                        help='load from epoch')
+    parser.add_argument('--test_sample_num', type=int, default=4, 
+                        help='The number of runs for each embeddings when testing')
+    parser.add_argument('--norm_type', type=str, default='bn', 
+                        help='The number of runs for each embeddings when testing')
+    parser.add_argument('--gen_activation_type', type=str, default='relu', 
+                        help='The number of runs for each embeddings when testing')
+    parser.add_argument('--debug_mode', action='store_true', 
+                        help='debug mode use fake dataset loader')   
 
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
-    img_size, lratio = 256, 4
-    norm = 'ln'
+    
+    netG = Gen(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type,
+                 activation=args.gen_activation_type, output_size=args.imsize)
 
-    netG = Gen( sent_dim= 1024, noise_dim = args.noise_dim, 
-                emb_dim= 128, hid_dim= 128, norm=norm, side_list=[64])
-    # output_size = 64
-    netD = Disc(input_size = img_size, num_chan = 3, hid_dim = 128, 
-                sent_dim=1024, emb_dim= 128,  norm=norm, side_list=[64])
+    netD = Disc(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
+                sent_dim=1024, emb_dim=128, norm=args.norm_type)
 
     print(netG)
-    print(netD)
+    print(netD) 
 
     if args.cuda:
         netD = netD.cuda(device_id)
         netG = netG.cuda(device_id)
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
-        
-    dataset = TextDataset(datadir, 'cnn-rnn', lratio)
-    filename_test = os.path.join(datadir, 'test')
-    dataset.test = dataset.get_data(filename_test)
-
-    filename_train = os.path.join(datadir, 'train')
-    dataset.train = dataset.get_data(filename_train)
-
-    model_name ='64_lapgan_{}_{}_{}'.format(data_name, img_size, norm)
-    train_gans(dataset, model_root, model_name, netG, netD,args)
+    
+    if not args.debug_mode:
+        dataset = TextDataset(datadir, 'cnn-rnn', 4)
+        filename_test = os.path.join(datadir, 'test')
+        dataset.test = dataset.get_data(filename_test)
+        filename_train = os.path.join(datadir, 'train')
+        dataset.train = dataset.get_data(filename_train)
+    else:
+        dataset = []
+        print ('>> in debug mode')
+    model_name ='yp_{}_{}_{}'.format(args.model_name, data_name, args.imsize)
+    train_gans(dataset, model_root, model_name, netG, netD, args)
