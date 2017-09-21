@@ -134,6 +134,31 @@ class MultiModalBlock(nn.Module):
         return out
 
 
+class MultiModalBlock2(nn.Module):
+    def __init__(self, text_dim, img_dim, norm, activation='relu', use_bias=False, upsample_factor=3):
+        super(MultiModalBlock2, self).__init__()
+        norm_layer = getNormLayer(norm)
+        activ = get_activation_layer(activation)
+        # upsampling 2^3 times
+        seq = []
+        cur_dim = text_dim
+        for i in range(upsample_factor):
+            seq += [nn.Upsample(scale_factor=2, mode='nearest')]
+            seq += [conv_norm2(cur_dim, cur_dim//2, norm_layer, activation=activ)]
+            cur_dim = cur_dim//2
+
+        self.upsample_path = nn.Sequential(*seq)
+        self.joint_path = nn.Sequential(*[
+            conv_norm2(cur_dim+img_dim, img_dim, norm_layer, kernel_size=1, use_activation=False)
+        ])
+    def forward(self, text, img ):
+        # text is  [B, 128]
+        # img is 
+        upsampled_text = self.upsample_path(text)
+        
+        out = self.joint_path(torch.cat([img, upsampled_text],1))
+        return out
+
 class sentConv2(nn.Module):
     def __init__(self, in_dim, row, col, channel, norm='bn',
                  activ = None, last_active = False):
@@ -209,6 +234,7 @@ class Generator(nn.Module):
 
             # add upsample module to concat with upper layers 
             if num_scales[i] in text_upsampling_at:
+                ## img_dim // 2 is bacause 
                 setattr(self, 'upsample_%d'%(num_scales[i]), MultiModalBlock(text_dim=cur_dim, img_dim=cur_dim//2, norm=norm, activation=activation))
             # configure side output module
             if num_scales[i] in side_output_at:
@@ -217,10 +243,10 @@ class Generator(nn.Module):
         
         self.apply(weights_init)
 
-    def forward(self, sent_embeddings, z=None):
+    def forward(self, sent_embeddings, z):
         # sent_embeddings: [B, 1024]
         out_dict = OrderedDict()
-        sent_random, kl_loss  = self.condEmbedding(sent_embeddings)
+        sent_random, kl_loss  = self.condEmbedding(sent_embeddings) # sent_random [B, 128]
         text = torch.cat([sent_random, z], dim=1)
 
         x = self.vec_to_tensor(text)
@@ -246,6 +272,49 @@ class Generator(nn.Module):
             out_256 = self.scale_256(x_128_16)
 
             out_dict['output_256'] = self.tensor_to_img_256(out_256)
+
+        return out_dict, kl_loss
+
+
+class Generator2(Generator):
+    # very simple skip connection to embed text code in multiscale outputs
+    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
+                 output_size=256):
+        super(Generator2, self).__init__(sent_dim, noise_dim, emb_dim, hid_dim, norm, activation, output_size)
+        print ('Generator 2 version without upsample_32')
+        delattr(self, 'upsample_4')
+        delattr(self, 'upsample_8')
+        delattr(self, 'upsample_16')
+            
+
+    def forward(self, sent_embeddings, z):
+        # sent_embeddings: [B, 1024]
+        out_dict = OrderedDict()
+        sent_random, kl_loss  = self.condEmbedding(sent_embeddings) # sent_random [B, 128]
+        text = torch.cat([sent_random, z], dim=1)
+
+        x = self.vec_to_tensor(text)
+        x_4 = self.scale_4(x)
+        x_8 = self.scale_8(x_4)
+        x_16 = self.scale_16(x_8)
+        x_32 = self.scale_32(x_16)
+        
+        # skip 4x4 feature map to 32 and send to 64
+        x_64 = self.scale_64(x_32)
+        out_dict['output_64'] = self.tensor_to_img_64(x_64)
+        
+        # if self.output_size > 64:
+        #     # skip 8x8 feature map to 64 and send to 128
+        #     x_64_8 = self.upsample_8(x_8, x_64)
+        #     x_128 = self.scale_128(x_64_8)
+        #     out_dict['output_128'] = self.tensor_to_img_128(x_128)
+
+        # if self.output_size > 128:
+        #     # skip 16x16 feature map to 128 and send to 256
+        #     x_128_16 = self.upsample_16(x_16, x_128)
+        #     out_256 = self.scale_256(x_128_16)
+
+        #     out_dict['output_256'] = self.tensor_to_img_256(out_256)
 
         return out_dict, kl_loss
 
@@ -314,8 +383,8 @@ class ImageDown(torch.nn.Module):
             cur_dim = 128 # for testing
             _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 32
             _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 16
-            _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 16
-            _layers += [conv_norm(cur_dim*4, out_dim,  norm_layer, stride=2, activation=activ)] # 16
+            _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 8
+            _layers += [conv_norm(cur_dim*4, out_dim,  norm_layer, stride=2, activation=activ)] # 4
             
             # add more layers like StackGAN did. I don't think it is necessary.
             # cur_dim = cur_dim * 4
@@ -364,12 +433,15 @@ class DiscClassifier(nn.Module):
         super(DiscClassifier, self).__init__()
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
-
+        activ = discAct()
         inp_dim = enc_dim + emb_dim
         new_feat_size = feat_size
 
-        _layers =  [nn.Conv2d(inp_dim, 1, kernel_size=new_feat_size, padding=0, bias=True)]
-
+        # TODO: do we need anyother convolutional layer to joint image-text feature.
+        # Now I added. It is different from previous verison.
+        # _layers =  [ conv_norm(inp_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
+        #              nn.Conv2d(enc_dim, 1, kernel_size=new_feat_size, padding=0, bias=True)]
+        _layers = [nn.Conv2d(inp_dim, 1, kernel_size=new_feat_size, padding=0, bias=True)]
         self.node = nn.Sequential(*_layers)
 
     def forward(self,sent_code,  img_code):

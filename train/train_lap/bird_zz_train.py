@@ -11,6 +11,7 @@ from torch.nn.utils import weight_norm
 from LaplacianGan.models.zz_model import Discriminator as Disc
 from LaplacianGan.models.zz_model import Generator as Gen
 from LaplacianGan.models.zz_model import GeneratorSimpleSkip 
+from LaplacianGan.models.zz_model import Generator2
 from LaplacianGan.zzGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
 
@@ -36,7 +37,7 @@ if  __name__ == '__main__':
 
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--reuse_weigths', action='store_false', default = False,
+    parser.add_argument('--reuse_weigths', action='store_true', 
                         help='continue from last checkout point')
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
@@ -86,12 +87,14 @@ if  __name__ == '__main__':
                         help='The number of runs for each embeddings when testing')
     parser.add_argument('--debug_mode', action='store_true', 
                         help='debug mode use fake dataset loader')   
+    parser.add_argument('--no_img_loss', action='store_true', 
+                        help='debug mode use fake dataset loader')
 
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
     
-    netG = GeneratorSimpleSkip(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+    netG = Gen(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
 
     netD = Disc(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                 sent_dim=1024, emb_dim=128, norm=args.norm_type)
@@ -104,8 +107,9 @@ if  __name__ == '__main__':
         netG = netG.cuda(device_id)
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
-    
+
     if not args.debug_mode:
+        print ('>> initialize dataset')
         dataset = TextDataset(datadir, 'cnn-rnn', 4)
         filename_test = os.path.join(datadir, 'test')
         dataset.test = dataset.get_data(filename_test)
