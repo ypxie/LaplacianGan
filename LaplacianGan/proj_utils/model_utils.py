@@ -20,18 +20,32 @@ class pretending_norm(nn.Module):
     def forward(self, x, **kwargs):
         return x
 
-
 ## Weights init function, DCGAN use 0.02 std
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
         if hasattr(m, 'weight'):
             m.weight.data.normal_(0.0, 0.02)
-    elif classname.find('BatchNorm') != -1:
+    elif classname.find('BatchNorm') != -1: 
         # Estimated variance, must be around 1
         m.weight.data.normal_(1.0, 0.02)
         # Estimated mean, must be around 0
         m.bias.data.fill_(0)
+
+# def weights_init_selu(m):
+#     classname = m.__class__.__name__
+#     if classname.find('Conv') != -1 or classname.find('Linear') != -1 :
+#         if hasattr(m, 'weight'):
+#             shape = list(m.weight.size()) # out, in, row, col
+#             f_in = np.prod(shape[1::]) if len(shape) == 4 else shape[1] 
+#             dev = np.sqrt(1.0 / f_in)
+#             m.weight.data.normal_(0.0, dev) 
+
+#     elif classname.find('BatchNorm') != -1:
+#         # Estimated variance, must be around 1
+#         m.weight.data.normal_(1.0, 0.02)
+#         # Estimated mean, must be around 0
+#         m.bias.data.fill_(0)
 
 class sentConv(nn.Module):
     def __init__(self, in_dim, row, col, channel, norm,
@@ -781,18 +795,32 @@ class LayerNormal(nn.Module):
         super(LayerNormal, self).__init__()
 
         self.eps = eps
-        self.a_2 = nn.Parameter(torch.ones(1, d_hid, 1, 1), requires_grad=True)
-        self.b_2 = nn.Parameter(torch.zeros(1, d_hid, 1, 1), requires_grad=True)
+        self.mu = nn.Parameter(torch.ones(1, d_hid, 1, 1), requires_grad=True)
+        self.beta = nn.Parameter(torch.zeros(1, d_hid, 1, 1), requires_grad=True)
 
     def forward(self, z):
+        _ndim = len(z.size())
 
-        mu   = torch.mean(z, 1, keepdim=True)
-        sigma =  torch.std(z, dim=1, keepdim=True )
+        batch_size = z.size()[0]
+        z_2d = z.view(batch_size, -1)
+
+        mu   = torch.mean(z_2d, 1, keepdim=True)
+        sigma =  torch.std(z_2d, 1, keepdim=True )
         
         #print(mu.size(), sigma.size(), z.size(),flat_z.size())
-        ln_out = (z - mu.expand_as(z)) / (sigma.expand_as(z) + self.eps)
         
-        ln_out = ln_out * self.a_2.expand_as(ln_out) + self.b_2.expand_as(ln_out)
+        if _ndim == 4: 
+            mu = mu.unsqueeze(-1).unsqueeze(-1)
+            sigma = sigma.unsqueeze(-1).unsqueeze(-1)
+            #print(mu.size(), sigma.size(), z.size())
+            ln_out = (z - mu.expand_as(z)) / (sigma.expand_as(z) + self.eps)
+            ln_out = ln_out * self.mu.expand_as(ln_out) + self.beta.expand_as(ln_out)
+        else:
+            ln_out = (z - mu.expand_as(z)) / (sigma.expand_as(z) + self.eps)
+            mu = self.mu.squeeze(-1).squeeze(-1)
+            beta = self.beta.squeeze(-1).squeeze(-1)
+            ln_out = ln_out * mu.expand_as(ln_out) + beta.expand_as(ln_out)
+
         return ln_out
 
 class ConvBN(nn.Module):

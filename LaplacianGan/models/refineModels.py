@@ -58,18 +58,10 @@ class condEmbedding(nn.Module):
 
 def genAct():
     return nn.ReLU(True)
-def discAct():
+    #return nn.SELU(True)
+def discAct():  
+    #return nn.SELU(True)
     return nn.LeakyReLU(0.2, True)
-
-def cat_vec_conv(text_enc, img_enc):
-    # text_enc (B, dim)
-    # img_enc  (B, chn, row, col)
-    b, c = text_enc.size()
-    row, col = img_enc.size()[2::]
-    text_enc = text_enc.unsqueeze(-1).unsqueeze(-1)
-    text_enc = text_enc.expand(b, c, row, col )
-    com_inp = torch.cat([img_enc, text_enc], dim=1)
-    return com_inp
 
 class Generator(nn.Module):
     def __init__(self, sent_dim,  noise_dim,  emb_dim, hid_dim, 
@@ -86,7 +78,7 @@ class Generator(nn.Module):
         
         node4_0 = sentConv(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm, None, True)
         _layers = conv_norm(self.hid_dim*8,  self.hid_dim*2, norm,  activ, 0, False,True, 1, 0)
-        _layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,True,   1, 0)
+        #_layers += conv_norm(self.hid_dim*2,  self.hid_dim*2, norm, activ, 0, False,True,   1, 0)
         _layers += conv_norm(self.hid_dim*2,  self.hid_dim*8, norm, activ, 0, False,False,  3, 1)
         node4_1 = nn.Sequential(*_layers)
         self.node_4  = resConn(node4_0, node4_1, fake_active)
@@ -95,7 +87,7 @@ class Generator(nn.Module):
         _layers += conv_norm(self.hid_dim*8,  self.hid_dim*4, norm, activ, 0, False,False,  3, 1)
         node8_0 = nn.Sequential(*_layers)
         _layers = conv_norm(self.hid_dim*4,  self.hid_dim*1, norm,  activ, 0, False,True,  1, 0)
-        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 0)
+        #_layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 0)
         _layers += conv_norm(self.hid_dim*1,  self.hid_dim*4, norm,  activ, 0, False,False, 3, 1)
         node8_1 = nn.Sequential(*_layers)
         self.node_8  = resConn(node8_0, node8_1, fake_active)
@@ -104,7 +96,7 @@ class Generator(nn.Module):
         _layers += conv_norm(self.hid_dim*4,  self.hid_dim*2, norm, activ, 0, False,False,  3, 1)
         node16_0 = nn.Sequential(*_layers)
         _layers = conv_norm(self.hid_dim*2,  self.hid_dim*1, norm,   activ, 0, False,True,  1, 0)
-        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 0)
+        #_layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 0)
         _layers += conv_norm(self.hid_dim*1,  self.hid_dim*2, norm,  activ, 0, False,False, 3, 1)
         #self.node_16 = nn.Sequential(*_layers) 
         node16_1 = nn.Sequential(*_layers)
@@ -114,7 +106,7 @@ class Generator(nn.Module):
         _layers += conv_norm(self.hid_dim*2,  self.hid_dim, norm, activ, 0, False,False,  3, 1)
         node32_0 = nn.Sequential(*_layers)
         _layers  = conv_norm(self.hid_dim,  self.hid_dim*1, norm,   activ, 0, False,True,  1, 0)
-        _layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 0)
+        #_layers += conv_norm(self.hid_dim*1,  self.hid_dim*1, norm,  activ, 0, False,False, 1, 0)
         _layers += conv_norm(self.hid_dim*1,  self.hid_dim, norm,  activ, 0, False,False, 3, 1)
         #self.node_32 = nn.Sequential(*_layers)
         node32_1 = nn.Sequential(*_layers)
@@ -246,7 +238,7 @@ class ImageDown(torch.nn.Module):
         #node_1 = self.node_1(content_code)
         #output =  self.activ(content_code + node_1)
         return content_code, content_code
-
+    
 class Discriminator(torch.nn.Module):
     '''
     enc_dim: Reduce images inputs to (B, enc_dim, H, W)
@@ -277,7 +269,7 @@ class Discriminator(torch.nn.Module):
         if 128 in side_list:
             enc_dim = hid_dim*2
             self.img_encoder_128  = ImageDown(128,  num_chan, hid_dim,  enc_dim, 4, norm)  # 8
-            self.pair_disc_128  = catSentConv(enc_dim, emb_dim, 4,  norm, activ, 0)
+            self.pair_disc_128    = catSentConv(enc_dim, emb_dim, 4,  norm, activ, 0)
             
             _layers  = conv_norm(enc_dim, hid_dim*2,   norm,  activ, 0, False, True,  1,0,1)
             _layers += conv_norm(hid_dim*2, hid_dim*2,   norm,  activ, 0, False,True, 1,0,1)

@@ -24,7 +24,7 @@ data_name = 'birds'
 datadir = os.path.join(data_root, data_name)
 
 
-device_id = 2
+device_id = 0
 
 if  __name__ == '__main__':
 
@@ -85,7 +85,7 @@ if  __name__ == '__main__':
 
     args.cuda = torch.cuda.is_available()
     img_size, lratio = 256, 4
-    norm = 'ln'
+    norm = 'bn'
 
     netG = Gen( sent_dim= 1024, noise_dim = args.noise_dim, 
                 emb_dim= 128, hid_dim= 128, norm=norm, side_list=[64])
