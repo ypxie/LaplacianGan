@@ -91,7 +91,7 @@ if  __name__ == '__main__':
 
     args.cuda = torch.cuda.is_available()
     
-    netG = GeneratorSimpleSkip(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+    netG = Gen(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
 
     netD = Disc(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                 sent_dim=1024, emb_dim=128, norm=args.norm_type)
