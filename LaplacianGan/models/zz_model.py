@@ -530,15 +530,17 @@ class Discriminator(torch.nn.Module):
         _layers += [activ]
         self.context_emb_pipe = nn.Sequential(*_layers)
 
+        enc_dim = hid_dim * 4 # the ImageDown output dimension
+
+
         _layers = []
-        cur_dim = 128
+        cur_dim, out_dim = 128, enc_dim
         norm_layer = getNormLayer(norm)
         _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 32->16
         _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 8
         _layers += [conv_norm(cur_dim*4, out_dim,  norm_layer, stride=2, activation=activ)] # 4
         shared_block  = nn.Sequential(*_layers)
         
-        enc_dim = hid_dim * 4 # the ImageDown output dimension
         self.img_encoder_64   = ImageDown(64,  num_chan,  hid_dim,  enc_dim, norm, shared_block)  # 4x4
         self.pair_disc_64   = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
         _layers =  [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]
