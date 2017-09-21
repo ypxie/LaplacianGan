@@ -242,5 +242,6 @@ def save_images_list(X_list, save_path=None, save=True, dim_ordering='tf'):
     if c == 1:
         img = img[:,:,0]
     if save:
-        writeImg(img.astype(np.uint8), save_path)
+        save_image = (img.copy() + 1) /2 * 255 
+        writeImg(save_image.astype(np.uint8), save_path)
     return img

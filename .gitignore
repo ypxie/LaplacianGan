@@ -16,7 +16,7 @@ temp/*
 .ipython*
 */.ipynb*
 */.ipynb_checkpoints/*
-
+Models/
 
 .remote-sync.json
 test.py

@@ -10,9 +10,9 @@ from torch.nn.utils import weight_norm
 
 from LaplacianGan.models.zz_model import Discriminator as Disc
 from LaplacianGan.models.zz_model import Generator as Gen
+from LaplacianGan.models.zz_model import GeneratorSimpleSkip 
 from LaplacianGan.zzGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
-
 
 home = os.path.expanduser('~')
 data_root = os.path.join('..', '..', 'Data')
@@ -78,15 +78,23 @@ if  __name__ == '__main__':
                         help='load from epoch')
     parser.add_argument('--model_name', type=str, default='zz_gan', 
                         help='load from epoch')
+    parser.add_argument('--test_sample_num', type=int, default=4, 
+                        help='The number of runs for each embeddings when testing')
+    parser.add_argument('--norm_type', type=str, default='bn', 
+                        help='The number of runs for each embeddings when testing')
+    parser.add_argument('--gen_activation_type', type=str, default='relu', 
+                        help='The number of runs for each embeddings when testing')
+    parser.add_argument('--debug_mode', action='store_true', 
+                        help='debug mode use fake dataset loader')   
 
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
     
-    netG = Gen(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm='bn', output_size=args.imsize)
+    netG = GeneratorSimpleSkip(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
 
     netD = Disc(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
-                sent_dim=1024, emb_dim=128, norm='bn')
+                sent_dim=1024, emb_dim=128, norm=args.norm_type)
 
     print(netG)
     print(netD) 
@@ -96,14 +104,15 @@ if  __name__ == '__main__':
         netG = netG.cuda(device_id)
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
-        
-    dataset = TextDataset(datadir, 'cnn-rnn', 4)
-    filename_test = os.path.join(datadir, 'test')
-    dataset.test = dataset.get_data(filename_test)
-
-    filename_train = os.path.join(datadir, 'train')
-    dataset.train = dataset.get_data(filename_train)
-
-    # dataset = []
+    
+    if not args.debug_mode:
+        dataset = TextDataset(datadir, 'cnn-rnn', 4)
+        filename_test = os.path.join(datadir, 'test')
+        dataset.test = dataset.get_data(filename_test)
+        filename_train = os.path.join(datadir, 'train')
+        dataset.train = dataset.get_data(filename_train)
+    else:
+        dataset = []
+        print ('>> in debug mode')
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
     train_gans(dataset, model_root, model_name, netG, netD, args)

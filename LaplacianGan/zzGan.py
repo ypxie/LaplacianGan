@@ -10,6 +10,7 @@ from torch.autograd import Variable
 from torch.nn.utils import clip_grad_norm
 from .proj_utils.plot_utils import *
 from .proj_utils.torch_utils import *
+import time
 
 TINY = 1e-8
 
@@ -97,18 +98,15 @@ def GaussianLogDensity(x, mu, log_var = 'I'):
     return log_prob
 
 
-
-
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
     # helper function
     def plot_imgs(samples, epoch, typ, name, path=''):
-
         tmpX = save_images(samples, save=not path == '', save_path=os.path.join(path, '{}_epoch{}_{}.png'.format(name, epoch, typ)), dim_ordering='th')
         plot_img(X=tmpX, win='{}_{}.png'.format(name, typ), env=mode_name)
 
     def fake_sampler(bz, n ):
         x = {}
-        x['output_64']  = np.random.rand(bz, 3, 64, 64)
+        x['output_64'] = np.random.rand(bz, 3, 64, 64)
         x['output_128'] = np.random.rand(bz, 3, 128, 128)
         x['output_256'] = np.random.rand(bz, 3, 256, 256)
         return x, x, np.random.rand(bz, 1024), None, None
@@ -119,17 +117,19 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     d_lr = args.d_lr
     g_lr = args.g_lr
     tot_epoch = args.maxepoch
+    if not args.debug_mode:
+        train_sampler = dataset.train.next_batch
+        test_sampler  = dataset.test.next_batch
+        number_example = dataset.train._num_examples
+        updates_per_epoch = int(number_example / args.batch_size)
+    else:
+        train_sampler = fake_sampler
+        test_sampler = fake_sampler
+        number_example = 16
+        updates_per_epoch = 10
 
-    train_sampler = dataset.train.next_batch
-    test_sampler  = dataset.test.next_batch
-    number_example = dataset.train._num_examples
-
-    # train_sampler = fake_sampler
-    # test_sampler = fake_sampler
-    # number_example = 16
-
-    updates_per_epoch = int(number_example / args.batch_size)
-    num_test = 64 // args.batch_size # number of testing samples to show
+    ''' configure optimizer '''
+    num_test_forward = 1 # 64 // args.batch_size // args.test_sample_num # number of testing samples to show
     if args.wgan:
         optimizerD = optim.RMSprop(netD.parameters(), lr= d_lr,  weight_decay=args.weight_decay)
         optimizerG = optim.RMSprop(netG.parameters(), lr= g_lr,  weight_decay=args.weight_decay)
@@ -140,7 +140,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     model_folder = os.path.join(model_root, mode_name)
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
-        
+    ''' load model '''
     if args.reuse_weigths:
         D_weightspath = os.path.join(model_folder, 'D_epoch{}.pth'.format(args.load_from_epoch))
         G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
@@ -165,12 +165,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     z = to_device(z, netG.device_id, requires_grad=False)
 
-    z_test = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
-    z_test = to_device(z_test, netG.device_id, volatile=True)    
+    # z_test = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
+    # z_test = to_device(z_test, netG.device_id, volatile=True)    
 
     global_iter = 0
     for epoch in range(start_epoch, tot_epoch):
-        
+        start_timer = time.time()
         # learning rate
         if epoch % args.epoch_decay == 0:
             d_lr = d_lr/2
@@ -189,34 +189,41 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             for p in netD.parameters(): p.requires_grad = True
             netD.zero_grad()
 
-            g_emb = Variable(embeddings.data, volatile=False)
-            fake_images, _ = netG(g_emb, z)
-            # import pdb; pdb.set_trace()
+            g_emb = Variable(embeddings.data, volatile=True)
+            g_z = Variable(z.data , volatile=True)
+            # forward generator
+            fake_images, _ = netG(g_emb, g_z) 
+
             discriminator_loss = 0
+            d_loss_val_dict = {}
             for key, _ in fake_images.items():
                 # iterate over image of different sizes.
                 this_img   = to_device(images[key], netD.device_id)
                 this_wrong = to_device(wrong_images[key], netD.device_id)
-
                 this_fake  = Variable(fake_images[key].data) # to cut connection to netG
+
                 # TODO do we need multiple embeddings?
+                # A faster implementation it is ok right?
+                # joint_inputs = torch.cat([this_img, this_wrong, this_fake], 0)
+                # joint_embeddings = torch.cat([embeddings, embeddings, embeddings], 0)
+                # all_dict = netD(joint_inputs)
+                # bz = joint_inputs.size(0) / 3 # the size for each type [this_img, this_wrong, this_fake]
+
+                # real_logit, real_img_logit  =  real_dict['pair_disc'][:bz], real_dict['img_disc'][:bz]
+                # wrong_logit, wrong_img_logit =  wrong_dict['pair_disc'][bz:bz*2], wrong_dict['img_disc'][bz:bz*2]
+                # fake_logit, fake_img_logit =  fake_dict['pair_disc'][bz*2:], fake_dict['img_disc'][bz*2:]
+
                 real_dict   = netD(this_img,   embeddings)
                 wrong_dict  = netD(this_wrong, embeddings)
                 fake_dict   = netD(this_fake,  embeddings)
+                real_logit, real_img_logit  =  real_dict['pair_disc'], real_dict['img_disc']
+                wrong_logit, wrong_img_logit =  wrong_dict['pair_disc'], wrong_dict['img_disc']
+                fake_logit, fake_img_logit =  fake_dict['pair_disc'], fake_dict['img_disc']
 
-                real_logit, real_img_logit  = \
-                                 real_dict['pair_disc'], real_dict['img_disc']
-                wrong_logit, wrong_img_logit = \
-                                 wrong_dict['pair_disc'], wrong_dict['img_disc']
-                fake_logit, fake_img_logit =  \
-                                 fake_dict['pair_disc'], fake_dict['img_disc']
-
+                # compute loss
                 chose_img_real = wrong_img_logit if random.random() > 0.5 else real_img_logit
-                
-                discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit,
-                                        fake_logit, args.wgan )
-                discriminator_loss += compute_d_img_loss(chose_img_real, 
-                                        fake_img_logit, args.wgan )
+                discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan )
+                discriminator_loss += compute_d_img_loss(chose_img_real, fake_img_logit, args.wgan )
         
             d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
             d_loss_val = -d_loss_val if args.wgan else d_loss_val
@@ -224,7 +231,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             optimizerD.step()    
             netD.zero_grad()
             d_loss_plot.plot(d_loss_val)
-            # real_dict, wrong_dict, fake_dict = None, None, None
 
             ''' update G '''
             for p in netD.parameters(): 
@@ -250,49 +256,61 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             netG.zero_grad()
             g_loss_plot.plot(g_loss_val)
             lr_plot.plot(g_lr)
-            # fake_dict, real_dict, fake_images= None, None, None
 
             global_iter += 1
 
             # visualize train samples
             if it % 50 == 0:
                 for k, sample in fake_images.items():
-                    plot_imgs(sample.cpu().data.numpy(), epoch, k, 'train_samples')
-                    plot_imgs(images[k], epoch, k, 'train_images')
+                    # plot_imgs(sample.cpu().data.numpy(), epoch, k, 'train_samples')
+                    plot_imgs([images[k], sample.cpu().data.numpy()], epoch, k, 'train_images')
                 print ('[epoch %d/%d iter %d]: lr = %.6f g_loss = %.5f d_loss= %.5f' % (epoch, tot_epoch, it, g_lr, g_loss_val, d_loss_val))
 
         ''' visualize test per epoch '''
         # generate samples
         gen_samples = []
         img_samples = []
-        for idx_test in range(num_test):
+        vis_samples = {'output_64': [], 'output_128': [], 'output_256': []}
+
+        for k in vis_samples.keys():
+            vis_samples[k] = [None for i in range(args.test_sample_num + 1)] # +1 to fill real image
+        for idx_test in range(num_test_forward):
             #sent_emb_test, _ =  netG.condEmbedding(test_embeddings)
             test_images, _, test_embeddings, _, _ = test_sampler(args.batch_size, 1)
-            test_embeddings = to_device(test_embeddings, netG.device_id, requires_grad=False)
-            z.data.normal_(0, 1)
-            #c_test    =  Variable(c_test.data, volatile=True)
-            samples, _ = netG(test_embeddings, z)
-            gen_samples.append(samples)
-            img_samples.append(test_images)
+            test_embeddings = to_device(test_embeddings, netG.device_id, volatile=True)
+            testing_z = Variable(z.data, volatile=True)
+            tmp_samples = {}
 
-        # visualize samples
-        types = gen_samples[0].keys()
-        for t in types:
-            tmp = []
-            tmp2 = []
-            for i in range(len(gen_samples)):
-                tmp.append(gen_samples[i][t].cpu().data.numpy())
-                tmp2.append(img_samples[i][t])
+            for t in range(args.test_sample_num):
+                testing_z.data.normal_(0, 1)
                 
-            tmp_gen_samples = np.concatenate(tmp, axis=0)
-            tmp_img_samples = np.concatenate(tmp2, axis=0)
-            plot_imgs(tmp_gen_samples, epoch, t, 'test_samples', path=model_folder)
-            plot_imgs(tmp_img_samples, epoch, t, 'test_images', path=model_folder)
-            
+                samples, _ = netG(test_embeddings, testing_z)
+                
+                # Oops! very tricky to organize data for plot inputs!!!
+                # vis_samples[k] = [real data, sample1, sample2, sample3, ... sample_args.test_sample_num]
+                for k, v in samples.items():
+                    cpu_data = v.cpu().data.numpy()
+
+                    if vis_samples[k][0] == None:
+                        vis_samples[k][0] = test_images[k]
+                    else:
+                        vis_samples[k][0] =  np.concatenate([ vis_samples[k][0], test_images[k]], 0) 
+
+                    if vis_samples[k][t+1] == None:
+                        vis_samples[k][t+1] = cpu_data
+                    else:
+                        vis_samples[k][t+1] = np.concatenate([vis_samples[k][t+1], cpu_data], 0)
+
+        end_timer = time.time() - start_timer
+        # visualize samples
+        for typ, v in vis_samples.items():
+            if v[0] != None:
+                plot_imgs(v, epoch, typ, 'test_samples', path=model_folder)
+    
         # save weights      
         if epoch % args.save_freq == 0:
             torch.save(netD.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
             torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
             print('save weights at {}'.format(model_folder))
         
-        print ('epoch {}/{} finished ...'.format(epoch, tot_epoch))
+        print ('epoch {}/{} finished [time={}] ...'.format(epoch, tot_epoch, end_timer))
