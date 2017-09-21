@@ -142,18 +142,22 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         os.makedirs(model_folder)
     ''' load model '''
     if args.reuse_weigths:
+        # import pdb; pdb.set_trace()
+        assert args.load_from_epoch != '', 'args.load_from_epoch is empty'
         D_weightspath = os.path.join(model_folder, 'D_epoch{}.pth'.format(args.load_from_epoch))
         G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
-        if os.path.exists(D_weightspath):
-            weights_dict = torch.load(D_weightspath,map_location=lambda storage, loc: storage)
-            netD.load_state_dict(weights_dict)# 12)
-            print('reload weights from {}'.format(D_weightspath))
-
-        if os.path.exists(G_weightspath):
-            weights_dict = torch.load(G_weightspath,map_location=lambda storage, loc: storage)
-            netG.load_state_dict(weights_dict)# 12)
-            print('reload weights from {}'.format(G_weightspath))
-        start_epoch = args.load_from_epoch
+        assert os.path.exists(D_weightspath) and os.path.exists(G_weightspath)
+        weights_dict = torch.load(D_weightspath,map_location=lambda storage, loc: storage)
+        # force load
+        weights_dict_copy = {}
+        for k1, k2 in zip(weights_dict.keys(), netD.state_dict().keys()):
+            weights_dict_copy[k2] = weights_dict[k1]
+        netD.load_state_dict(weights_dict_copy)# 12)
+        print('reload weights from {}'.format(D_weightspath))
+        weights_dict = torch.load(G_weightspath,map_location=lambda storage, loc: storage)
+        netG.load_state_dict(weights_dict)# 12)
+        print('reload weights from {}'.format(G_weightspath))
+        start_epoch = args.load_from_epoch + 1
     else:
         start_epoch = 1
 
@@ -223,8 +227,9 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 # compute loss
                 chose_img_real = wrong_img_logit if random.random() > 0.5 else real_img_logit
                 discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan )
-                discriminator_loss += compute_d_img_loss(chose_img_real, fake_img_logit, args.wgan )
-        
+                if not args.no_img_loss:
+                    discriminator_loss += compute_d_img_loss(chose_img_real, fake_img_logit, args.wgan ) 
+
             d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
             d_loss_val = -d_loss_val if args.wgan else d_loss_val
             discriminator_loss.backward()
@@ -325,4 +330,4 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
             print('save weights at {}'.format(model_folder))
         
-        print ('epoch {}/{} finished [time={}] ...'.format(epoch, tot_epoch, end_timer))
+        print ('epoch {}/{} finished [time = {}s] ...'.format(epoch, tot_epoch, end_timer))
