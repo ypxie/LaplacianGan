@@ -268,7 +268,7 @@ class Generator(nn.Module):
         '''user defefined'''
         self.output_size = output_size
         # 64, 128, or 256 version
-        num_scales = [4, 8, 16, 32]
+        num_scales = [4, 8, 16, 32, 64]
 
         reduce_dim_at = [8, 64, 256] 
         side_output_at = [64, 128, 256] 
@@ -318,7 +318,7 @@ class Generator(nn.Module):
         x_32 = self.scale_32(x_16)
         
         # skip 4x4 feature map to 32 and send to 64
-        x_64 = self.scale_64(x_32_4)
+        x_64 = self.scale_64(x_32)
         out_dict['output_64'] = self.tensor_to_img_64(x_64)
         
         if self.output_size > 64:

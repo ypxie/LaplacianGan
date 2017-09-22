@@ -8,11 +8,6 @@ import argparse, os
 import torch, h5py
 from torch.nn.utils import weight_norm
 
-from LaplacianGan.models.zz_model import Discriminator as Disc
-from LaplacianGan.models.zz_model import Generator as Gen
-from LaplacianGan.models.zz_model import GeneratorSimpleSkip 
-from LaplacianGan.models.zz_model import GeneratorNoSkip
-from LaplacianGan.models.zz_model2 import Generator as GenNStage
 from LaplacianGan.zzGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
 
@@ -90,15 +85,35 @@ if  __name__ == '__main__':
                         help='debug mode use fake dataset loader')   
     parser.add_argument('--no_img_loss', action='store_true', 
                         help='debug mode use fake dataset loader')
+    parser.add_argument('--which_gen', type=str, default='origin', 
+                        help='generator type')
+    parser.add_argument('--which_disc', type=str, default='origin', 
+                        help='discriminator type')
 
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
     
-    netG = GenNStage(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+    # Generator
+    if args.which_gen == 'origin':
+        from LaplacianGan.models.zz_model import Generator
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+    elif args.which_gen == 'mutiStage':
+        from LaplacianGan.models.zz_model2 import Generator 
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+    elif args.which_gen == 'origin_no_skip':
+        from LaplacianGan.models.zz_model import GeneratorNoSkip as Generator
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+    else:
+        raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 
-    netD = Disc(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
-                sent_dim=1024, emb_dim=128, norm=args.norm_type)
+    # Discriminator
+    if args.which_disc == 'origin':
+        from LaplacianGan.models.zz_model import Discriminator 
+        netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
+                    sent_dim=1024, emb_dim=128, norm=args.norm_type)
+    else:
+        raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
 
     print(netG)
     print(netD) 

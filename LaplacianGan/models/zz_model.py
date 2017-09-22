@@ -497,7 +497,7 @@ class DiscClassifier(nn.Module):
         # Now I added. It is different from previous verison.
         _layers =  [ conv_norm(inp_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
                      nn.Conv2d(enc_dim, 1, kernel_size=new_feat_size, padding=0, bias=True)]
-        # _layers = [nn.Conv2d(inp_dim, 1, kernel_size=new_feat_size, padding=0, bias=True)]
+        ## _layers = [nn.Conv2d(inp_dim, 1, kernel_size=new_feat_size, padding=0, bias=True)]
         self.node = nn.Sequential(*_layers)
 
     def forward(self,sent_code,  img_code):
