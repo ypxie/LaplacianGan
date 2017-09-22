@@ -11,7 +11,8 @@ from torch.nn.utils import weight_norm
 from LaplacianGan.models.zz_model import Discriminator as Disc
 from LaplacianGan.models.zz_model import Generator as Gen
 from LaplacianGan.models.zz_model import GeneratorSimpleSkip 
-from LaplacianGan.models.zz_model import Generator2
+from LaplacianGan.models.zz_model import GeneratorNoSkip
+from LaplacianGan.models.zz_model2 import Generator as GenNStage
 from LaplacianGan.zzGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
 
@@ -94,7 +95,7 @@ if  __name__ == '__main__':
 
     args.cuda = torch.cuda.is_available()
     
-    netG = Gen(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+    netG = GenNStage(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
 
     netD = Disc(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                 sent_dim=1024, emb_dim=128, norm=args.norm_type)
