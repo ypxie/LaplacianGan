@@ -330,7 +330,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         end_timer = time.time() - start_timer
         # visualize samples
         for typ, v in vis_samples.items():
-            if v[0] != None:
+            if v[0] is not None:
                 plot_imgs(v, epoch, typ, 'test_samples', path=model_folder)
     
         # save weights      
