@@ -8,7 +8,7 @@ import argparse, os
 import torch, h5py
 from torch.nn.utils import weight_norm
 
-from LaplacianGan.models.expModels import Discriminator as Disc
+from LaplacianGan.models.refineModels import Discriminator as Disc
 from LaplacianGan.models.expModels import Generator as Gen
 from LaplacianGan.models.expModels import GeneratorSimpleSkip 
 from LaplacianGan.zzGan import train_gans
@@ -41,7 +41,7 @@ if  __name__ == '__main__':
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
     
-    parser.add_argument('--save_freq', type=int, default= 20, metavar='N',
+    parser.add_argument('--save_freq', type=int, default= 5, metavar='N',
                         help='how frequent to save the model')
     parser.add_argument('--display_freq', type=int, default= 200, metavar='N',
                         help='plot the results every {} batches')
@@ -64,17 +64,17 @@ if  __name__ == '__main__':
                         help='the channel of each image.')
     parser.add_argument('--KL_COE', type=float, default= 4, metavar='N',
                         help='kl divergency coefficient.')
-    parser.add_argument('--use_content_loss', type=bool, default= True, metavar='N',
+    parser.add_argument('--use_content_loss', type=bool, default= False, metavar='N',
                         help='whether or not to use content loss.')
     parser.add_argument('--save_folder', type=str, default= 'tmp_images', metavar='N',
                         help='folder to save the temper images.')
-
+                        
     ## add more
     parser.add_argument('--imsize', type=int, default=64, 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
                         help='decay epoch image size')
-    parser.add_argument('--load_from_epoch', type=int, default=0, 
+    parser.add_argument('--load_from_epoch', type=int, default=60, 
                         help='load from epoch')
     parser.add_argument('--model_name', type=str, default='zz_gan', 
                         help='load from epoch')
@@ -86,7 +86,8 @@ if  __name__ == '__main__':
                         help='The number of runs for each embeddings when testing')
     parser.add_argument('--debug_mode', action='store_true', 
                         help='debug mode use fake dataset loader')   
-
+    parser.add_argument('--no_img_loss', action='store_true', default= False, 
+                        help='debug mode use fake dataset loader')                      
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()

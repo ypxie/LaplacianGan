@@ -255,7 +255,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 generator_loss += compute_g_loss(fake_pair_logit, fake_img_logit, args.wgan)               
                 
                 if use_content_loss:
-                    if epoch > 100:
+                    if epoch >= 50:
                         this_img   = to_device(images[key], netD.device_id)
                         real_dict   = netD(this_img,   embeddings)
                         real_img_code = real_dict['content_code']

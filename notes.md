@@ -4,3 +4,7 @@
 2. 64*64 with 0.002 lr, batch_size 16, without skil connection in gen.
 
 ## Large Model
+
+
+## Matching aware
+1. no skip connection + 1*1 more conv in disc helps matching.
