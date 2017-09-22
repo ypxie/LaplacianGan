@@ -6,5 +6,12 @@
 ## Large Model
 
 
-## Matching aware
-1. no skip connection + 1*1 more conv in disc helps matching.
+## Question need to answer:
+
+- Small batch size?
+    - Small batch size totally fails. The mode clapse is obvious. Batch size matters
+- without large multimodal path?
+- Balance or unbalanced
+- Layer normalization+reLU  (LeakyreLU) is not working .... why? Wrong implementation?
+- In DiscClassifier. Do we need an extra 1x1 convolutional to embed image feature.
+    - Now the text is corresponded with image, because of removed unsample or 1x1 convolution?
