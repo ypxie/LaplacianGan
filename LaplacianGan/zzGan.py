@@ -10,7 +10,7 @@ from torch.autograd import Variable
 from torch.nn.utils import clip_grad_norm
 from .proj_utils.plot_utils import *
 from .proj_utils.torch_utils import *
-import time
+import time, json
 
 TINY = 1e-8
 
@@ -162,8 +162,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         print('reload weights from {}'.format(G_weightspath))
         start_epoch = args.load_from_epoch + 1
         if os.path.exists(plot_save_path):
-            with open(plot_save_path, 'r') as json_data:
-                plot_dict = json.loads(json_data)
+            plot_dict = torch.load(plot_save_path)
     else:
         start_epoch = 1
 
@@ -339,7 +338,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             torch.save(netD.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
             torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
             print('save weights at {}'.format(model_folder))
-            with open(plot_save_path, 'w') as f:
-                 json.dump(plot_dict, f)
-                 
+            torch.save(plot_dict, plot_save_path)
+
+
         print ('epoch {}/{} finished [time = {}s] ...'.format(epoch, tot_epoch, end_timer))

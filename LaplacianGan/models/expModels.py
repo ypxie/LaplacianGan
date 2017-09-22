@@ -427,55 +427,17 @@ class ImageDown(torch.nn.Module):
         #output =  self.activ(content_code + node_1)
         return out
 
-class shareImageDown(torch.nn.Module):
+        
+class sharedImageDown(torch.nn.Module):
     '''
        This module encode image to 16*16 feat maps
     '''
-    def __init__(self, input_size, num_chan, hid_dim, out_dim, norm='norm', shared_block=None):
-        super(shareImageDown, self).__init__()
+    def __init__(self, input_size, num_chan, out_dim, norm='bn', shared_block=None):
+        super(sharedImageDown, self).__init__()
         self.register_buffer('device_id', torch.zeros(1))
         
         self.__dict__.update(locals())
-        norm_layer = getNormLayer(norm)
-        activ = discAct()
-        cur_dim = 128
-
-        # Shared 32*32 feature encoder
         
-        _layers = []
-
-        if input_size == 64:      
-            _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 32
-        if input_size == 128:
-            
-            _layers += [conv_norm(num_chan, cur_dim//2, norm_layer, stride=2, activation=activ, use_norm=False)] # 64
-            _layers += [conv_norm(cur_dim//2, cur_dim,  norm_layer, stride=2, activation=activ)] # 32
-        
-        if input_size == 256:
-            
-            _layers += [conv_norm(num_chan, cur_dim//4, norm_layer, stride=2, activation=activ, use_norm=False)] # 128
-            _layers += [conv_norm(cur_dim//4, cur_dim//2,  norm_layer, stride=2, activation=activ)] # 64
-            _layers += [conv_norm(cur_dim//2, cur_dim,  norm_layer, stride=2, activation=activ)] # 32
-            
-        self.node = nn.Sequential(*_layers)
-        self.shared_block = shared_block
-
-    def forward(self, inputs):
-        # inputs (B, C, H, W), must be dividable by 32
-        # return (B, C, row, col), and content_code
-        out = self.node(inputs)
-        out = self.shared_block(out)
-        return out
-        
-class shareImageDown(torch.nn.Module):
-    '''
-       This module encode image to 16*16 feat maps
-    '''
-    def __init__(self, input_size, num_chan, hid_dim, out_dim, norm='norm', shared_block=None):
-        super(shareImageDown, self).__init__()
-        self.register_buffer('device_id', torch.zeros(1))
-        
-        self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
         activ = discAct()
         cur_dim = 128
@@ -658,24 +620,24 @@ class sharedDiscriminator(torch.nn.Module):
         shared_block  = nn.Sequential(*_layers)
 
         _layers = []
-        self.img_encoder_64   = sharedImageDown(64,  num_chan,  enc_dim, norm,shared_block)  # 4x4
+        self.img_encoder_64   = sharedImageDown(64,  num_chan,  enc_dim, norm, shared_block)  # 4x4
         self.pair_disc_64   = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
-        _layers = [conv_norm(inp_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
+        _layers = [conv_norm(enc_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
                    nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]
         self.img_disc_64 = nn.Sequential(*_layers)
         self.max_out_size = 64
 
         if input_size > 64:
-            self.img_encoder_128  = shareImageDown(128,  num_chan, enc_dim, norm, shared_block)  # 8
+            self.img_encoder_128  = sharedImageDown(128,  num_chan, enc_dim, norm, shared_block)  # 8
             self.pair_disc_128  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
             # I add another 1x1 convolution in img disc
-            _layers = [conv_norm(inp_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
+            _layers = [conv_norm(enc_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
                        nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 4
             self.img_disc_128 = nn.Sequential(*_layers)
             self.max_out_size = 128
             
         if input_size > 128:
-            self.img_encoder_256  = shareImageDown(256, num_chan, enc_dim, norm, shared_block)  # 8
+            self.img_encoder_256  = sharedImageDown(256, num_chan, enc_dim, norm, shared_block)  # 8
             self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
             _layers = [conv_norm(inp_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
                        nn.Conv2d(enc_dim, 1, kernel_size=4, padding = 0, bias=True)]   # 4
