@@ -307,7 +307,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         for idx_test in range(num_test_forward + 1):
             #sent_emb_test, _ =  netG.condEmbedding(test_embeddings)
             if idx_test == 0:
-                test_images, testing_embeddings = fixed_images, fixed_embeddings
+                test_images, test_embeddings = fixed_images, fixed_embeddings
 
             else:
                 test_images, _, test_embeddings, _, _ = test_sampler(args.batch_size, 1)
