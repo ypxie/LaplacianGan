@@ -121,6 +121,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         test_sampler  = dataset.test.next_batch
         number_example = dataset.train._num_examples
         updates_per_epoch = int(number_example / args.batch_size)
+    
     else:
         train_sampler = fake_sampler
         test_sampler = fake_sampler
@@ -140,7 +141,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
     
-    plot_save_path = os.path.join(model_folder, 'plot.json')
+    plot_save_path = os.path.join(model_folder, 'plot_save.pth')
     plot_dict = {'disc':[], 'gen':[]}
 
     ''' load model '''
@@ -173,6 +174,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
     z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     z = to_device(z, netG.device_id, requires_grad=False)
+
+    # test the fixed image for every epoch
+    fixed_images, _, fixed_embeddings, _, _ = test_sampler(args.batch_size*2, 1)
+    fixed_embeddings = to_device(fixed_embeddings, netG.device_id, volatile=True)
+    fixed_z_data = [torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1) for _ in range(args.test_sample_num)]
+    fixed_z_list = [to_device(z, netG.device_id, volatile=True) for z in fixed_z_data]
 
     # z_test = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     # z_test = to_device(z_test, netG.device_id, volatile=True)    
@@ -296,31 +303,41 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         # generate samples
         gen_samples = []
         img_samples = []
-        vis_samples = {'output_64': [], 'output_128': [], 'output_256': []}
-
-        for k in vis_samples.keys():
-            vis_samples[k] = [None for i in range(args.test_sample_num + 1)] # +1 to fill real image
-        for idx_test in range(num_test_forward):
+        
+        for idx_test in range(num_test_forward + 1):
             #sent_emb_test, _ =  netG.condEmbedding(test_embeddings)
-            test_images, _, test_embeddings, _, _ = test_sampler(args.batch_size, 1)
-            test_embeddings = to_device(test_embeddings, netG.device_id, volatile=True)
-            testing_z = Variable(z.data, volatile=True)
+            if idx_test == 0:
+                test_images, testing_embeddings = fixed_images, fixed_embeddings
+
+            else:
+                test_images, _, test_embeddings, _, _ = test_sampler(args.batch_size, 1)
+                test_embeddings = to_device(test_embeddings, netG.device_id, volatile=True)
+                testing_z = Variable(z.data, volatile=True)
+
             tmp_samples = {}
 
             for t in range(args.test_sample_num):
-                testing_z.data.normal_(0, 1)
+                
+                if idx_test == 0: # plot fixed
+                    testing_z = fixed_z_list[t]
+                else:
+                    testing_z.data.normal_(0, 1)
                 
                 samples, _ = netG(test_embeddings, testing_z)
+                
+                if idx_test == 0 and t == 0:  
+                    for k in samples.keys():
+                        vis_samples[k] = [None for i in range(args.test_sample_num + 1)] # +1 to fill real image
                 
                 # Oops! very tricky to organize data for plot inputs!!!
                 # vis_samples[k] = [real data, sample1, sample2, sample3, ... sample_args.test_sample_num]
                 for k, v in samples.items():
                     cpu_data = v.cpu().data.numpy()
-
-                    if vis_samples[k][0] == None:
-                        vis_samples[k][0] = test_images[k]
-                    else:
-                        vis_samples[k][0] =  np.concatenate([ vis_samples[k][0], test_images[k]], 0) 
+                    if t == 0:
+                        if vis_samples[k][0] == None:
+                            vis_samples[k][0] = test_images[k]
+                        else:
+                            vis_samples[k][0] =  np.concatenate([ vis_samples[k][0], test_images[k]], 0) 
 
                     if vis_samples[k][t+1] == None:
                         vis_samples[k][t+1] = cpu_data
@@ -330,8 +347,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         end_timer = time.time() - start_timer
         # visualize samples
         for typ, v in vis_samples.items():
-            if v[0] is not None:
-                plot_imgs(v, epoch, typ, 'test_samples', path=model_folder)
+            plot_imgs(v, epoch, typ, 'test_samples', path=model_folder)
     
         # save weights      
         if epoch % args.save_freq == 0:

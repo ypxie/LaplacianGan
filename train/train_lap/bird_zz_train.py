@@ -97,16 +97,16 @@ if  __name__ == '__main__':
     args.cuda = torch.cuda.is_available()
     
     # Generator
-    if args.which_gen is 'origin':
+    if args.which_gen == 'origin':
         from LaplacianGan.models.zz_model import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
-    elif args.which_gen is 'mutiStage':
+    elif args.which_gen == 'mutiStage':
         from LaplacianGan.models.zz_model2 import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
-    elif args.which_gen is 'origin_no_skip':
+    elif args.which_gen == 'origin_no_skip':
         from LaplacianGan.models.zz_model import GeneratorNoSkip as Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
-    elif args.which_gen is 'large_shared_skip':
+    elif args.which_gen == 'large_shared_skip':
         from LaplacianGan.models.expModels import Generator as Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)   
@@ -114,11 +114,11 @@ if  __name__ == '__main__':
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 
     # Discriminator
-    if args.which_disc is 'origin':
+    if args.which_disc == 'origin':
         from LaplacianGan.models.zz_model import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
-    elif args.which_disc is 'large_shared_skip':
+    elif args.which_disc == 'large_shared_skip':
         
         from LaplacianGan.models.expModels import sharedDiscriminator as Discriminator
         
