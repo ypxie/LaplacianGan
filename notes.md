@@ -4,7 +4,8 @@
 2. 64*64 with 0.002 lr, batch_size 16, without skil connection in gen.
 
 ## Large Model
-
+## Ongoing testing
+- large_shared_skip: testing shared disc + one more 1x1 convolution in image disc.
 
 ## Question need to answer:
 

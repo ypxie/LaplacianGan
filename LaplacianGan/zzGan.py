@@ -97,7 +97,6 @@ def GaussianLogDensity(x, mu, log_var = 'I'):
     log_prob = -torch.mean(torch.mean(log_prob, -1) )   # keep_dims=True,
     return log_prob
 
-
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
     # helper function
     def plot_imgs(samples, epoch, typ, name, path=''):
@@ -140,6 +139,10 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     model_folder = os.path.join(model_root, mode_name)
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
+    
+    plot_save_path = os.path.join(model_folder, 'plot.json')
+    plot_dict = {'disc':[], 'gen':[]}
+
     ''' load model '''
     if args.reuse_weigths:
         # import pdb; pdb.set_trace()
@@ -158,6 +161,9 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         netG.load_state_dict(weights_dict)# 12)
         print('reload weights from {}'.format(G_weightspath))
         start_epoch = args.load_from_epoch + 1
+        if os.path.exists(plot_save_path):
+            with open(plot_save_path, 'r') as json_data:
+                plot_dict = json.loads(json_data)
     else:
         start_epoch = 1
 
@@ -236,6 +242,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             optimizerD.step()    
             netD.zero_grad()
             d_loss_plot.plot(d_loss_val)
+            plot_dict['disc'].append(d_loss_val)
 
             ''' update G '''
             for p in netD.parameters(): 
@@ -273,6 +280,9 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             netG.zero_grad()
             g_loss_plot.plot(g_loss_val)
             lr_plot.plot(g_lr)
+            plot_dict['gen'].append(g_loss_val)
+
+            
 
             global_iter += 1
 
@@ -329,5 +339,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             torch.save(netD.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
             torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
             print('save weights at {}'.format(model_folder))
-        
+            with open(plot_save_path, 'w') as f:
+                 json.dump(plot_dict, f)
+                 
         print ('epoch {}/{} finished [time = {}s] ...'.format(epoch, tot_epoch, end_timer))
