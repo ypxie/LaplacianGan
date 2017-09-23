@@ -176,7 +176,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     z = to_device(z, netG.device_id, requires_grad=False)
 
     # test the fixed image for every epoch
-    fixed_images, _, fixed_embeddings, _, _ = test_sampler(args.batch_size*2, 1)
+    fixed_images, _, fixed_embeddings, _, _ = test_sampler(args.batch_size, 1)
     fixed_embeddings = to_device(fixed_embeddings, netG.device_id, volatile=True)
     fixed_z_data = [torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1) for _ in range(args.test_sample_num)]
     fixed_z_list = [to_device(z, netG.device_id, volatile=True) for z in fixed_z_data]
