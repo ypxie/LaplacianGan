@@ -70,7 +70,7 @@ def pad_conv_norm(dim_in, dim_out, norm_layer, kernel_size=3, stride=1, use_acti
     if kernel_size != 1:
         seq += [nn.ReflectionPad2d(1)]
 
-    seq += [nn.Conv2d(dim_in, dim_out, kernel_size=kernel_size, padding=0, stride=1,bias=use_bias),
+    seq += [nn.Conv2d(dim_in, dim_out, kernel_size=kernel_size, padding=0, stride=stride,   bias=use_bias),
            norm_layer(dim_out)]
     
     if use_activation:
@@ -196,55 +196,60 @@ class ResnetBlock2(nn.Module):
         return out
 
 class ResnetGenerator(nn.Module):
-    def __init__(self, input_nc, output_nc, ngf=64, text_dim=128, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
+    def __init__(self, input_nc, output_nc, ngf=64, in_text_dim=128, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
         assert(n_blocks >= 0)
         super(ResnetGenerator, self).__init__()
         self.input_nc = input_nc
         self.output_nc = output_nc
         self.ngf = ngf
         self.gpu_ids = gpu_ids
-
-        img_down = []
+        self.out_text_dim = ngf
+        img_encode = []
         res_blocks = []
         img_decode = []
 
         n_downsampling = 2
-        for i in range(n_downsampling):
+        img_encode += [pad_conv_norm(input_nc, ngf, norm_layer=norm_layer, stride=2)]
+        for i in range(n_downsampling-1):
             mult = 2**i
-            img_down += [pad_conv_norm(ngf * mult, int(ngf * mult / 2), norm_layer=norm_layer, stride=2)]
+            img_encode += [pad_conv_norm(ngf * mult, int(ngf * mult) * 2, norm_layer=norm_layer, stride=2)]
 
-        mult = 2**n_downsampling
+        mult = 2**(n_downsampling - 1)
+        res_dim = ngf * mult + self.out_text_dim
         for i in range(n_blocks):
-            res_blocks += [ResnetBlock2(ngf * mult + text_dim, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout)]
+            res_blocks += [ResnetBlock2(res_dim, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout)]
         
-        # upsample is more
-        for i in range(n_downsampling + 1):
-            mult = 2**(n_downsampling - i)
+        # decode
+        
+        for i in range(n_downsampling):
             img_decode += [nn.Upsample(scale_factor=2, mode='nearest')]
-            img_decode += [pad_conv_norm(ngf * mult, int(ngf * mult / 2), norm_layer=norm_layer)]
+            img_decode += [pad_conv_norm(res_dim, res_dim//2, norm_layer=norm_layer)]
+            res_dim /= 2
+
+        img_decode += [nn.Upsample(scale_factor=2, mode='nearest'),
+                        nn.ReflectionPad2d(1),
+                        nn.Conv2d(res_dim, output_nc, kernel_size=3, padding=0),
+                        nn.Tanh()]
+
         
-
-        img_decode += [nn.ReflectionPad2d(1)]
-        img_decode += [nn.Conv2d(ngf // 2, output_nc, kernel_size=3, padding=0)]
-        img_decode += [nn.Tanh()]
-
-        txt_encode = [nn.Linear(text_dim, ngf),
-                        nn.BatchNorm1d(ngf),
+        txt_encode = [nn.Linear(in_text_dim, self.out_text_dim),
+                        nn.BatchNorm1d(self.out_text_dim),
                         nn.ReLU(True)]
         
-        self.img_encode = nn.Sequential(*img_decode)
+        self.img_encode = nn.Sequential(*img_encode)
         self.res_blocks = nn.Sequential(*res_blocks)
         self.img_decode = nn.Sequential(*img_decode)
         self.txt_encode = nn.Sequential(*txt_encode)
 
     def forward(self, img, text):
         ''' text: [B,128] '''
+
         h = self.txt_encode(text)
         x = self.img_encode(img)
         
         h =  h.unsqueeze(-1).unsqueeze(-1)
         b, dim, w, w = x.size()
-        h = h.expand(b,dim,w,w)
+        h = h.expand(b,self.out_text_dim,w,w)
 
         x = self.res_blocks(torch.cat([x, h], 1))
         x = self.img_decode(x)
@@ -253,7 +258,7 @@ class ResnetGenerator(nn.Module):
 
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
-                 output_size=256):
+                 output_size=256, num_blocks=2):
         super(Generator, self).__init__()
         self.__dict__.update(locals())
         print ('>> initialized a {} size nStage generator'.format(output_size))
@@ -297,12 +302,10 @@ class Generator(nn.Module):
 
         # configure generator scale 128
         if output_size > 64:
-            self.scale_128 = ResnetGenerator(3, 3, ngf=64, n_blocks=3, norm_layer=norm_layer)
+            self.scale_128 = ResnetGenerator(3, 3, ngf=64, n_blocks=num_blocks, norm_layer=norm_layer)
         if output_size > 128:
-            self.scale_256 = ResnetGenerator(3, 3, ngf=32, n_blocks=3, norm_layer=norm_layer)
+            self.scale_256 = ResnetGenerator(3, 3, ngf=32, n_blocks=num_blocks, norm_layer=norm_layer)
 
-
-        
         self.apply(weights_init)
 
     def forward(self, sent_embeddings, z):
@@ -320,17 +323,20 @@ class Generator(nn.Module):
         # skip 4x4 feature map to 32 and send to 64
         x_64 = self.scale_64(x_32)
         out_dict['output_64'] = self.tensor_to_img_64(x_64)
+
         
         if self.output_size > 64:
             # skip 8x8 feature map to 64 and send to 128
-            x_128 = self.scale_128(x_64, sent_random)
-            out_dict['output_128'] = self.tensor_to_img_128(x_128)
+            out_64 = Variable(out_dict['output_64'].data, requires_grad=False)
+            x_128 = self.scale_128(out_64, sent_random)
+            out_dict['output_128'] = x_128
 
         if self.output_size > 128:
             # skip 16x16 feature map to 128 and send to 256
-            out_256 = self.scale_256(x_128, sent_random)
+            out_128 = Variable(out_dict['output_128'].data, requires_grad=False)
+            x_128 = self.scale_256(out_128, sent_random)
 
-            out_dict['output_256'] = self.tensor_to_img_256(out_256)
+            out_dict['output_256'] = x_128
 
         return out_dict, kl_loss
 
