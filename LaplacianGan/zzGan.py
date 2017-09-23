@@ -303,7 +303,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         # generate samples
         gen_samples = []
         img_samples = []
-        
+        vis_samples = {}
         for idx_test in range(num_test_forward + 1):
             #sent_emb_test, _ =  netG.condEmbedding(test_embeddings)
             if idx_test == 0:
