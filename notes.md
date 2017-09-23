@@ -6,6 +6,8 @@
 ## Large Model
 ## Ongoing testing
 - large_shared_skip: testing shared disc + one more 1x1 convolution in image disc.
+- no_upsampling skip conection: I do not think adding skip connect is necessary anymore. The results are also good
+- 
 
 ## Question need to answer:
 
@@ -15,4 +17,4 @@
 - Balance or unbalanced
 - Layer normalization+reLU  (LeakyreLU) is not working .... why? Wrong implementation?
 - In DiscClassifier. Do we need an extra 1x1 convolutional to embed image feature.
-    - Now the text is corresponded with image, because of removed unsample or 1x1 convolution?
+    - **Now the text is corresponded with image, because of removed unsample or 1x1 convolution?**
