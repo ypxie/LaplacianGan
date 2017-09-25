@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-
 from collections import OrderedDict
 from ..proj_utils.model_utils import to_device, getNormLayer, weights_init
 import math
@@ -283,13 +282,12 @@ class GeneratorNoSkip(Generator):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
                  output_size=256):
         super(GeneratorNoSkip, self).__init__(sent_dim, noise_dim, emb_dim, hid_dim, norm, activation, output_size)
-        print ('WARNING: GeneratorNoSkip version without upsample_32')
+        print ('GeneratorNoSkip version without upsample_32')
         delattr(self, 'upsample_4')
         if hasattr(self, 'upsample_8'):
             delattr(self, 'upsample_8')
         if hasattr(self, 'upsample_16'):
             delattr(self, 'upsample_16')
-            
 
     def forward(self, sent_embeddings, z):
         # sent_embeddings: [B, 1024]

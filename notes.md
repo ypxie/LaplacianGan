@@ -6,8 +6,9 @@
 ## Large Model
 ## Ongoing testing
 - large_shared_skip: testing shared disc + one more 1x1 convolution in image disc.
-- no_upsampling skip conection: I do not think adding skip connect is necessary anymore. The results are also good
-- 
+- no_upsampling skip conection: **I do not think adding skip connect is necessary anymore**. The results are also good
+- MultiStage architecture: Results seems promising. Stil training.
+- 256 early version: Although the style is not corresponded. But I think the major issuse here is the smaller 256 does not have good quality. So 256 can not. 
 
 ## Question need to answer:
 

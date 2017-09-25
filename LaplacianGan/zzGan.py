@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import autograd
 from torch.autograd import Variable
+from torch.nn import Parameter
 
 from torch.nn.utils import clip_grad_norm
 from .proj_utils.plot_utils import *
@@ -97,6 +98,25 @@ def GaussianLogDensity(x, mu, log_var = 'I'):
     log_prob = -torch.mean(torch.mean(log_prob, -1) )   # keep_dims=True,
     return log_prob
 
+def load_partial_state_dict(model, state_dict):
+
+        own_state = model.state_dict()
+        for name, param in state_dict.items():
+            if name not in own_state:
+                raise KeyError('unexpected key "{}" in state_dict'
+                               .format(name))
+            if isinstance(param, Parameter):
+                # backwards compatibility for serialized parameters
+                param = param.data
+            try:
+                own_state[name].copy_(param)
+            except:
+                print('While copying the parameter named {}, whose dimensions in the model are'
+                      ' {} and whose dimensions in the checkpoint are {}, ...'.format(
+                          name, own_state[name].size(), param.size()))
+                raise
+        print ('>> load partial state dict: {} initialized'.format(len(state_dict)))
+
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
     # helper function
     def plot_imgs(samples, epoch, typ, name, path=''):
@@ -151,16 +171,22 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         D_weightspath = os.path.join(model_folder, 'D_epoch{}.pth'.format(args.load_from_epoch))
         G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
         assert os.path.exists(D_weightspath) and os.path.exists(G_weightspath)
-        weights_dict = torch.load(D_weightspath,map_location=lambda storage, loc: storage)
-        # force load
-        weights_dict_copy = {}
-        for k1, k2 in zip(weights_dict.keys(), netD.state_dict().keys()):
-            weights_dict_copy[k2] = weights_dict[k1]
-        netD.load_state_dict(weights_dict_copy)# 12)
+        weights_dict = torch.load(D_weightspath, map_location=lambda storage, loc: storage)
+        # !! force load by renaming
+        import pdb; pdb.set_trace()
         print('reload weights from {}'.format(D_weightspath))
-        weights_dict = torch.load(G_weightspath,map_location=lambda storage, loc: storage)
-        netG.load_state_dict(weights_dict)# 12)
+        # weights_dict_copy = {}
+        # for idx, k1 in enumerate(weights_dict.keys()):
+        #     # only iteraate weights_dict because netD may has more layers for multiple resolutions
+        #     k2 = netD.state_dict().keys()[idx]
+        #     weights_dict_copy[k2] = weights_dict[k1]
+        load_partial_state_dict(netD, weights_dict)
+        # netD.load_state_dict(weights_dict)# 12)
         print('reload weights from {}'.format(G_weightspath))
+        weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
+        load_partial_state_dict(netG, weights_dict)
+        # netG.load_state_dict(weights_dict)# 12)
+
         start_epoch = args.load_from_epoch + 1
         if os.path.exists(plot_save_path):
             plot_dict = torch.load(plot_save_path)
