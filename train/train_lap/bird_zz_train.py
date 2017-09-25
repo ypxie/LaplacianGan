@@ -101,7 +101,7 @@ if  __name__ == '__main__':
         from LaplacianGan.models.zz_model import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
     elif args.which_gen == 'mutiStage':
-        from LaplacianGan.models.zz_model2 import Generator 
+        from LaplacianGan.models.zz_model_multistage import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
     elif args.which_gen == 'origin_no_skip':
         from LaplacianGan.models.zz_model import GeneratorNoSkip as Generator
