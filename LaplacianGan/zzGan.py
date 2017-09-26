@@ -230,7 +230,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             ''' update D '''        
             for p in netD.parameters(): p.requires_grad = True
             netD.zero_grad()
-
+            
             g_emb = Variable(embeddings.data, volatile=True)
             g_z = Variable(z.data , volatile=True)
             # forward generator
