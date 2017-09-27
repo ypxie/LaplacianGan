@@ -262,7 +262,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 fake_logit, fake_img_logit =  fake_dict['pair_disc'], fake_dict['img_disc']
 
                 # compute loss
-                chose_img_real = wrong_img_logit if random.random() > 0.5 else real_img_logit
+                chose_img_real = wrong_img_logit if random.random() > 0.1 else real_img_logit
                 discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan)
                 discriminator_loss += compute_d_img_loss(chose_img_real, fake_img_logit, args.wgan ) 
 
