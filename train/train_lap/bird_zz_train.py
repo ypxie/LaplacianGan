@@ -17,8 +17,6 @@ model_root = os.path.join('..', '..', 'Models')
 data_name = 'birds'
 datadir = os.path.join(data_root, data_name)
 
-
-
 if  __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description = 'Gans')    

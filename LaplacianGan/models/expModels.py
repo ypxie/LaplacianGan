@@ -513,84 +513,6 @@ class DiscClassifier(nn.Module):
 
         return output
 
-class Discriminator(torch.nn.Module):
-    '''
-    enc_dim: Reduce images inputs to (B, enc_dim, H, W)
-    emb_dim: The sentence embedding dimension.
-    '''
-
-    def __init__(self, input_size, num_chan,  hid_dim, sent_dim, emb_dim, norm='bn'):
-        super(Discriminator, self).__init__()
-        self.register_buffer('device_id', torch.IntTensor(1))
-        self.__dict__.update(locals())
-        activ = discAct()
-        norm_layer = getNormLayer(norm)
-
-        _layers = [nn.Linear(sent_dim, emb_dim)]
-        _layers += [activ]
-        self.context_emb_pipe = nn.Sequential(*_layers)
-
-        enc_dim = hid_dim * 4 # the ImageDown output dimension
-
-        _layers = []
-        self.img_encoder_64   = ImageDown(64,  num_chan,  enc_dim, norm)  # 4x4
-        self.pair_disc_64   = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
-        _layers =  [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]
-        self.img_disc_64 = nn.Sequential(*_layers)
-        self.max_out_size = 64
-
-        if input_size > 64:
-            self.img_encoder_128  = ImageDown(128,  num_chan, enc_dim, norm)  # 8
-            self.pair_disc_128  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
-            _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 4
-            self.img_disc_128 = nn.Sequential(*_layers)
-            self.max_out_size = 128
-            
-        if input_size > 128:
-            self.img_encoder_256  = ImageDown(256, num_chan, enc_dim, norm)  # 8
-            self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
-            _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding = 0, bias=True)]   # 4
-            self.img_disc_256 = nn.Sequential(*_layers)
-            self.max_out_size = 256
-        
-        self.apply(weights_init)
-        print ('>> initialized a {} size discriminator'.format(input_size))
-
-    def forward(self, images, embdding):
-        '''
-        images: (B, C, H, W)
-        embdding : (B, sent_dim)
-        outptuts:
-        -----------
-        img_code B*chan*col*row
-        pair_disc_out: B*1
-        img_disc: B*1*col*row
-        '''
-        out_dict = OrderedDict()
-        img_size = images.size()[3]
-        assert img_size in [32, 64, 128, 256], 'wrong input size {} in image discriminator'.format(img_size)
-        assert self.max_out_size >= img_size, 'image size {} exceeds expected maximum size {}'.format(img_size, self.max_out_size)
-
-        img_encoder_sym  = 'img_encoder_{}'.format(img_size)
-        img_disc_sym = 'img_disc_{}'.format(img_size)
-        pair_disc_sym = 'pair_disc_{}'.format(img_size)
-
-        img_encoder = getattr(self, img_encoder_sym)
-        img_disc    = getattr(self, img_disc_sym)
-        pair_disc   = getattr(self, pair_disc_sym)
-
-        sent_code = self.context_emb_pipe(embdding)
-        
-        img_code = img_encoder(images)
-        pair_disc_out = pair_disc(sent_code, img_code)
-        img_disc_out  = img_disc(img_code)
-        
-        out_dict['pair_disc']     = pair_disc_out
-        out_dict['img_disc']      = img_disc_out
-        out_dict['content_code']  = img_code # useless
-        return out_dict
-
-
 
 class sharedDiscriminator(torch.nn.Module):
     '''
@@ -638,8 +560,9 @@ class sharedDiscriminator(torch.nn.Module):
             
         if input_size > 128:
             self.img_encoder_256  = sharedImageDown(256, num_chan, enc_dim, norm, shared_block)  # 8
+            
             self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
-            _layers = [conv_norm(inp_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
+            _layers = [conv_norm(enc_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
                        nn.Conv2d(enc_dim, 1, kernel_size=4, padding = 0, bias=True)]   # 4
             self.img_disc_256 = nn.Sequential(*_layers)
             self.max_out_size = 256

@@ -298,7 +298,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                         real_dict   = netD(this_img,   embeddings)
                         real_img_code = real_dict['content_code']
                         #l2 = torch.mean((real_img_code - fake_img_code)**2) 
-                        #l1 =
                         #conten_loss = GaussianLogDensity(real_img_code, fake_img_code)
                         conten_loss = torch.mean(torch.abs(fake_img_code - real_img_code))* 4
                         generator_loss += conten_loss
@@ -312,9 +311,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             g_loss_plot.plot(g_loss_val)
             lr_plot.plot(g_lr)
             plot_dict['gen'].append(g_loss_val)
-
             
-
             global_iter += 1
 
             # visualize train samples
