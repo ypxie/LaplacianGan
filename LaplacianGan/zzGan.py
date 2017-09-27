@@ -166,14 +166,13 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
     ''' load model '''
     if args.reuse_weigths:
-        # import pdb; pdb.set_trace()
         assert args.load_from_epoch != '', 'args.load_from_epoch is empty'
         D_weightspath = os.path.join(model_folder, 'D_epoch{}.pth'.format(args.load_from_epoch))
         G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
         assert os.path.exists(D_weightspath) and os.path.exists(G_weightspath)
         weights_dict = torch.load(D_weightspath, map_location=lambda storage, loc: storage)
         # !! force load by renaming
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         print('reload weights from {}'.format(D_weightspath))
         # weights_dict_copy = {}
         # for idx, k1 in enumerate(weights_dict.keys()):
@@ -200,12 +199,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
     z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     z = to_device(z, netG.device_id, requires_grad=False)
-
     # test the fixed image for every epoch
     fixed_images, _, fixed_embeddings, _, _ = test_sampler(args.batch_size, 1)
     fixed_embeddings = to_device(fixed_embeddings, netG.device_id, volatile=True)
     fixed_z_data = [torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1) for _ in range(args.test_sample_num)]
-    fixed_z_list = [to_device(a, netG.device_id, volatile=True) for a in fixed_z_data]
+    fixed_z_list = [to_device(a, netG.device_id, volatile=True) for a in fixed_z_data] # what?
+
 
     # z_test = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     # z_test = to_device(z_test, netG.device_id, volatile=True)    
@@ -311,9 +310,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             g_loss_plot.plot(g_loss_val)
             lr_plot.plot(g_lr)
             plot_dict['gen'].append(g_loss_val)
-            
-            global_iter += 1
 
+            global_iter += 1
             # visualize train samples
             if it % 50 == 0:
                 for k, sample in fake_images.items():
