@@ -106,6 +106,10 @@ if  __name__ == '__main__':
     elif args.which_gen == 'origin_no_skip':
         from LaplacianGan.models.zz_model import GeneratorNoSkip as Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+    elif args.which_gen == 'origin_simple_skip':
+        from LaplacianGan.models.zz_model import GeneratorSimpleSkip as Generator
+
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
     elif args.which_gen == 'large_shared_skip':
         from LaplacianGan.models.expModels import Generator as Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
@@ -121,7 +125,6 @@ if  __name__ == '__main__':
     elif args.which_disc == 'large_shared_skip':
         
         from LaplacianGan.models.expModels import sharedDiscriminator as Discriminator
-        
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
     else:

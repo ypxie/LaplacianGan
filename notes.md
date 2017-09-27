@@ -19,3 +19,9 @@
 - Layer normalization+reLU  (LeakyreLU) is not working .... why? Wrong implementation?
 - In DiscClassifier. Do we need an extra 1x1 convolutional to embed image feature.
     - **Now the text is corresponded with image, because of removed unsample or 1x1 convolution?**
+
+
+
+# Model saved
+- zz_mmgan_noupsample_revisedisc_birds_64: do not use any upsample skip connection, pair discriminator has an extra 1x1
+- zz_mmgan_256_birds_256: has pretty resonable results, but the style is inaccurate

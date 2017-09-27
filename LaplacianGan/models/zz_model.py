@@ -133,18 +133,18 @@ class MultiModalBlock(nn.Module):
         return out
 
 
-class MultiModalBlock2(nn.Module):
-    def __init__(self, text_dim, img_dim, norm, activation='relu', use_bias=False, upsample_factor=3):
-        super(MultiModalBlock2, self).__init__()
+class MultiModalBlockShort(nn.Module):
+    def __init__(self, text_dim, img_dim, norm, activation='relu'):
+        super(MultiModalBlockShort, self).__init__()
         norm_layer = getNormLayer(norm)
         activ = get_activation_layer(activation)
         # upsampling 2^3 times
         seq = []
         cur_dim = text_dim
-        for i in range(upsample_factor):
-            seq += [nn.Upsample(scale_factor=2, mode='nearest')]
-            seq += [pad_conv_norm(cur_dim, cur_dim//2, norm_layer, activation=activ)]
-            cur_dim = cur_dim//2
+        
+        seq += [nn.Upsample(scale_factor=8, mode='nearest')]
+        seq += [pad_conv_norm(cur_dim, cur_dim//8, norm_layer, activation=activ)]
+        cur_dim = cur_dim//8
 
         self.upsample_path = nn.Sequential(*seq)
         self.joint_path = nn.Sequential(*[
@@ -235,7 +235,7 @@ class Generator(nn.Module):
 
             # add upsample module to concat with upper layers 
             if num_scales[i] in text_upsampling_at:
-                ## img_dim // 2 is bacause 
+                
                 setattr(self, 'upsample_%d'%(num_scales[i]), MultiModalBlock(text_dim=cur_dim, img_dim=cur_dim//2, norm=norm, activation=activation))
             # configure side output module
             if num_scales[i] in side_output_at:
@@ -282,7 +282,7 @@ class GeneratorNoSkip(Generator):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
                  output_size=256):
         super(GeneratorNoSkip, self).__init__(sent_dim, noise_dim, emb_dim, hid_dim, norm, activation, output_size)
-        print ('GeneratorNoSkip version without upsample_32')
+        print ('GeneratorNoSkip version without unsample skip connection')
         delattr(self, 'upsample_4')
         if hasattr(self, 'upsample_8'):
             delattr(self, 'upsample_8')
@@ -305,18 +305,15 @@ class GeneratorNoSkip(Generator):
         x_64 = self.scale_64(x_32)
         out_dict['output_64'] = self.tensor_to_img_64(x_64)
         
-        # if self.output_size > 64:
-        #     # skip 8x8 feature map to 64 and send to 128
-        #     x_64_8 = self.upsample_8(x_8, x_64)
-        #     x_128 = self.scale_128(x_64_8)
-        #     out_dict['output_128'] = self.tensor_to_img_128(x_128)
+        if self.output_size > 64:
+            # skip 8x8 feature map to 64 and send to 128
+            x_128 = self.scale_128(x_64)
+            out_dict['output_128'] = self.tensor_to_img_128(x_128)
 
-        # if self.output_size > 128:
-        #     # skip 16x16 feature map to 128 and send to 256
-        #     x_128_16 = self.upsample_16(x_16, x_128)
-        #     out_256 = self.scale_256(x_128_16)
-
-        #     out_dict['output_256'] = self.tensor_to_img_256(out_256)
+        if self.output_size > 128:
+            # skip 16x16 feature map to 128 and send to 256
+            out_256 = self.scale_256(x_128)
+            out_dict['output_256'] = self.tensor_to_img_256(out_256)
 
         return out_dict, kl_loss
 
@@ -325,48 +322,30 @@ class GeneratorSimpleSkip(Generator):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
                  output_size=256):
         super(GeneratorSimpleSkip, self).__init__(sent_dim, noise_dim, emb_dim, hid_dim, norm, activation, output_size)
-        self.upsample_4 = None
-        if self.output_size > 64:
-            self.upsample_8  = None
-        if self.output_size > 128:
-            self.upsample_16 = None
+        print (
+            'Generator with short multimodal connection'
+        )
+        if output_size == 256:
+            num_scales = [4, 8, 16, 32, 64, 128, 256]
+            text_upsampling_at = [4, 8, 16] 
+        elif output_size == 64:
+            num_scales = [4, 8, 16, 32, 64]
+            text_upsampling_at = [4] 
+        elif output_size == 128:
+            num_scales = [4, 8, 16, 32, 64, 128]
+            text_upsampling_at = [4, 8] 
+        reduce_dim_at = [8, 64, 256] 
 
-    def forward(self, sent_embeddings, z=None):
-        # sent_embeddings: [B, 1024]
-        
-        out_dict = OrderedDict()
-        sent_random, kl_loss  = self.condEmbedding(sent_embeddings)
-        text = torch.cat([sent_random, z], dim=1)
-        
-        # replicate sent_random
-        text_hidden =  sent_random.unsqueeze(-1).unsqueeze(-1)
-        b, text_dim = sent_random.size()
+        cur_dim = self.hid_dim*8
+        for i in range(len(num_scales)):
+            # if need to reduce dimension
+            if num_scales[i] in reduce_dim_at:
+                cur_dim = cur_dim//2
+            # add upsample module to concat with upper layers 
+            if num_scales[i] in text_upsampling_at:
+                setattr(self, 'upsample_%d'%(num_scales[i]), MultiModalBlockShort(text_dim=cur_dim, img_dim=cur_dim//2, norm=norm, activation=activation))
+     
 
-        x = self.vec_to_tensor(text)
-        x_4 = self.scale_4(x)
-        x_8 = self.scale_8(x_4)
-        x_16 = self.scale_16(x_8)
-        x_32 = self.scale_32(x_16)
-        
-        # concat text_hiddent to x_32
-        x_32_4 = torch.cat([x_32, text_hidden.expand((b,text_dim,32,32))], 1)
-        x_64 = self.scale_64(x_32_4)
-        out_dict['output_64'] = self.tensor_to_img_64(x_64)
-        
-        if self.output_size > 64:
-            # skip 8x8 feature map to 64 and send to 128
-            x_64_8 = torch.cat([x_64, text_hidden.expand((b,text_dim,64,64))], 1)
-            x_128 = self.scale_128(x_64_8)
-            out_dict['output_128'] = self.tensor_to_img_128(x_128)
-
-        if self.output_size > 128:
-            # skip 16x16 feature map to 128 and send to 256
-            x_128_16 = torch.cat([x_128, text_hidden.expand((b,text_dim,128,128))], 1)
-            out_256 = self.scale_256(x_128_16)
-
-            out_dict['output_256'] = self.tensor_to_img_256(out_256)
-
-        return out_dict, kl_loss  
 
 
 class ImageDown(torch.nn.Module):
