@@ -205,6 +205,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     fixed_z_data = [torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1) for _ in range(args.test_sample_num)]
     fixed_z_list = [to_device(a, netG.device_id, volatile=True) for a in fixed_z_data] # what?
 
+
     # z_test = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     # z_test = to_device(z_test, netG.device_id, volatile=True)    
 
@@ -228,7 +229,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             ''' update D '''        
             for p in netD.parameters(): p.requires_grad = True
             netD.zero_grad()
-
+            
             g_emb = Variable(embeddings.data, volatile=True)
             g_z = Variable(z.data , volatile=True)
             # forward generator

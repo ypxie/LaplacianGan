@@ -35,7 +35,7 @@ class Dataset(object):
         self._class_range = class_range
         self._imsize = imsize
         self._perm = None
-
+        self.end_of_data = False
     @property
     def images(self):
         return self._images
@@ -193,6 +193,7 @@ class Dataset(object):
         if (start + batch_size) > self._num_examples:
             end = self._num_examples
             start = end - batch_size
+            self.end_of_data = True
         else:
             end = start + batch_size
 

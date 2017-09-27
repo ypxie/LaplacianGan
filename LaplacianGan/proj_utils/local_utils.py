@@ -18,19 +18,23 @@ import scipy.ndimage
 
 from numba import jit, autojit
 from .generic_utils import get_from_module
-import random
+import random, shutil
 import scipy.misc as misc
 
 def get(identifier):
     return get_from_module(identifier, globals(), 'local_utils')
 
-def mkdirs(folders):
+def mkdirs(folders, erase=False):
     if type(folders) is not list:
         folders = [folders]
     for fold in folders:
         if not os.path.exists(fold):
             os.makedirs(fold)
-
+        else:
+            if erase:
+                shutil.rmtree(fold)
+                os.makedirs(fold)
+                
 class myobj(object):
     pass
 
