@@ -57,7 +57,7 @@ def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_logit, prob=0.5, wg
 
         real_img_d_loss = wrong_d_loss * prob + real_d_loss * (1-prob)
         fake_d_loss = 0 if type(fake_logit) in [int, float]  else  torch.mean( ((fake_logit))**2)
-        
+
         return fake_d_loss + real_img_d_loss
 
 def compute_g_loss(fake_logit, wgan=False):
@@ -228,7 +228,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             
             netG.train()
             if gen_iterations < 100 or gen_iterations % 50 == 0:
-                ncritic = 25
+                ncritic = 2
             else:
                 ncritic = args.ncritic
 

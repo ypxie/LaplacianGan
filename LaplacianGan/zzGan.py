@@ -180,29 +180,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     if args.reuse_weigths :
         D_weightspath = os.path.join(model_folder, 'D_epoch{}.pth'.format(args.load_from_epoch))
         G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
-<<<<<<< HEAD
-        assert os.path.exists(D_weightspath) and os.path.exists(G_weightspath)
-        weights_dict = torch.load(D_weightspath, map_location=lambda storage, loc: storage)
-        # !! force load by renaming
-        # import pdb; pdb.set_trace()
-        print('reload weights from {}'.format(D_weightspath))
-        # weights_dict_copy = {}
-        # for idx, k1 in enumerate(weights_dict.keys()):
-        #     # only iteraate weights_dict because netD may has more layers for multiple resolutions
-        #     k2 = netD.state_dict().keys()[idx]
-        #     weights_dict_copy[k2] = weights_dict[k1]
-        load_partial_state_dict(netD, weights_dict)
-        # netD.load_state_dict(weights_dict)# 12)
-        print('reload weights from {}'.format(G_weightspath))
-        weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
-        load_partial_state_dict(netG, weights_dict)
-        # netG.load_state_dict(weights_dict)# 12)
-
-        start_epoch = args.load_from_epoch + 1
-        tot_epoch = start_epoch + args.maxepoch + 1
-        if os.path.exists(plot_save_path):
-            plot_dict = torch.load(plot_save_path)
-=======
 
         if os.path.exists(D_weightspath) and os.path.exists(G_weightspath):
             
@@ -229,7 +206,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         else:
             print('{} and {} do not exist!!'.format(D_weightspath, G_weightspath))
             start_epoch = 1
->>>>>>> 73d4277fb4d889530200892099e47a8daaec73a8
+
     else:
         start_epoch = 1
 
