@@ -47,9 +47,9 @@ def compute_d_pair_loss(real_logit, wrong_logit, fake_logit, wgan=False):
             real_d_loss + (wrong_d_loss + fake_d_loss) / 2.
         return discriminator_loss
 
-def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_logit, prob=0.5, wgan=False):
+def compute_d_img_loss(real_logit, fake_logit, wgan=False):
     if wgan:
-        dloss = (prob*wrong_img_logit + (1-prob)*real_img_logit) - real_logit 
+        dloss = fake_logit - real_logit 
         return torch.mean(dloss)
     else:
         # ones_target  =  Variable(real_logit.data.new(real_logit.size()).fill_(1.0), 
@@ -61,12 +61,9 @@ def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_logit, prob=0.5, wg
         # fake_d_loss =  F.binary_cross_entropy_with_logits(fake_logit, zeros_target)
         # fake_d_loss =  torch.mean(fake_d_loss) 
         
-        wrong_d_loss = torch.mean( ((wrong_img_logit) -1)**2)
-        real_d_loss = torch.mean( ((real_img_logit) -1)**2)
-
-        real_img_d_loss = wrong_d_loss * prob + real_d_loss * (1-prob)
+        real_d_loss =  torch.mean( ((real_logit) -1)**2)
         fake_d_loss =  torch.mean( ((fake_logit))**2)
-        return fake_d_loss + real_img_d_loss
+        return fake_d_loss + real_d_loss
 
 def compute_g_loss(fake_pair_logit, fake_img_logit, wgan=False):
     if wgan:
@@ -204,7 +201,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             if os.path.exists(plot_save_path):
                 plot_dict = torch.load(plot_save_path)
         else:
-            print('{} and {} do not exist!!'.format(D_weightspath, G_weightspath))
             start_epoch = 1
     else:
         start_epoch = 1
@@ -263,14 +259,14 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 real_dict   = netD(this_img,   embeddings)
                 wrong_dict  = netD(this_wrong, embeddings)
                 fake_dict   = netD(this_fake,  embeddings)
-                real_logit, real_img_logit   =  real_dict['pair_disc'], real_dict['img_disc']
+                real_logit, real_img_logit  =  real_dict['pair_disc'], real_dict['img_disc']
                 wrong_logit, wrong_img_logit =  wrong_dict['pair_disc'], wrong_dict['img_disc']
-                fake_logit, fake_img_logit   =  fake_dict['pair_disc'], fake_dict['img_disc']
+                fake_logit, fake_img_logit =  fake_dict['pair_disc'], fake_dict['img_disc']
 
                 # compute loss
-                #chose_img_real = wrong_img_logit if random.random() > 0.1 else real_img_logit
+                chose_img_real = wrong_img_logit if random.random() > 0.1 else real_img_logit
                 discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan)
-                discriminator_loss += compute_d_img_loss(wrong_img_logit, real_img_logit, fake_img_logit, prob=0.5, wgan=args.wgan ) 
+                discriminator_loss += compute_d_img_loss(chose_img_real, fake_img_logit, args.wgan ) 
 
             d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
             d_loss_val = -d_loss_val if args.wgan else d_loss_val
@@ -286,13 +282,14 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             netG.zero_grad()
             #_, _, embeddings, _, _ = train_sampler(args.batch_size, args.num_emb)
             ''' Interpolate across samples '''
-            # if args.emb_interp:
-            #     np_embeddings = inter_across(np_embeddings)
-            #     embeddings = to_device(np_embeddings, netD.device_id, requires_grad=False)
+            if args.emb_interp:
+                np_embeddings = inter_across(np_embeddings)
+                interp_embeddings = to_device(np_embeddings, netD.device_id, requires_grad=False)
 
             z.data.normal_(0, 1) # resample random noises
             fake_images, kl_loss = netG(embeddings, z)
             
+
             loss_val  = 0
             generator_loss = args.KL_COE*kl_loss
             for key, _ in fake_images.items():

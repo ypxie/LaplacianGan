@@ -65,14 +65,13 @@ if  __name__ == '__main__':
                         help='folder to save the temper images.')
 
     ## add more
-
     parser.add_argument('--device_id', type=int, default=0, 
                         help='which device')
     parser.add_argument('--imsize', type=int, default=256, 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
                         help='decay epoch image size')
-    parser.add_argument('--load_from_epoch', type=int, default=0, 
+    parser.add_argument('--load_from_epoch', type=int, default= 0, 
                         help='load from epoch')
     parser.add_argument('--model_name', type=str, default='zz_gan')
     parser.add_argument('--test_sample_num', type=int, default=4, 
@@ -81,14 +80,13 @@ if  __name__ == '__main__':
                         help='The number of runs for each embeddings when testing')
     parser.add_argument('--gen_activation_type', type=str, default='relu', 
                         help='The number of runs for each embeddings when testing')
-    parser.add_argument('--debug_mode', action='store_true', 
+    parser.add_argument('--debug_mode', action='store_true',  
                         help='debug mode use fake dataset loader')   
-    parser.add_argument('--no_img_loss', action='store_true', 
-                        help='debug mode use fake dataset loader')
-    parser.add_argument('--which_gen', type=str, default='origin', 
-                        help='generator type')
-    parser.add_argument('--which_disc', type=str, default='origin', 
-                        help='discriminator type')
+    parser.add_argument('--which_gen', type=str, default='origin',  help='generator type')
+    parser.add_argument('--which_disc', type=str, default='origin', help='discriminator type')
+    parser.add_argument('--emb_interp', action='store_true', 
+                        help='Use interpolation emb in disc')        
+            
 
     args = parser.parse_args()
 
@@ -109,9 +107,11 @@ if  __name__ == '__main__':
 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
     elif args.which_gen == 'large_shared_skip':
+        
         from LaplacianGan.models.expModels import Generator as Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)   
+   
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 
@@ -125,6 +125,7 @@ if  __name__ == '__main__':
         from LaplacianGan.models.expModels import sharedDiscriminator as Discriminator
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
+    
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
     
@@ -142,7 +143,7 @@ if  __name__ == '__main__':
 
     if not args.debug_mode:
         print ('>> initialize dataset')
-        dataset = TextDataset(datadir, 'cnn-rnn', 4)
+        dataset = TextDataset(datadir, 'cnn-rnn', args.num_emb)
         filename_test = os.path.join(datadir, 'test')
         dataset.test = dataset.get_data(filename_test)
         filename_train = os.path.join(datadir, 'train')

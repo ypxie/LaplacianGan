@@ -31,6 +31,6 @@
 
 
 # To Do
-- cond aug + determinisitc_emb
+- cond aug + determinisitc_emb (**Proven failed**)
 - use text sample size 1
 - local disc 

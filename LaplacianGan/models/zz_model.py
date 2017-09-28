@@ -187,8 +187,7 @@ class Generator(nn.Module):
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
-
-
+        
         self.register_buffer('device_id', torch.IntTensor(1))
         self.condEmbedding = condEmbedding(sent_dim, emb_dim)
         self.vec_to_tensor = sentConv2(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm=norm)
