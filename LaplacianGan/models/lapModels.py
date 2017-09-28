@@ -189,12 +189,16 @@ class Generator(nn.Module):
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
 
-
         self.register_buffer('device_id', torch.IntTensor(1))
         self.condEmbedding = condEmbedding(sent_dim, emb_dim)
         self.vec_to_tensor = sentConv2(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm=norm)
         
         '''user defefined'''
+        if type(output_size) is not list:
+            if output_size == 256: output_size = [64, 128, 256]
+            if output_size == 128: output_size = [64, 128]
+            if output_size == 64:  output_size = [64]
+
         self.output_size = output_size
         # 64, 128, or 256 version
         

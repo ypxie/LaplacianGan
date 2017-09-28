@@ -10,6 +10,9 @@
 - MultiStage architecture: Results seems promising. Stil training.
 - 256 early version: Although the style is not corresponded. But I think the major issuse here is the smaller 256 does not have good quality. So 256 can not. 
 
+- 256 large_skip_shared: with nun_emb = 1.
+- 64 no_skip_connection-thin network: with num_emb = 1. 
+
 ## Question need to answer:
 
 - Small batch size?
@@ -25,3 +28,9 @@
 # Model saved
 - zz_mmgan_noupsample_revisedisc_birds_64: do not use any upsample skip connection, pair discriminator has an extra 1x1
 - zz_mmgan_256_birds_256: has pretty resonable results, but the style is inaccurate
+
+
+# To Do
+- cond aug + determinisitc_emb (**Proven failed**)
+- use text sample size 1
+- local disc 

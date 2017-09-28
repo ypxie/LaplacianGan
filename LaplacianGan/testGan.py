@@ -19,13 +19,8 @@ TINY = 1e-8
 
 def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     # helper function
-    def plot_imgs(samples, epoch, typ, name, path=''):
-        tmpX = save_images(samples, save=not path == '', save_path=os.path.join(path, '{}_epoch{}_{}.png'.format(name, epoch, typ)), dim_ordering='th')
-        plot_img(X=tmpX, win='{}_{}.png'.format(name, typ), env=mode_name)
-    
-    test_sampler  = dataset.test.next_batch_test
 
-    num_test_forward = args.test_sample_num # number of testing samples to show
+    test_sampler  = dataset.test.next_batch_test
 
     model_folder = os.path.join(model_root, mode_name)
     model_marker = mode_name + '_epoch_{}'.format(args.load_from_epoch)
@@ -50,15 +45,14 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
 
     testing_z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     testing_z = to_device(testing_z, netG.device_id, volatile=True)    
-
     
 
     while True:
         if dataset.test.end_of_data:
             break;
         
-        test_images, test_embeddings, saveIDs, test_captions = test_sampler(args.batch_size, 1)
-        
+        test_images, test_embeddings_list, saveIDs, test_captions = test_sampler(args.batch_size, 1)
+        #test_embeddings_list is a list of (B,emb_dim)
         ''' visualize test per epoch '''
         # generate samples
         gen_samples = []
@@ -68,9 +62,14 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
         tmp_samples = {}
         
         data_dict = {}
+        all_captions = []
         for t in range(args.test_sample_num):
-            testing_z.data.normal_(0, 1)
             
+            B = len(test_embeddings_list)
+            ridx = random.randint(0, B-1)
+            testing_z.data.normal_(0, 1)
+
+            this_test_embeddings = test_embeddings_list[ridx]
             samples, _ = netG(test_embeddings, testing_z)
             
             if  t == 0:  
@@ -78,8 +77,6 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                     vis_samples[k] = [None for i in range(args.test_sample_num + 1)] # +1 to fill real image
                     data_dict[k] = []
 
-            # Oops! very tricky to organize data for plot inputs!!!
-            # vis_samples[k] = [real data, sample1, sample2, sample3, ... sample_args.test_sample_num]
             for k, v in samples.items():
                 cpu_data = v.cpu().data.numpy()
                 if t == 0:
@@ -102,8 +99,13 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                 save_path = os.path.join(save_folder, '{}_{}.png'.format(img_id, typ) )
                 save_images(this_img, save = True, save_path=save_path, dim_ordering='th')
     
+    string_dt = h5py.special_dtype(vlen=str)
+    #dset_img = h5file.create_dataset("images", (total_num, 3, 224, 224), dtype='uint8')
+            
     with h5py.File(save_h5,'w') as h5file:
         for k, v in data_dict.items():
             all_data = np.concatenate(v, 0)
             dset_img = h5file.create_dataset(k, data=all_data, dtype='float32')
-    
+            
+            h5file.create_dataset("captions", data=np.array(test_captions), dtype=string_dt)
+            h5file.close()
