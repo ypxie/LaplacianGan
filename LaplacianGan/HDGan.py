@@ -83,7 +83,7 @@ def inter_across(embeddings):
     return res
     
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
-
+    print('>> using hd gan trainer')
     # helper function
     def plot_imgs(samples, epoch, typ, name, path=''):
         tmpX = save_images(samples, save=not path == '', save_path=os.path.join(path, '{}_epoch{}_{}.png'.format(name, epoch, typ)), dim_ordering='th')
@@ -188,7 +188,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 ncritic = 5
                 print ('>> set ncritic to {}'.format(ncritic))
             elif gen_iterations % 50 == 0:
-                ncritic = 20
+                ncritic = 15
                 print ('>> set ncritic to {}'.format(ncritic))
             else:
                 ncritic = args.ncritic
