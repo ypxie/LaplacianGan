@@ -212,7 +212,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             if gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0) :
                 ncritic = 5
             elif gen_iterations % 50 == 0:
-                ncritic = 20
+                ncritic = 10
             else:
                 ncritic = args.ncritic
 
