@@ -210,7 +210,7 @@ class Generator(nn.Module):
 
         print ('>> initialized a {} size generator'.format(output_size))
 
-        reduce_dim_at = [8, 32, 128, 256] # [8, 64, 256]
+        reduce_dim_at  = [8, 32, 128, 256] # [8, 64, 256]
         side_output_at = [64, 128, 256] 
         num_resblock = 1
 
@@ -335,7 +335,7 @@ class GeneratorSimpleSkip(Generator):
         elif output_size == 128:
             num_scales = [4, 8, 16, 32, 64, 128]
             text_upsampling_at = [4, 8] 
-        reduce_dim_at = [8, 64, 256] 
+        reduce_dim_at = [8, 32, 128, 256] 
 
         cur_dim = self.hid_dim*8
         for i in range(len(num_scales)):
@@ -346,9 +346,6 @@ class GeneratorSimpleSkip(Generator):
             if num_scales[i] in text_upsampling_at:
                 setattr(self, 'upsample_%d'%(num_scales[i]), MultiModalBlockShort(text_dim=cur_dim, img_dim=cur_dim//2, norm=norm, activation=activation))
      
-
-
-
 class ImageDown(torch.nn.Module):
     '''
        This module encode image to 16*16 feat maps
@@ -366,7 +363,7 @@ class ImageDown(torch.nn.Module):
             _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 32
             _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 16
             _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 8
-            _layers += [conv_norm(cur_dim*4, out_dim,  norm_layer, stride=2, activation=activ)] # 4
+            _layers += [conv_norm(cur_dim*4, out_dim,  norm_layer, stride=1, activation=activ, kernel_size=5, padding=0)] # 4
             #_layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=1, activation=activ,kernel_size=3, padding=0)] # 2
 
         if input_size == 128:
@@ -375,7 +372,7 @@ class ImageDown(torch.nn.Module):
             _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 32
             _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 16
             _layers += [conv_norm(cur_dim*4, cur_dim*8,  norm_layer, stride=2, activation=activ)] # 8
-            _layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=2, activation=activ)] # 4
+            _layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=1, activation=activ,kernel_size=5, padding=0)] # 4
         
         if input_size == 256:
             cur_dim = 32 # for testing
@@ -384,7 +381,7 @@ class ImageDown(torch.nn.Module):
             _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 32
             _layers += [conv_norm(cur_dim*4, cur_dim*8,  norm_layer, stride=2, activation=activ)] # 16
             _layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=2, activation=activ)] # 8
-            #_layers += [conv_norm(cur_dim*16, out_dim,  norm_layer, stride=2, activation=activ)] # 16
+            #_layers += [conv_norm(cur_dim*16, out_dim,  norm_layer, stride=2, activation=activ)] # 4
             
         self.node = nn.Sequential(*_layers)
 
@@ -415,8 +412,9 @@ class DiscClassifier(nn.Module):
 
         # TODO: do we need anyother convolutional layer to joint image-text feature.
         # Now I added. It is different from previous verison.
+        
         _layers =  [ conv_norm(inp_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
-                     nn.Conv2d(enc_dim, 1, kernel_size=new_feat_size, padding=0, bias=True)]
+                      nn.Conv2d(enc_dim, 1, kernel_size =new_feat_size, padding=0, bias=True)]
         ## _layers = [nn.Conv2d(inp_dim, 1, kernel_size=new_feat_size, padding=0, bias=True)]
         self.node = nn.Sequential(*_layers)
 
@@ -483,14 +481,16 @@ class Discriminator(torch.nn.Module):
 
         if input_size > 128:
             self.img_encoder_256  = ImageDown(256, num_chan, enc_dim, norm)  # 8
+             
             self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=8,  norm=norm, activ=activ)
-            
+            self.shrink = conv_norm(enc_dim, enc_dim,  norm_layer, stride=1, activation=activ, kernel_size=5, padding=0)
+
             self.max_out_size = 256
             if 'local' in self.disc_mode:
                 _layers = [nn.Conv2d(enc_dim, 1, kernel_size=1, padding = 0, bias=True)]   # 8
                 self.local_img_disc_256 = nn.Sequential(*_layers)
             if 'global' in self.disc_mode:
-                _layers = [nn.Conv2d(enc_dim, 1, kernel_size=8, padding=0, bias=True)]   # 1
+                _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 1
                 self.global_img_disc_256 = nn.Sequential(*_layers)
 
             _layers = [nn.Linear(sent_dim, emb_dim)]
@@ -530,9 +530,13 @@ class Discriminator(torch.nn.Module):
         context_emb_pipe  = getattr(self, context_emb_pipe_sym)
 
         sent_code = context_emb_pipe(embdding)
-        img_code = img_encoder(images)
-        pair_disc_out = pair_disc(sent_code, img_code)
-        
+        img_code = img_encoder(images) 
+        if img_size == 256:
+            shrink_img_code = self.shrink(img_code)
+            pair_disc_out = pair_disc(shrink_img_code, img_code)
+        else:
+            pair_disc_out = pair_disc(sent_code, img_code)
+
         out_dict['local_img_disc']   = 1
         out_dict['global_img_disc']  = 1
 
@@ -541,8 +545,9 @@ class Discriminator(torch.nn.Module):
             out_dict['local_img_disc']  = local_img_disc_out
             
         if 'global' in self.disc_mode:
-            global_img_disc_out              = global_img_disc(img_code)
-            out_dict['global_img_disc']      = global_img_disc_out
+            this_code = img_code  if img_size is not 256 else shrink_img_code
+            global_img_disc_out         = global_img_disc(this_code)
+            out_dict['global_img_disc'] = global_img_disc_out
             
         out_dict['pair_disc']     = pair_disc_out
         out_dict['content_code']  = None # useless

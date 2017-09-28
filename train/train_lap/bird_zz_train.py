@@ -105,12 +105,12 @@ if  __name__ == '__main__':
         from LaplacianGan.models.zz_model import GeneratorSimpleSkip as Generator
 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
-    elif args.which_gen == 'large_skip':
+    elif args.which_gen == 'large_no_skip':
         from LaplacianGan.lapGan import train_gans
-        from LaplacianGan.models.expModels import Generator as Generator
+        from LaplacianGan.models.zz_model import GeneratorNoSkip as Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)   
-   
+                        
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 
@@ -119,7 +119,7 @@ if  __name__ == '__main__':
         from LaplacianGan.models.zz_model import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
-    elif args.which_disc == 'large_skip':
+    elif args.which_disc == 'large_no_skip':
         from LaplacianGan.lapGan import train_gans
         from LaplacianGan.models.zz_model import Discriminator as Discriminator
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 

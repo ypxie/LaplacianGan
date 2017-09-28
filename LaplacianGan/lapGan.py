@@ -21,24 +21,6 @@ def compute_d_pair_loss(real_logit, wrong_logit, fake_logit, wgan=False):
         disc = wrong_logit  + fake_logit - 2*real_logit
         return torch.mean(disc)
     else:    
-        # ones_target  =  Variable(real_logit.data.new(real_logit.size()).fill_(1.0), requires_grad=False)
-        # zeros_target =  Variable(real_logit.data.new(real_logit.size()).fill_(0.0), requires_grad=False)
-
-        # real_d_loss =\
-        #     F.binary_cross_entropy_with_logits( real_logit,
-        #                                         ones_target)
-        # real_d_loss = torch.mean(real_d_loss)
-
-        # wrong_d_loss =\
-        #     F.binary_cross_entropy_with_logits( wrong_logit,
-        #                                         zeros_target)
-        # wrong_d_loss = torch.mean(wrong_d_loss)
-
-        # fake_d_loss =\
-        #     F.binary_cross_entropy_with_logits( fake_logit,
-        #                                         zeros_target)
-        # fake_d_loss = torch.mean(fake_d_loss)
-        
         real_d_loss  = torch.mean( ((real_logit) -1)**2)
         wrong_d_loss = torch.mean( ((wrong_logit))**2)
         fake_d_loss  = torch.mean( ((fake_logit))**2)
@@ -53,10 +35,10 @@ def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_logit, prob=0.5, wg
         return torch.mean(dloss)
     else:
         wrong_d_loss = 0 if type(wrong_img_logit) in [int, float] else torch.mean( ((wrong_img_logit) -1)**2) 
-        real_d_loss = 0 if type(real_img_logit) in [int, float]  else torch.mean( ((real_img_logit) -1)**2)
+        real_d_loss  = 0 if type(real_img_logit) in [int, float]  else torch.mean( ((real_img_logit) -1)**2)
 
         real_img_d_loss = wrong_d_loss * prob + real_d_loss * (1-prob)
-        fake_d_loss = 0 if type(fake_logit) in [int, float]  else  torch.mean( ((fake_logit))**2)
+        fake_d_loss  = 0 if type(fake_logit) in [int, float]  else  torch.mean( ((fake_logit))**2)
 
         return fake_d_loss + real_img_d_loss
 
@@ -66,7 +48,7 @@ def compute_g_loss(fake_logit, wgan=False):
         #gloss = -fake_img_logit
         return torch.mean(gloss)
     else:   
-        if type(fake_logit) is int or    type(fake_logit) is float:
+        if type(fake_logit) in [int, float]:
             return 0
         else:
             generator_loss = torch.mean( ((fake_logit) -1)**2 )              
@@ -228,7 +210,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             
             netG.train()
             if gen_iterations < 100 or gen_iterations % 50 == 0:
-                ncritic = 2
+                ncritic = 5
             else:
                 ncritic = args.ncritic
 
