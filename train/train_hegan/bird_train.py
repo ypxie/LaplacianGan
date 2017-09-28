@@ -120,7 +120,6 @@ if  __name__ == '__main__':
     
     print(netG)
     print(netD) 
-    print('Finish building gen and disc for: ', args.which_gen)
     
     device_id = getattr(args, 'device_id', 0)
 
@@ -141,4 +140,5 @@ if  __name__ == '__main__':
         dataset = []
         print ('>> in debug mode')
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
+    print ('>> START training ')
     train_gans(dataset, model_root, model_name, netG, netD, args)

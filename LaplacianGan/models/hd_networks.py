@@ -328,8 +328,9 @@ class Discriminator(torch.nn.Module):
 
         if input_size > 128:
             self.img_encoder_256  = ImageDown(256, num_chan, enc_dim, norm)  # 8
-             
-            self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
+            
+            self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
+            
             # shrink is used for mapping 8x8 FM to 4x4
             self.shrink = conv_norm(enc_dim, enc_dim,  norm_layer, stride=1, activation=activ, kernel_size=5, padding=0)
 
