@@ -31,7 +31,7 @@ if  __name__ == '__main__':
     
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--reuse_weigths', action='store_true', 
+    parser.add_argument('--reuse_weights', action='store_true', 
                         help='continue from last checkout point')
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
