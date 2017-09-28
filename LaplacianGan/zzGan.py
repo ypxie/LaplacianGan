@@ -115,7 +115,7 @@ def load_partial_state_dict(model, state_dict):
                       ' {} and whose dimensions in the checkpoint are {}, ...'.format(
                           name, own_state[name].size(), param.size()))
                 raise
-        print ('>> load partial state dict: {} initialized'.format(len(state_dict)))
+        print ('>> load partial state dict: {} out of {} initialized'.format(len(state_dict), len(own_state)))
 
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
     # helper function
@@ -187,6 +187,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         # netG.load_state_dict(weights_dict)# 12)
 
         start_epoch = args.load_from_epoch + 1
+        tot_epoch = start_epoch + args.maxepoch + 1
         if os.path.exists(plot_save_path):
             plot_dict = torch.load(plot_save_path)
     else:

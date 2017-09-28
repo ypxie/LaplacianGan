@@ -639,7 +639,7 @@ class sharedDiscriminator(torch.nn.Module):
         if input_size > 128:
             self.img_encoder_256  = sharedImageDown(256, num_chan, enc_dim, norm, shared_block)  # 8
             self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
-            _layers = [conv_norm(inp_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
+            _layers = [conv_norm(enc_dim, enc_dim, norm_layer, kernel_size=1, stride=1, activation=activ),
                        nn.Conv2d(enc_dim, 1, kernel_size=4, padding = 0, bias=True)]   # 4
             self.img_disc_256 = nn.Sequential(*_layers)
             self.max_out_size = 256
