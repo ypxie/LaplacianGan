@@ -87,7 +87,6 @@ if  __name__ == '__main__':
     parser.add_argument('--emb_interp', action='store_true', 
                         help='Use interpolation emb in disc')        
             
-
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
@@ -107,7 +106,7 @@ if  __name__ == '__main__':
 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
     elif args.which_gen == 'large_shared_skip':
-        
+        from LaplacianGan.lapGan import train_gans
         from LaplacianGan.models.expModels import Generator as Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)   
@@ -121,7 +120,7 @@ if  __name__ == '__main__':
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
     elif args.which_disc == 'large_shared_skip':
-        
+        from LaplacianGan.lapGan import train_gans
         from LaplacianGan.models.expModels import sharedDiscriminator as Discriminator
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
