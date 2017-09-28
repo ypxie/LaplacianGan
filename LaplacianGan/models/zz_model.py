@@ -77,12 +77,14 @@ def pad_conv_norm(dim_in, dim_out, norm_layer, kernel_size=3, use_activation=Tru
     
     return nn.Sequential(*seq)
 
-def conv_norm(dim_in, dim_out, norm_layer, kernel_size=3, stride=1, use_activation=True, use_bias=False, activation=nn.ReLU(True), use_norm=True):
+def conv_norm(dim_in, dim_out, norm_layer, kernel_size=3, stride=1, use_activation=True, 
+              use_bias=False, activation=nn.ReLU(True), use_norm=True,padding=None):
     # designed for discriminator
+    
     if kernel_size == 3:
-        padding = 1
+        padding = 1 if padding is None else padding
     else:
-        padding = 0
+        padding = 0 if padding is None else padding
 
     seq = [nn.Conv2d(dim_in, dim_out, kernel_size=kernel_size, padding=padding, bias=use_bias, stride=stride),
            ]
@@ -187,7 +189,7 @@ class Generator(nn.Module):
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
-        
+
         self.register_buffer('device_id', torch.IntTensor(1))
         self.condEmbedding = condEmbedding(sent_dim, emb_dim)
         self.vec_to_tensor = sentConv2(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm=norm)
@@ -208,7 +210,7 @@ class Generator(nn.Module):
 
         print ('>> initialized a {} size generator'.format(output_size))
 
-        reduce_dim_at = [8, 64, 256] 
+        reduce_dim_at = [8, 32, 128, 256] # [8, 64, 256]
         side_output_at = [64, 128, 256] 
         num_resblock = 1
 
@@ -364,33 +366,26 @@ class ImageDown(torch.nn.Module):
             _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 32
             _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 16
             _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 8
-            _layers += [conv_norm(cur_dim*4, out_dim,  norm_layer, stride=2, activation=activ)] # 4
-            
-            # add more layers like StackGAN did. I don't think it is necessary.
-            # cur_dim = cur_dim * 4
-            # _layers = []
-            # _layers += [conv_norm(cur_dim, cur_dim//4,  norm_layer, kernel_size=1, activation=activ)] # 16
-            # _layers += [conv_norm(cur_dim//4, cur_dim//4, norm_layer, activation=activ)] # 16
-            # _layers += [conv_norm(cur_dim//4, out_dim, norm_layer,  use_activation=False)] # 16
-            # self.skip = nn.Sequential(*_layers)
+            _layers += [conv_norm(cur_dim*4, cur_dim*8,  norm_layer, stride=2, activation=activ)] # 4
+            _layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=2, activation=activ,kernel_size=3, padding=0)] # 2
+
         if input_size == 128:
             cur_dim = 64 # for testing
-            _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 32
-            _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 16
+            _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 64
+            _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 32
             _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 16
-            _layers += [conv_norm(cur_dim*4, cur_dim*8,  norm_layer, stride=2, activation=activ)] # 16
-            _layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=2, activation=activ)] # 16
+            _layers += [conv_norm(cur_dim*4, cur_dim*8,  norm_layer, stride=2, activation=activ)] # 8
+            _layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=2, activation=activ)] # 4
         
         if input_size == 256:
             cur_dim = 32 # for testing
-            _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 32
-            _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 16
-            _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 16
+            _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 128
+            _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 64
+            _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 32
             _layers += [conv_norm(cur_dim*4, cur_dim*8,  norm_layer, stride=2, activation=activ)] # 16
-            _layers += [conv_norm(cur_dim*8, cur_dim*16,  norm_layer, stride=2, activation=activ)] # 16
-            _layers += [conv_norm(cur_dim*16, out_dim,  norm_layer, stride=2, activation=activ)] # 16
+            _layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=2, activation=activ)] # 8
+            #_layers += [conv_norm(cur_dim*16, out_dim,  norm_layer, stride=2, activation=activ)] # 16
             
-
         self.node = nn.Sequential(*_layers)
 
     def forward(self, inputs):
@@ -455,18 +450,17 @@ class Discriminator(torch.nn.Module):
         activ = discAct()
         norm_layer = getNormLayer(norm)
 
-        _layers = [nn.Linear(sent_dim, emb_dim)]
-        _layers += [activ]
-        self.context_emb_pipe = nn.Sequential(*_layers)
-
         enc_dim = hid_dim * 4 # the ImageDown output dimension
 
         _layers = []
         self.img_encoder_64   = ImageDown(64,  num_chan,  enc_dim, norm)  # 4x4
-        self.pair_disc_64   = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
-        _layers =  [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]
+        self.pair_disc_64   = DiscClassifier(enc_dim, emb_dim, feat_size=2, norm=norm, activ=activ)
+        _layers =  [nn.Conv2d(enc_dim, 1, kernel_size=2, padding=0, bias=True)]
         self.img_disc_64 = nn.Sequential(*_layers)
         self.max_out_size = 64
+        _layers = [nn.Linear(sent_dim, emb_dim)]
+        _layers += [activ]
+        self.context_emb_pipe_64 = nn.Sequential(*_layers)
 
         if input_size > 64:
             self.img_encoder_128  = ImageDown(128,  num_chan, enc_dim, norm)  # 8
@@ -474,14 +468,20 @@ class Discriminator(torch.nn.Module):
             _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 4
             self.img_disc_128 = nn.Sequential(*_layers)
             self.max_out_size = 128
-            
+            _layers = [nn.Linear(sent_dim, emb_dim)]
+            _layers += [activ]
+            self.context_emb_pipe_128 = nn.Sequential(*_layers)
+
         if input_size > 128:
             self.img_encoder_256  = ImageDown(256, num_chan, enc_dim, norm)  # 8
-            self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
-            _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding = 0, bias=True)]   # 4
+            self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=8,  norm=norm, activ=activ)
+            _layers = [nn.Conv2d(enc_dim, 1, kernel_size=1, padding = 0, bias=True)]   # 4
             self.img_disc_256 = nn.Sequential(*_layers)
             self.max_out_size = 256
-        
+            _layers = [nn.Linear(sent_dim, emb_dim)]
+            _layers += [activ]
+            self.context_emb_pipe_256 = nn.Sequential(*_layers)
+
         self.apply(weights_init)
         print ('>> initialized a {} size discriminator'.format(input_size))
 
@@ -503,12 +503,14 @@ class Discriminator(torch.nn.Module):
         img_encoder_sym  = 'img_encoder_{}'.format(img_size)
         img_disc_sym = 'img_disc_{}'.format(img_size)
         pair_disc_sym = 'pair_disc_{}'.format(img_size)
+        context_emb_pipe_sym = 'context_emb_pipe_{}'.format(img_size)
 
         img_encoder = getattr(self, img_encoder_sym)
         img_disc    = getattr(self, img_disc_sym)
         pair_disc   = getattr(self, pair_disc_sym)
+        context_emb_pipe = getattr(self, context_emb_pipe_sym)
 
-        sent_code = self.context_emb_pipe(embdding)
+        sent_code = context_emb_pipe(embdding)
         
         img_code = img_encoder(images)
         pair_disc_out = pair_disc(sent_code, img_code)

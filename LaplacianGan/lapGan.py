@@ -242,12 +242,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         for it in range(updates_per_epoch):
             
             netG.train()
-            if gen_iterations < 100 or gen_iterations % 100 == 0:
+            if gen_iterations < 100 or gen_iterations % 50 == 0:
                 ncritic = 25
             else:
                 ncritic = args.ncritic
 
-            for _ in range(args.ncritic):
+            for _ in range(ncritic):
                 ''' Sample data '''
                 images, wrong_images, np_embeddings, _, _ = train_sampler(args.batch_size, args.num_emb)
                 embeddings = to_device(np_embeddings, netD.device_id, requires_grad=False)
