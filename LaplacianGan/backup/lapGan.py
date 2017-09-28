@@ -121,7 +121,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         
     D_weightspath = os.path.join(model_folder, 'd_weights.pth')
     G_weightspath = os.path.join(model_folder, 'g_weights.pth')
-    if args.reuse_weigths == 1:
+    if args.reuse_weights == 1:
         if os.path.exists(D_weightspath):
             weights_dict = torch.load(D_weightspath,map_location=lambda storage, loc: storage)
             netD.load_state_dict(weights_dict)# 12)
