@@ -366,8 +366,8 @@ class ImageDown(torch.nn.Module):
             _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 32
             _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 16
             _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 8
-            _layers += [conv_norm(cur_dim*4, cur_dim*8,  norm_layer, stride=2, activation=activ)] # 4
-            _layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=2, activation=activ,kernel_size=3, padding=0)] # 2
+            _layers += [conv_norm(cur_dim*4, out_dim,  norm_layer, stride=2, activation=activ)] # 4
+            #_layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=1, activation=activ,kernel_size=3, padding=0)] # 2
 
         if input_size == 128:
             cur_dim = 64 # for testing
@@ -457,7 +457,7 @@ class Discriminator(torch.nn.Module):
         _layers = []
         self.img_encoder_64   = ImageDown(64,  num_chan,  enc_dim, norm)  # 4x4
         self.pair_disc_64   = DiscClassifier(enc_dim, emb_dim, feat_size=2, norm=norm, activ=activ)
-        _layers =  [nn.Conv2d(enc_dim, 1, kernel_size=2, padding=0, bias=True)]
+        _layers =  [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]
         self.global_img_disc_64 = nn.Sequential(*_layers)
 
         self.max_out_size = 64
@@ -475,7 +475,7 @@ class Discriminator(torch.nn.Module):
                 self.local_img_disc_128 = nn.Sequential(*_layers)
             if 'global' in self.disc_mode:
                 _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 4
-                 self.global_img_disc_128 = nn.Sequential(*_layers)
+                self.global_img_disc_128 = nn.Sequential(*_layers)
 
             _layers = [nn.Linear(sent_dim, emb_dim)]
             _layers += [activ]
@@ -491,7 +491,7 @@ class Discriminator(torch.nn.Module):
                 self.local_img_disc_256 = nn.Sequential(*_layers)
             if 'global' in self.disc_mode:
                 _layers = [nn.Conv2d(enc_dim, 1, kernel_size=8, padding=0, bias=True)]   # 1
-                 self.global_img_disc_256 = nn.Sequential(*_layers)
+                self.global_img_disc_256 = nn.Sequential(*_layers)
 
             _layers = [nn.Linear(sent_dim, emb_dim)]
             _layers += [activ]
@@ -524,8 +524,8 @@ class Discriminator(torch.nn.Module):
         global_img_disc_sym = 'global_img_disc_{}'.format(img_size)
         img_encoder = getattr(self, img_encoder_sym)
         
-        local_img_disc    = getattr(self, img_disc_sym, None)
-        global_img_disc   = getattr(self, img_disc_sym, None)
+        local_img_disc    = getattr(self, local_img_disc_sym, None)
+        global_img_disc   = getattr(self, global_img_disc_sym, None)
         pair_disc         = getattr(self, pair_disc_sym)
         context_emb_pipe  = getattr(self, context_emb_pipe_sym)
 
