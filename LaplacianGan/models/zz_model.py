@@ -533,7 +533,7 @@ class Discriminator(torch.nn.Module):
         img_code = img_encoder(images) 
         if img_size == 256:
             shrink_img_code = self.shrink(img_code)
-            pair_disc_out = pair_disc(shrink_img_code, img_code)
+            pair_disc_out = pair_disc(sent_code, shrink_img_code)
         else:
             pair_disc_out = pair_disc(sent_code, img_code)
 

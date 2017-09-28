@@ -114,14 +114,12 @@ class Dataset(object):
                     e_sample = embeddings[i, randix, :]
                     e_mean = np.mean(e_sample, axis=0)
                     
-
                     sampled_embeddings.append(e_mean)
             sampled_embeddings_array = np.array(sampled_embeddings)
             return np.squeeze(sampled_embeddings_array), sampled_captions
 
     def next_batch(self, batch_size, window):
         """Return the next `batch_size` examples from this data set."""
-
 
         start = self._index_in_epoch
         self._index_in_epoch += batch_size

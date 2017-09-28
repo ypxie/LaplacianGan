@@ -15,7 +15,6 @@ import time, json
 
 TINY = 1e-8
 
-
 def compute_d_pair_loss(real_logit, wrong_logit, fake_logit, wgan=False):
     if wgan:
         disc = wrong_logit  + fake_logit - 2*real_logit
