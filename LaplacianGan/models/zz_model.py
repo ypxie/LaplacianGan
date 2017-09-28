@@ -443,7 +443,9 @@ class Discriminator(torch.nn.Module):
     emb_dim: The sentence embedding dimension.
     '''
 
-    def __init__(self, input_size, num_chan,  hid_dim, sent_dim, emb_dim, norm='bn'):
+    def __init__(self, input_size, num_chan,  hid_dim, sent_dim, emb_dim, 
+                 norm='bn', disc_mode= ['global']):
+
         super(Discriminator, self).__init__()
         self.register_buffer('device_id', torch.IntTensor(1))
         self.__dict__.update(locals())
@@ -456,7 +458,8 @@ class Discriminator(torch.nn.Module):
         self.img_encoder_64   = ImageDown(64,  num_chan,  enc_dim, norm)  # 4x4
         self.pair_disc_64   = DiscClassifier(enc_dim, emb_dim, feat_size=2, norm=norm, activ=activ)
         _layers =  [nn.Conv2d(enc_dim, 1, kernel_size=2, padding=0, bias=True)]
-        self.img_disc_64 = nn.Sequential(*_layers)
+        self.global_img_disc_64 = nn.Sequential(*_layers)
+
         self.max_out_size = 64
         _layers = [nn.Linear(sent_dim, emb_dim)]
         _layers += [activ]
@@ -465,9 +468,15 @@ class Discriminator(torch.nn.Module):
         if input_size > 64:
             self.img_encoder_128  = ImageDown(128,  num_chan, enc_dim, norm)  # 8
             self.pair_disc_128  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
-            _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 4
-            self.img_disc_128 = nn.Sequential(*_layers)
             self.max_out_size = 128
+
+            if 'local' in self.disc_mode:
+                _layers = [nn.Conv2d(enc_dim, 1, kernel_size=1, padding=0, bias=True)]   # 4
+                self.local_img_disc_128 = nn.Sequential(*_layers)
+            if 'global' in self.disc_mode:
+                _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 4
+                 self.global_img_disc_128 = nn.Sequential(*_layers)
+
             _layers = [nn.Linear(sent_dim, emb_dim)]
             _layers += [activ]
             self.context_emb_pipe_128 = nn.Sequential(*_layers)
@@ -475,9 +484,15 @@ class Discriminator(torch.nn.Module):
         if input_size > 128:
             self.img_encoder_256  = ImageDown(256, num_chan, enc_dim, norm)  # 8
             self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=8,  norm=norm, activ=activ)
-            _layers = [nn.Conv2d(enc_dim, 1, kernel_size=1, padding = 0, bias=True)]   # 4
-            self.img_disc_256 = nn.Sequential(*_layers)
+            
             self.max_out_size = 256
+            if 'local' in self.disc_mode:
+                _layers = [nn.Conv2d(enc_dim, 1, kernel_size=1, padding = 0, bias=True)]   # 8
+                self.local_img_disc_256 = nn.Sequential(*_layers)
+            if 'global' in self.disc_mode:
+                _layers = [nn.Conv2d(enc_dim, 1, kernel_size=8, padding=0, bias=True)]   # 1
+                 self.global_img_disc_256 = nn.Sequential(*_layers)
+
             _layers = [nn.Linear(sent_dim, emb_dim)]
             _layers += [activ]
             self.context_emb_pipe_256 = nn.Sequential(*_layers)
@@ -501,23 +516,36 @@ class Discriminator(torch.nn.Module):
         assert self.max_out_size >= img_size, 'image size {} exceeds expected maximum size {}'.format(img_size, self.max_out_size)
 
         img_encoder_sym  = 'img_encoder_{}'.format(img_size)
-        img_disc_sym = 'img_disc_{}'.format(img_size)
+        
         pair_disc_sym = 'pair_disc_{}'.format(img_size)
         context_emb_pipe_sym = 'context_emb_pipe_{}'.format(img_size)
 
+        local_img_disc_sym = 'local_img_disc_{}'.format(img_size)
+        global_img_disc_sym = 'global_img_disc_{}'.format(img_size)
         img_encoder = getattr(self, img_encoder_sym)
-        img_disc    = getattr(self, img_disc_sym)
-        pair_disc   = getattr(self, pair_disc_sym)
-        context_emb_pipe = getattr(self, context_emb_pipe_sym)
+        
+        local_img_disc    = getattr(self, img_disc_sym, None)
+        global_img_disc   = getattr(self, img_disc_sym, None)
+        pair_disc         = getattr(self, pair_disc_sym)
+        context_emb_pipe  = getattr(self, context_emb_pipe_sym)
 
         sent_code = context_emb_pipe(embdding)
-        
         img_code = img_encoder(images)
         pair_disc_out = pair_disc(sent_code, img_code)
-        img_disc_out  = img_disc(img_code)
         
+        out_dict['local_img_disc']   = 1
+        out_dict['global_img_disc']  = 1
+
+        if 'local' in self.disc_mode:
+            local_img_disc_out          = local_img_disc(img_code) if img_size is not 64 else 1
+            out_dict['local_img_disc']  = local_img_disc_out
+            
+        if 'global' in self.disc_mode:
+            global_img_disc_out              = global_img_disc(img_code)
+            out_dict['global_img_disc']      = global_img_disc_out
+            
         out_dict['pair_disc']     = pair_disc_out
-        out_dict['img_disc']      = img_disc_out
-        out_dict['content_code']  = img_code # useless
+        out_dict['content_code']  = None # useless
+
         return out_dict
 
