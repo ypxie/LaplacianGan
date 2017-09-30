@@ -31,6 +31,6 @@
 
 
 # To Do
-- cond aug + determinisitc_emb (**Proven failed**)
-- use text sample size 1
 - local disc 
+- Use a buffer to save low scored samples up to 500, and take half of fake samples from thoese buffer. at each iteration, update buffer. looks like buffer reply. 
+- using 4096X16X16 memory to help the network learning.

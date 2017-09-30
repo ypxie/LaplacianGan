@@ -66,7 +66,7 @@ class Sent2FeatMap(nn.Module):
 
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
-                 output_size=256, use_upsamle_skip=False):
+                 output_size=256, use_upsamle_skip=False, memory_size=4096):
         super(Generator, self).__init__()
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
@@ -76,7 +76,10 @@ class Generator(nn.Module):
         self.condEmbedding = condEmbedding(sent_dim, emb_dim)
         self.vec_to_tensor = Sent2FeatMap(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm=norm)
         self.use_upsamle_skip = use_upsamle_skip
-
+        
+        data = torch.FloatTensor(memory_size, 16, 16).normal_(0.0, 0.02)
+        self.memory_16 = nn.Parameter(data)
+        
         '''user defefined'''
         self.output_size = output_size
         # 64, 128, or 256 version

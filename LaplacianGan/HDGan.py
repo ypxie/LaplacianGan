@@ -83,7 +83,7 @@ def inter_across(embeddings):
     return res
     
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
-
+    print('>> using hd gan trainer')
     # helper function
     def plot_imgs(samples, epoch, typ, name, path=''):
         tmpX = save_images(samples, save=not path == '', save_path=os.path.join(path, '{}_epoch{}_{}.png'.format(name, epoch, typ)), dim_ordering='th')
@@ -178,10 +178,11 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         if epoch % args.epoch_decay == 0:
             #d_lr = max(d_lr/2, 0.00005)
             #g_lr = max(g_lr/2, 0.00005)
-            set_lr(optimizerD, d_lr)
+            d_lr = d_lr / 2
+	    g_lr = g_lr / 2
+	    set_lr(optimizerD, d_lr)
             set_lr(optimizerG, g_lr)
-        
-
+       
         for it in range(updates_per_epoch):
             netG.train()
             #if gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0) :
