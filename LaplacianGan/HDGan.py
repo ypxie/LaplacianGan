@@ -184,12 +184,13 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
         for it in range(updates_per_epoch):
             netG.train()
-            if gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0) :
-                ncritic = 5
-                #print ('>> set ncritic to {}'.format(ncritic))
-            elif gen_iterations % 50 == 0:
-                ncritic = 15
-                #print ('>> set ncritic to {}'.format(ncritic))
+            if start_epoch < 50:
+                if gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0) :
+                    ncritic = 5
+                    #print ('>> set ncritic to {}'.format(ncritic))
+                elif gen_iterations % 50 == 0:
+                    ncritic = 15
+                    #print ('>> set ncritic to {}'.format(ncritic))
             else:
                 ncritic = args.ncritic
             
