@@ -176,8 +176,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         start_timer = time.time()
         # learning rate
         if epoch % args.epoch_decay == 0:
-            d_lr = min(d_lr/2, 0.00005)
-            g_lr = min(g_lr/2, 0.00005)
+            d_lr = max(d_lr/2, 0.00005)
+            g_lr = max(g_lr/2, 0.00005)
             set_lr(optimizerD, d_lr)
             set_lr(optimizerG, g_lr)
         
@@ -186,10 +186,10 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             netG.train()
             if gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0) :
                 ncritic = 5
-                print ('>> set ncritic to {}'.format(ncritic))
+                #print ('>> set ncritic to {}'.format(ncritic))
             elif gen_iterations % 50 == 0:
                 ncritic = 15
-                print ('>> set ncritic to {}'.format(ncritic))
+                #print ('>> set ncritic to {}'.format(ncritic))
             else:
                 ncritic = args.ncritic
             
