@@ -5,7 +5,7 @@ gen='origin'
 disc='origin_global_local'
 
 #python bird_train.py --device_id 2 --emb_interp --batch_size 16 --num_emb 4 --imsize 256 --model_name ${name} --reuse_weights --load_from_epoch 138 --which_gen ${gen} --which_disc ${disc} --save_freq 3
-python bird_train.py --device_id 2 --emb_interp --batch_size 16 --num_emb 4 --imsize 256 --model_name ${name} --reuse_weights --load_from_epoch 138 --which_gen ${gen} --which_disc ${disc} --save_freq 3
+python bird_train.py --device_id 2 --g_lr 0.0001 --d_lr 0.0001 --emb_interp --batch_size 16 --num_emb 4 --imsize 256 --model_name ${name} --reuse_weights --load_from_epoch 100 --which_gen ${gen} --which_disc ${disc} --save_freq 3
 
 #python bird_train.py --device_id 1 --g_lr 0.0005 --d_lr 0.0005 --emb_interp --batch_size 16 --num_emb 4 --imsize 256 --model_name ${name} --load_from_epoch 3 --which_gen ${gen} --which_disc ${disc} --save_freq 1
 
