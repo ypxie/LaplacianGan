@@ -11,11 +11,7 @@ from torch.nn.utils import weight_norm
 from LaplacianGan.HDGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
 
-home = os.path.expanduser('~')
-data_root = os.path.join('..', '..', 'Data')
-model_root = os.path.join('..', '..', 'Models')
-data_name = 'birds'
-datadir = os.path.join(data_root, data_name)
+
 
 if  __name__ == '__main__':
 
@@ -87,11 +83,16 @@ if  __name__ == '__main__':
     parser.add_argument('--which_disc', type=str, default='origin', help='discriminator type')
     parser.add_argument('--emb_interp', action='store_true', 
                         help='Use interpolation emb in disc')        
-            
+    parser.add_argument('--dataset', type=str, default='birds', help='which dataset to use [birds or flowers]')  
+          
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
-    
+    data_root = os.path.join('..', '..', 'Data')
+    model_root = os.path.join('..', '..', 'Models')
+    data_name = args.dataset
+    datadir = os.path.join(data_root, data_name)
+
     # Generator
     if args.which_gen == 'origin':
         from LaplacianGan.models.hd_networks import Generator

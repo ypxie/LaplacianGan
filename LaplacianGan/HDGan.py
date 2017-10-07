@@ -148,8 +148,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             if os.path.exists(plot_save_path):
                 plot_dict = torch.load(plot_save_path)
         else:
-            print('WRANING!!! {} or {} do not exist!!'.format(D_weightspath, G_weightspath))
-            start_epoch = 1
+            print ('{} or {} do not exist!!'.format(D_weightspath, G_weightspath))
+            raise NotImplementedError
     else:
         start_epoch = 1
 
@@ -185,15 +185,16 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
         for it in range(updates_per_epoch):
             netG.train()
-            if start_epoch <= 100:
-                if (start_epoch < 2) and( gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
-                    ncritic = 5
-                    #print ('>> set ncritic to {}'.format(ncritic))
-                elif gen_iterations % 50 == 0:
-                    ncritic = 15
-                    #print ('>> set ncritic to {}'.format(ncritic))
-            else:
-                ncritic = args.ncritic
+            # if start_epoch <= 100:
+            #     if (start_epoch < 2) and( gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
+            #         ncritic = 5
+            #         #print ('>> set ncritic to {}'.format(ncritic))
+            #     elif gen_iterations % 50 == 0:
+            #         ncritic = 15
+            #         #print ('>> set ncritic to {}'.format(ncritic))
+            # else:
+            
+            ncritic = args.ncritic
 
             for _ in range(ncritic):
                 ''' Sample data '''
