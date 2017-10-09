@@ -17,6 +17,8 @@ temp/*
 */.ipynb*
 */.ipynb_checkpoints/*
 Models/
+inception-score/inception_finetuned_models/*
+inception-score/results/*
 
 .remote-sync.json
 test.py

@@ -11,8 +11,6 @@ from torch.nn.utils import weight_norm
 from LaplacianGan.HDGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
 
-
-
 if  __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description = 'Gans')    
