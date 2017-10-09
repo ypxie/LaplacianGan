@@ -204,7 +204,7 @@ class Dataset(object):
         sampled_embeddings = self._embeddings[start:end]
         _, embedding_num, _ = sampled_embeddings.shape
         sampled_embeddings_batchs = []
-
+        
         sampled_captions = []
         sampled_filenames = self._filenames[start:end]
         sampled_class_id = self._class_id[start:end]

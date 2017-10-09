@@ -181,7 +181,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         set_lr(optimizerD, d_lr)
         set_lr(optimizerG, g_lr)
 
-
         for it in range(updates_per_epoch):
             netG.train()
             if start_epoch <= 100:
