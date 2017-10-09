@@ -176,10 +176,9 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         start_timer = time.time()
         # learning rate
         if epoch % args.epoch_decay == 0:
-            #d_lr = max(d_lr/2, 0.00005)
-            #g_lr = max(g_lr/2, 0.00005)
-            d_lr = d_lr / 2
-            g_lr = g_lr / 2
+            d_lr = d_lr/2
+            g_lr = g_lr/2
+
             set_lr(optimizerD, d_lr)
             set_lr(optimizerG, g_lr)
 

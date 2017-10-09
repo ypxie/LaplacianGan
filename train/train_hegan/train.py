@@ -79,10 +79,9 @@ if  __name__ == '__main__':
                         help='debug mode use fake dataset loader')   
     parser.add_argument('--which_gen', type=str, default='origin',  help='generator type')
     parser.add_argument('--which_disc', type=str, default='origin', help='discriminator type')
-    parser.add_argument('--emb_interp', action='store_true', 
-                        help='Use interpolation emb in disc')        
+    
     parser.add_argument('--dataset', type=str, default='birds', help='which dataset to use [birds or flowers]')  
-          
+
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
@@ -130,7 +129,7 @@ if  __name__ == '__main__':
 
     if not args.debug_mode:
         print ('>> initialize dataset')
-        dataset = TextDataset(datadir, 'cnn-rnn', args.num_emb)
+        dataset = TextDataset(datadir, 'cnn-rnn', 4)
         filename_test = os.path.join(datadir, 'test')
         dataset.test = dataset.get_data(filename_test)
         filename_train = os.path.join(datadir, 'train')
