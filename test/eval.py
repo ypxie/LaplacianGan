@@ -25,4 +25,6 @@ save_h5 = os.path.join(save_root, 'zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.
 
 with h5py.File(save_h5,'r') as h5file:
     img_256 = h5file['output_256']
-    print(np.mean(img_256))
+    print(img_256.shape)
+    for this_img in img_256:
+        print(np.mean(this_img))
