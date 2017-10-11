@@ -165,7 +165,6 @@ def load_data_from_h5(fullpath):
     images = []
     for hf in h5list:
         #data = dd.io.load(hf)['samples']
-        import pdb; pdb.set_trace()
         data = h5py.File(hf)['output_256']
         for i in range(data.shape[0]):
             img = data[i]

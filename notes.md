@@ -46,3 +46,6 @@
 - ~~zz_mmgan_plain_gl_disc_birds_256_G_epoch_300.h5: 3.44 0.05~~
 - zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5 mean: 4.01 std: 0.04
 - zz_mmgan_plain_gl_disc_birds_256_G_epoch_560.h5 mean: 4.0 std 0.03
+- zz_mmgan_plain_gl_disc_birds_256_G_epoch_300.h5 mean: 3.96 std: 0.02
+- zz_mmgan_plain_gl_disc_birds_256_G_epoch_400.h5 mean: 3.99 std: 0.02
+- eval_bs_1testing_num_11/ mean: 3.99 std: 0.05
