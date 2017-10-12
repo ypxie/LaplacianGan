@@ -5,9 +5,33 @@ import argparse, os
 import torch, h5py
 
 import torch.nn as nn
+from collections import OrderedDict
 
 from LaplacianGan.paraGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
+
+
+from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
+from torch.nn.parallel.replicate import replicate
+from torch.nn.parallel.parallel_apply import parallel_apply
+
+class myDataParallel(nn.DataParallel):
+    
+    def forward(self, *inputs, **kwargs):
+        inputs, kwargs = self.scatter(inputs, kwargs, self.device_ids)
+        if len(self.device_ids) == 1:
+            return self.module(*inputs[0], **kwargs[0])
+        replicas = self.replicate(self.module, self.device_ids)
+        outputs = self.parallel_apply(replicas, inputs, kwargs)
+        return self.gather(outputs, self.output_device)
+
+    def gather(self, outputs_dict, output_device):
+        outputs = OrderedDict()
+        for k, v in outputs_dict.items():
+            outputs[k] = gather(v, output_device, dim=self.dim)
+
+        return outputs
+
 
 def train_worker(data_root, model_root, training_dict):
 
@@ -131,8 +155,8 @@ def train_worker(data_root, model_root, training_dict):
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
     
-    netG = nn.DataParallel(netG, device_ids=args.gpu_list, output_device= args.device_id)
-    netD = nn.DataParallel(netD, device_ids=args.gpu_list, output_device= args.device_id)
+    netG = myDataParallel(netG, device_ids=args.gpu_list, output_device= args.device_id)
+    netD = myDataParallel(netD, device_ids=args.gpu_list, output_device= args.device_id)
 
     if not args.debug_mode:
         print ('>> initialize dataset')

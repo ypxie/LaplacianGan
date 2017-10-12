@@ -137,7 +137,9 @@ class Generator(nn.Module):
     def forward_upsample(self, sent_embeddings, z):
         # sent_embeddings: [B, 1024]
         out_dict = OrderedDict()
+        
         sent_random, kl_loss  = self.condEmbedding(sent_embeddings) # sent_random [B, 128]
+        
         text = torch.cat([sent_random, z], dim=1)
 
         x = self.vec_to_tensor(text)
@@ -195,9 +197,8 @@ class Generator(nn.Module):
         return out_dict, kl_loss
     
     def forward(self, sent_embeddings, z):
+        print(sent_embeddings.get_device(), z.get_device(), self.device_id.get_device(), self.condEmbedding.linear.weight.get_device())
         return self._foward(sent_embeddings, z)
-
-
 
 class ImageDown(torch.nn.Module):
     '''
