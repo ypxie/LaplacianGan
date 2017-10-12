@@ -190,7 +190,7 @@ class Dataset(object):
         """Return the next `batch_size` examples from this data set."""
         if (start + batch_size) > self._num_examples:
             end = self._num_examples
-            start = end - batch_size
+            #start = end - batch_size
             self.end_of_data = True
         else:
             end = start + batch_size
@@ -216,8 +216,8 @@ class Dataset(object):
 
         for i in range(np.minimum(max_captions, embedding_num)):
             batch = sampled_embeddings[:, i, :]
-            sampled_embeddings_batchs.append(np.squeeze(batch))
-
+            sampled_embeddings_batchs.append(batch)
+            #sampled_embeddings_batchs.append(np.squeeze(batch))
         return [sampled_images, sampled_embeddings_batchs,
                 self._saveIDs[start:end], sampled_captions]
 

@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import sys, os
-sys.path.insert(0, os.path.join('..','..'))
-
 import numpy as np
 import argparse, os
 import torch, h5py
@@ -12,7 +9,8 @@ import torch.nn as nn
 from LaplacianGan.HDGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
 
-if  __name__ == '__main__':
+def train_worker(data_root, model_root, training_dict):
+
 
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
@@ -26,7 +24,7 @@ if  __name__ == '__main__':
     
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--reuse_weights', action='store_true', 
+    parser.add_argument('--reuse_weights',  default= training_dict['reuse_weights'],
                         help='continue from last checkout point')
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
@@ -37,7 +35,7 @@ if  __name__ == '__main__':
                         help='plot the results every {} batches')
     parser.add_argument('--verbose_per_iter', type=int, default= 50, 
                         help='print losses per iteration')
-    parser.add_argument('--batch_size', type=int, default=8, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=training_dict['batch_size'], metavar='N',
                         help='batch size.')
     parser.add_argument('--num_emb', type=int, default=4, metavar='N',
                         help='number of emb chosen for each image.')
@@ -55,23 +53,21 @@ if  __name__ == '__main__':
                         help='the channel of each image.')
     parser.add_argument('--KL_COE', type=float, default= 4, metavar='N',
                         help='kl divergency coefficient.')
-    parser.add_argument('--use_content_loss', type=bool, default= False, metavar='N',
+    parser.add_argument('--use_content_loss', type=bool, default= True, metavar='N',
                         help='whether or not to use content loss.')
-    parser.add_argument('--save_folder', type=str, default= 'tmp_images', metavar='N',
-                        help='folder to save the temper images.')
 
     ## add more
-    parser.add_argument('--device_id', type=int, default=0, 
+    parser.add_argument('--device_id', type=int, default=training_dict['device_id'], 
                         help='which device')
-    parser.add_argument('--gpu_list', type=int, default=[0], 
+    parser.add_argument('--gpu_list', type=int, default=training_dict['gpu_list'], 
                         help='which devices to parallel the data')
-    parser.add_argument('--imsize', type=int, default=256, 
+    parser.add_argument('--imsize', type=int, default=training_dict['imsize'], 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
                         help='decay epoch image size')
-    parser.add_argument('--load_from_epoch', type=int, default= 0, 
+    parser.add_argument('--load_from_epoch', type=int, default= training_dict['load_from_epoch'], 
                         help='load from epoch')
-    parser.add_argument('--model_name', type=str, default='zz_gan')
+    parser.add_argument('--model_name', type=str, default=training_dict['model_name'])
     parser.add_argument('--test_sample_num', type=int, default=4, 
                         help='The number of runs for each embeddings when testing')
     parser.add_argument('--norm_type', type=str, default='bn', 
@@ -80,17 +76,16 @@ if  __name__ == '__main__':
                         help='The number of runs for each embeddings when testing')
     parser.add_argument('--debug_mode', action='store_true',  
                         help='debug mode use fake dataset loader')   
-    parser.add_argument('--which_gen', type=str, default='origin',  help='generator type')
-    parser.add_argument('--which_disc', type=str, default='origin', help='discriminator type')
+    parser.add_argument('--which_gen', type=str, default=training_dict['which_gen'],  help='generator type')
+    parser.add_argument('--which_disc', type=str, default=training_dict['which_disc'], help='discriminator type')
     
-    parser.add_argument('--dataset', type=str, default='birds', help='which dataset to use [birds or flowers]')  
+    parser.add_argument('--dataset', type=str, default=training_dict['dataset'], help='which dataset to use [birds or flowers]')  
 
     args = parser.parse_args()
 
-    args.cuda = torch.cuda.is_available()
-    data_root = os.path.join('..', '..', 'Data')
-    model_root = os.path.join('..', '..', 'Models')
-    data_name = args.dataset
+    args.cuda  = torch.cuda.is_available()
+    
+    data_name  = args.dataset
     datadir = os.path.join(data_root, data_name)
 
     # Generator
@@ -124,15 +119,14 @@ if  __name__ == '__main__':
     
     device_id = getattr(args, 'device_id', 0)
 
-    
-    netG = nn.DataParallel(netG, device_ids=self.gpu_list, output_device= self.device_id)
-    netD = nn.DataParallel(netD, device_ids=self.gpu_list, output_device= self.device_id)
-
     if args.cuda:
         netD = netD.cuda(device_id)
         netG = netG.cuda(device_id)
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
+    
+    netG = nn.DataParallel(netG, device_ids=args.gpu_list, output_device= args.device_id)
+    netD = nn.DataParallel(netD, device_ids=args.gpu_list, output_device= args.device_id)
 
     if not args.debug_mode:
         print ('>> initialize dataset')

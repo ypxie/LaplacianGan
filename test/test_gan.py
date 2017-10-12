@@ -16,11 +16,11 @@ from LaplacianGan.proj_utils.local_utils import mkdirs
 home = os.path.expanduser('~')
 proj_root = os.path.join('..')
 data_root = os.path.join(proj_root, 'Data')
-model_root = os.path.join(proj_root, 'Models')
+
 data_name = 'birds'
 datadir = os.path.join(data_root, data_name)
-save_root = os.path.join(data_root, 'Results', data_name)
-mkdirs(save_root)
+model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
+
 
 if  __name__ == '__main__':
 
@@ -52,9 +52,9 @@ if  __name__ == '__main__':
                         
     parser.add_argument('--which_gen', type=str, default='origin',  help='generator type')
     parser.add_argument('--which_disc', type=str, default='origin', help='discriminator type')
-    parser.add_argument('--emb_interp', action='store_true', 
-                        help='Use interpolation emb in disc')        
-            
+    parser.add_argument('--save_spec', type=str, default='', help='save_spec')
+    parser.add_argument('--train_mode',action='store_true', 
+                        help='continue from last checkout point')
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
@@ -85,8 +85,8 @@ if  __name__ == '__main__':
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
     
-    print(netG)
-    print(netD) 
+    #print(netG)
+    #print(netD) 
     
     device_id = getattr(args, 'device_id', 0)
 
@@ -102,6 +102,9 @@ if  __name__ == '__main__':
     dataset.test = dataset.get_data(filename_test)
 
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
+
+    save_root = os.path.join(home, 'devbox', 'Shared_YZ', 'Results',data_name, args.save_spec + 'testing_num_{}'.format(args.test_sample_num) )
+    mkdirs(save_root)
 
     test_gans(dataset, model_root, model_name, save_root, netG, args)
 

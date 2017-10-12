@@ -40,8 +40,8 @@ class MultiModalBlock(nn.Module):
         ])
     def forward(self, text, img ):
         upsampled_text = self.upsample_path(text)
-        
-        out = self.joint_path(torch.cat([img, upsampled_text],1))
+        inputs = torch.cat([img, upsampled_text],1)
+        out = self.joint_path(inputs)
         return out
 
 class Sent2FeatMap(nn.Module):
@@ -133,7 +133,7 @@ class Generator(nn.Module):
             print ('>> initialized a {} size generator (plain)'.format(output_size)),
             self._foward = self.forward_plain
         print ('\t downsample at {}'.format(str(reduce_dim_at)))
-
+        
     def forward_upsample(self, sent_embeddings, z):
         # sent_embeddings: [B, 1024]
         out_dict = OrderedDict()
