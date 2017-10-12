@@ -114,10 +114,10 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     ''' configure optimizer '''
     num_test_forward = 1 # 64 // args.batch_size // args.test_sample_num # number of testing samples to show
     if args.wgan:
-        optimizerD = optim.RMSprop(netG.module.parameters(), lr= d_lr,  weight_decay=args.weight_decay)
+        optimizerD = optim.RMSprop(netD.module.parameters(), lr= d_lr,  weight_decay=args.weight_decay)
         optimizerG = optim.RMSprop(netG.module.parameters(), lr= g_lr,  weight_decay=args.weight_decay)
     else:
-        optimizerD = optim.Adam(netG.module.parameters(), lr= d_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
+        optimizerD = optim.Adam(netD.module.parameters(), lr= d_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
         optimizerG = optim.Adam(netG.module.parameters(), lr= g_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
 
     model_folder = os.path.join(model_root, mode_name)
@@ -137,11 +137,11 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             #assert os.path.exists(D_weightspath) and os.path.exists(G_weightspath)
             weights_dict = torch.load(D_weightspath, map_location=lambda storage, loc: storage)
             print('reload weights from {}'.format(D_weightspath))
-            load_partial_state_dict(netD.module, weights_dict)
-            # netG.module.load_state_dict(weights_dict)# 12)
+            load_partial_state_dict(netD, weights_dict)
+            # netD.module.load_state_dict(weights_dict)# 12)
             print('reload weights from {}'.format(G_weightspath))
             weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
-            load_partial_state_dict(netG.module, weights_dict)
+            load_partial_state_dict(netG, weights_dict)
             # netG.module.load_state_dict(weights_dict)# 12)
 
             start_epoch = args.load_from_epoch + 1
@@ -197,12 +197,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             for _ in range(ncritic):
                 ''' Sample data '''
                 images, wrong_images, np_embeddings, _, _ = train_sampler(args.batch_size, args.num_emb)
-                embeddings = to_device(np_embeddings, netG.module.device_buff, requires_grad=False)
+                embeddings = to_device(np_embeddings, netD.module.device_buff, requires_grad=False)
                 z.data.normal_(0, 1)
 
                 ''' update D '''
-                for p in netG.module.parameters(): p.requires_grad = True
-                netG.module.zero_grad()
+                for p in netD.module.parameters(): p.requires_grad = True
+                netD.module.zero_grad()
 
                 g_emb = Variable(embeddings.data, volatile=True)
                 g_z = Variable(z.data , volatile=True)
@@ -212,8 +212,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 d_loss_val_dict = {}
                 for key, _ in fake_images.items():
                     # iterate over image of different sizes.
-                    this_img   = to_device(images[key], netG.module.device_buff)
-                    this_wrong = to_device(wrong_images[key], netG.module.device_buff)
+                    this_img   = to_device(images[key], netD.module.device_buff)
+                    this_wrong = to_device(wrong_images[key], netD.module.device_buff)
                     this_fake  = Variable(fake_images[key].data) # to cut connection to netG
 
                     real_dict   = netD(this_img,   embeddings)
@@ -237,18 +237,18 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 d_loss_val = -d_loss_val if args.wgan else d_loss_val
                 discriminator_loss.backward()
                 optimizerD.step()
-                netG.module.zero_grad()
+                netD.module.zero_grad()
                 d_loss_plot.plot(d_loss_val)
                 plot_dict['disc'].append(d_loss_val)
 
             ''' update G '''
-            for p in netG.module.parameters(): p.requires_grad = False  # to avoid computation
+            for p in netD.module.parameters(): p.requires_grad = False  # to avoid computation
             netG.module.zero_grad()
             #_, _, embeddings, _, _ = train_sampler(args.batch_size, args.num_emb)
             ''' Interpolate across samples '''
             # if args.emb_interp:
             #     np_embeddings = inter_across(np_embeddings)
-            #     embeddings = to_device(np_embeddings, netG.module.device_id, requires_grad=False)
+            #     embeddings = to_device(np_embeddings, netD.module.device_id, requires_grad=False)
 
             z.data.normal_(0, 1) # resample random noises
             fake_images, kl_loss = netG(embeddings, z)
@@ -338,7 +338,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
         # save weights
         if epoch % args.save_freq == 0:
-            torch.save(netG.module.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
+            torch.save(netD.module.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
             torch.save(netG.module.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
             print('save weights at {}'.format(model_folder))
             torch.save(plot_dict, plot_save_path)
