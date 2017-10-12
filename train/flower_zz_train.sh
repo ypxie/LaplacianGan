@@ -1,7 +1,6 @@
 
 D=256
 name='zz_mmgan_plain_gl_disc'
-epoch=380
 
 ## if you pretrained from an outside model 
 root=/home/zizhao/work/LaplacianGan/Models

@@ -78,7 +78,7 @@ def train_worker(data_root, model_root, training_dict):
                         help='The number of runs for each embeddings when testing')
     parser.add_argument('--gen_activation_type', type=str, default='relu', 
                         help='The number of runs for each embeddings when testing')
-    parser.add_argument('--debug_mode', action='store_true',  
+    parser.add_argument('--debug_mode', type=bool, default=True,  
                         help='debug mode use fake dataset loader')   
     parser.add_argument('--which_gen', type=str, default=training_dict['which_gen'],  help='generator type')
     parser.add_argument('--which_disc', type=str, default=training_dict['which_disc'], help='discriminator type')

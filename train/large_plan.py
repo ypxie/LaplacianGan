@@ -12,7 +12,7 @@ import torch.multiprocessing as mp
 
 from LaplacianGan.proj_utils.local_utils import Indexflow
 
-large_global_local = {'reuse_weights': True, 'batch_size': 64, 'device_id': 0, 'gpu_list': [0,1,2,3], 
+large_global_local = {'reuse_weights': True, 'batch_size': 4, 'device_id': 0, 'gpu_list': [0], 
                    'imsize':256, 'load_from_epoch': 291, 'model_name':'large_global_local', 
                    'which_gen': 'origin', 'which_disc':'origin_global_local', 'dataset':'birds' }
 
