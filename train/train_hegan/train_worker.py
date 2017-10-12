@@ -6,7 +6,7 @@ import torch, h5py
 
 import torch.nn as nn
 
-from LaplacianGan.HDGan import train_gans
+from LaplacianGan.paraGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
 
 def train_worker(data_root, model_root, training_dict):
