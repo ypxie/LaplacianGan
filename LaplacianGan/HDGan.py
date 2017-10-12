@@ -143,13 +143,13 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
             load_partial_state_dict(netG, weights_dict)
             # netG.load_state_dict(weights_dict)# 12)
-
+            
             start_epoch = args.load_from_epoch + 1
             if os.path.exists(plot_save_path):
                 plot_dict = torch.load(plot_save_path)
         else:
             print ('{} or {} do not exist!!'.format(D_weightspath, G_weightspath))
-            raise NotImplementedError
+            
     else:
         start_epoch = 1
 

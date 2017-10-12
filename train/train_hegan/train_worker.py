@@ -11,7 +11,6 @@ from LaplacianGan.fuel.zz_datasets import TextDataset
 
 def train_worker(data_root, model_root, training_dict):
 
-
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')
@@ -114,9 +113,10 @@ def train_worker(data_root, model_root, training_dict):
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
     
-    print(netG)
-    print(netD) 
-    
+    #print(netG)
+    #print(netD) 
+    print(args)
+
     device_id = getattr(args, 'device_id', 0)
 
     if args.cuda:
