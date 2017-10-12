@@ -159,12 +159,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     lr_plot = plot_scalar(name = "lr", env= mode_name, rate = args.display_freq)
 
     z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
-    z = to_device(z, netG.device_buff, requires_grad=False)
+    z = to_device(z, netG.device_id, requires_grad=False)
     # test the fixed image for every epoch
     fixed_images, _, fixed_embeddings, _, _ = test_sampler(args.batch_size, 1)
-    fixed_embeddings = to_device(fixed_embeddings, netG.device_buff, volatile=True)
+    fixed_embeddings = to_device(fixed_embeddings, netG.device_id, volatile=True)
     fixed_z_data = [torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1) for _ in range(args.test_sample_num)]
-    fixed_z_list = [to_device(a, netG.device_buff, volatile=True) for a in fixed_z_data] # what?
+    fixed_z_list = [to_device(a, netG.device_id, volatile=True) for a in fixed_z_data] # what?
 
     print ('ncritic effective at first {} epochs'.format(args.ncritic_epoch_range))
 
@@ -196,7 +196,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             for _ in range(ncritic):
                 ''' Sample data '''
                 images, wrong_images, np_embeddings, _, _ = train_sampler(args.batch_size, args.num_emb)
-                embeddings = to_device(np_embeddings, netD.device_buff, requires_grad=False)
+                embeddings = to_device(np_embeddings, netD.device_id, requires_grad=False)
                 z.data.normal_(0, 1)
 
                 ''' update D '''
@@ -211,8 +211,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 d_loss_val_dict = {}
                 for key, _ in fake_images.items():
                     # iterate over image of different sizes.
-                    this_img   = to_device(images[key], netD.device_buff)
-                    this_wrong = to_device(wrong_images[key], netD.device_buff)
+                    this_img   = to_device(images[key], netD.device_id)
+                    this_wrong = to_device(wrong_images[key], netD.device_id)
                     this_fake  = Variable(fake_images[key].data) # to cut connection to netG
 
                     real_dict   = netD(this_img,   embeddings)
@@ -297,7 +297,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
             else:
                 test_images, _, test_embeddings, _, _ = test_sampler(args.batch_size, 1)
-                test_embeddings = to_device(test_embeddings, netG.device_buff, volatile=True)
+                test_embeddings = to_device(test_embeddings, netG.device_id, volatile=True)
                 testing_z = Variable(z.data, volatile=True)
 
             tmp_samples = {}

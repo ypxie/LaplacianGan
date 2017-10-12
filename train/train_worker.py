@@ -11,14 +11,19 @@ from LaplacianGan.fuel.zz_datasets import TextDataset
 
 def train_worker(data_root, model_root, training_dict):
 
+    save_freq           = getattr(training_dict, 'save_freq', 3)
+    ncritic_epoch_range = getattr(training_dict, 'ncritic_epoch_range', 600)
+    g_lr                = getattr(training_dict, 'g_lr', .0002)
+    d_lr                = getattr(training_dict, 'd_lr', .0002)
+
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')
     parser.add_argument('--maxepoch', type=int, default=600, metavar='N',
                         help='number of epochs to train (default: 10)')
-    parser.add_argument('--g_lr', type=float, default = .0002, metavar='LR',
+    parser.add_argument('--g_lr', type=float, default = g_lr, metavar='LR',
                         help='learning rate (default: 0.01)')
-    parser.add_argument('--d_lr', type=float, default = .0002, metavar='LR',
+    parser.add_argument('--d_lr', type=float, default = d_lr, metavar='LR',
                         help='learning rate (default: 0.01)')
     
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
@@ -28,7 +33,7 @@ def train_worker(data_root, model_root, training_dict):
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
     
-    parser.add_argument('--save_freq', type=int, default= 20, metavar='N',
+    parser.add_argument('--save_freq', type=int, default= save_freq, metavar='N',
                         help='how frequent to save the model')
     parser.add_argument('--display_freq', type=int, default= 200, metavar='N',
                         help='plot the results every {} batches')
@@ -58,7 +63,7 @@ def train_worker(data_root, model_root, training_dict):
     ## add more
     parser.add_argument('--device_id', type=int, default=training_dict['device_id'], 
                         help='which device')
-    parser.add_argument('--gpu_list', type=int, default=training_dict['gpu_list'], 
+    parser.add_argument('--gpu_list',  default=training_dict['gpu_list'], 
                         help='which devices to parallel the data')
     parser.add_argument('--imsize', type=int, default=training_dict['imsize'], 
                         help='output image size')
@@ -79,7 +84,7 @@ def train_worker(data_root, model_root, training_dict):
     parser.add_argument('--which_disc', type=str, default=training_dict['which_disc'], help='discriminator type')
     
     parser.add_argument('--dataset', type=str, default=training_dict['dataset'], help='which dataset to use [birds or flowers]') 
-    parser.add_argument('--ncritic_epoch_range', type=int, default=600, help='How many epochs the ncritic effective')   
+    parser.add_argument('--ncritic_epoch_range', type=int, default=ncritic_epoch_range, help='How many epochs the ncritic effective')   
 
     args = parser.parse_args()
 
