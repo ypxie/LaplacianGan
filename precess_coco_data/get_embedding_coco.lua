@@ -57,12 +57,13 @@ for i = 3, table.getn(files)  do
     tmp_path = path..'/caption_txt/'..f
     
     name = f:sub(1,-5)
-    
-    print(name)
+        
     c = 1
     feats = torch.Tensor(5, 1024):zero()
     for query_str in io.lines(tmp_path) do
-      print('\t'..query_str)
+     
+      -- print('\t'..query_str)
+      
       local txt = torch.zeros(1, opt.doc_length, #alphabet)
       for t = 1,opt.doc_length do
         local ch = query_str:sub(t,t)
@@ -81,10 +82,14 @@ for i = 3, table.getn(files)  do
       c = c + 1
       if c == 6 then break end
     end
+
     if c  ~= 6 then
       print ('error')
       break
     end
-    torch.save(opt.path..name:sub(1,-5)..'.t7', {txt=feat, img=name})
+    torch.save(opt.path..name:sub(1,-5)..'.t7', {txt=feats, img=name})
+  end
+  if i % 100 == 0 then
+    print (i..' processed')
   end
 end

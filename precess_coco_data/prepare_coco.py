@@ -4,7 +4,7 @@ import torchfile as torchf
 import cPickle
 
 path = 'Data/coco/'
-save_path = path + 'train/'
+save_path = path + 'val/'
 
 t7list = glob.glob(os.path.join(path, 'val2014_ex_t7/*.t7'))
 # {'char': not used , 'txt': embedding, 'img': name of file }

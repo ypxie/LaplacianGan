@@ -166,10 +166,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     fixed_z_data = [torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1) for _ in range(args.test_sample_num)]
     fixed_z_list = [to_device(a, netG.device_buff, volatile=True) for a in fixed_z_data] # what?
 
-
-    # z_test = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
-    # z_test = to_device(z_test, netG.device_id, volatile=True)
-
+    print ('ncritic effective at first {} epochs'.format(args.ncritic_epoch_range))
+    
     global_iter = 0
     gen_iterations = 0
     for epoch in range(start_epoch, tot_epoch):
@@ -184,12 +182,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
         for it in range(updates_per_epoch):
             netG.train()
-            if start_epoch <= 100:
-                if (start_epoch < 2) and( gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
+            if start_epoch <= args.ncritic_epoch_range:
+                if (start_epoch < 2) and (gen_iterations < 200 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
                     ncritic = 5
                     #print ('>> set ncritic to {}'.format(ncritic))
-                elif gen_iterations % 50 == 0:
-                    ncritic = 10
+                elif gen_iterations % 50 == 0   :
+                    ncritic = 15
                     #print ('>> set ncritic to {}'.format(ncritic))
             else:
                 ncritic = args.ncritic
