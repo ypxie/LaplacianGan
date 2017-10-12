@@ -49,3 +49,8 @@
 - zz_mmgan_plain_gl_disc_birds_256_G_epoch_300.h5 mean: 3.96 std: 0.02
 - zz_mmgan_plain_gl_disc_birds_256_G_epoch_400.h5 mean: 3.99 std: 0.02
 - eval_bs_1testing_num_11/ mean: 3.99 std: 0.05
+
+## how to generate coco training data
+- go to coco_official/ and run coco.py to get [image]\_captions.txt and captions.pickle
+- go to process_data/get_embedding_coco.lua to compute embedding in txt files [image]\_captions.txt.
+- go to process_data/prepare_coco.py to merge embeddings in t7 to pickle and fileinfo.pickle
