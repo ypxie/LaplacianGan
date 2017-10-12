@@ -137,9 +137,13 @@ class Dataset(object):
             start = 0
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples
+            print (self._index_in_epoch,  self._num_examples)
+            print ('go to next round')
+
         end = self._index_in_epoch
 
         current_ids = self._perm[start:end]
+        
         fake_ids = np.random.randint(self._num_examples, size=batch_size)
 
         # collision_flag =\
@@ -240,6 +244,10 @@ def img_loader_func(img_names):
     for i_n in img_names:
         img = misc.imread(os.path.join(IMG_PATH, i_n))
         img = misc.imresize(img, (IMG_DIM, IMG_DIM))
+        if len(img.shape) != 3:
+            # happen to be a gray image
+            img = np.tile(img[:,:,np.newaxis], [1,1,3])
+
         res.append(img[np.newaxis,:,:,:])
     res = np.concatenate(res, axis=0)
     
@@ -274,7 +282,8 @@ class TextDataset(object):
             IMG_PATH = IM_PATH_TRAIN
         elif 'val' in pickle_path:
             IMG_PATH = IM_PATH_VAL
-
+        
+        print ('read data from {}'.format(IMG_PATH))
         images = img_loader_func
 
         with open(pickle_path + self.embedding_filename, 'rb') as f:
@@ -301,20 +310,18 @@ class TextDataset(object):
 
 
 class WrapperLoader():
-    def __init__(self, pickle_path, num_embed, test_mode):
+    def __init__(self, pickle_path, num_embed, test_mode, aug_flag):
         
 
-        self.dataset = TextDataset().get_data(pickle_path, aug_flag=not test_mode)
+        self.dataset = TextDataset().get_data(pickle_path, aug_flag=aug_flag)
         self.num_embed = num_embed
         self.num_samples = self.dataset.num_examples
         self.test_mode = test_mode
 
     def __getitem__(self, index):
         if self.test_mode:
-            if self.num_embed > 1:
-                print ('WARNING: you are using testing mode but with # of embedding > 1 ')
-            data = self.dataset.next_batch_test(1, index, self.num_embed)
-            # data = self.dataset.next_batch(self.batch_size, self.num_embed)
+            # data = self.dataset.next_batch_test(1, index, self.num_embed)
+            data = self.dataset.next_batch(1, self.num_embed)
         else:
             data = self.dataset.next_batch(1, self.num_embed)
 
@@ -325,19 +332,18 @@ class WrapperLoader():
 
 class MultiThreadLoader():
 
-    def __init__(self, pickle_path, batch_size, num_embed=1, threads=2, test_mode=False):
+    def __init__(self, pickle_path, batch_size, num_embed, threads=0, test_mode=False, aug_flag=True):
+        print ('create multithread loader with {} threads ...'.format(threads))
 
-        self.dataset = WrapperLoader(pickle_path, num_embed, test_mode)
+        self.dataset = WrapperLoader(pickle_path, num_embed, test_mode, aug_flag=aug_flag)
         import torch.utils.data
 
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=batch_size,
-            shuffle=not test_mode,
+            shuffle=True,
             num_workers=threads)
         
-        print ('create multithread loader with {} threads'.format(threads))
-
     def load_data(self):
         return self.dataloader
 
@@ -348,4 +354,5 @@ class MultiThreadLoader():
 IM_PATH_TRAIN = 'Data/coco/coco_official/train2014'
 IM_PATH_VAL = 'Data/coco/coco_official/val2014'
 IMG_PATH = IM_PATH_TRAIN
-IMG_DIM = 256
+
+IMG_DIM = 304 # use for augmentation

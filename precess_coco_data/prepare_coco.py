@@ -6,11 +6,11 @@ import cPickle
 path = 'Data/coco/'
 save_path = path + 'train/'
 
-t7list = glob.glob(os.path.join(path, 'train2014_ex_t7/*.t7'))
+t7list = glob.glob(os.path.join(path, 'val2014_ex_t7/*.t7'))
 # {'char': not used , 'txt': embedding, 'img': name of file }
 
 embeding_fn = 'char-CNN-RNN-embeddings.pickle' # list([numofembedding, 1024])
-file_info = 'filenames.pickle' # list('filename')
+file_info = 'filenames.pickle' # list('filename.jpg')
 
 # image need to save in folder not 
 

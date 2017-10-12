@@ -19,6 +19,6 @@ temp/*
 Models/
 inception-score/inception_finetuned_models/*
 inception-score/results/*
-
+demo/text_encoder/*
 .remote-sync.json
 test.py
