@@ -72,7 +72,7 @@ class Generator(nn.Module):
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
 
-        self.register_buffer('device_buff', torch.IntTensor(1))
+        self.register_buffer('device_id', torch.IntTensor(1))
         self.condEmbedding = condEmbedding(sent_dim, emb_dim)
         self.vec_to_tensor = Sent2FeatMap(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm=norm)
         self.use_upsamle_skip = use_upsamle_skip
@@ -96,8 +96,8 @@ class Generator(nn.Module):
         side_output_at = [64, 128, 256] 
         num_resblock = 1
 
-        self.modules = OrderedDict()
-        self.side_modules = OrderedDict()
+        #self.modules = OrderedDict()
+        #self.side_modules = OrderedDict()
 
         cur_dim = self.hid_dim*8
         for i in range(len(num_scales)):
@@ -205,7 +205,7 @@ class ImageDown(torch.nn.Module):
     '''
     def __init__(self, input_size, num_chan, out_dim, norm='norm'):
         super(ImageDown, self).__init__()
-        self.register_buffer('device_buff', torch.zeros(1))
+        self.register_buffer('device_id', torch.zeros(1))
         
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
@@ -292,7 +292,7 @@ class Discriminator(torch.nn.Module):
                  norm='bn', disc_mode= ['global']):
 
         super(Discriminator, self).__init__()
-        self.register_buffer('device_buff', torch.IntTensor(1))
+        self.register_buffer('device_id', torch.IntTensor(1))
         self.__dict__.update(locals())
         activ = discAct()
         norm_layer = getNormLayer(norm)
