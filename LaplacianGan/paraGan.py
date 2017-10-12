@@ -137,11 +137,11 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             #assert os.path.exists(D_weightspath) and os.path.exists(G_weightspath)
             weights_dict = torch.load(D_weightspath, map_location=lambda storage, loc: storage)
             print('reload weights from {}'.format(D_weightspath))
-            load_partial_state_dict(netD, weights_dict)
+            load_partial_state_dict(netD.module, weights_dict)
             # netD.module.load_state_dict(weights_dict)# 12)
             print('reload weights from {}'.format(G_weightspath))
             weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
-            load_partial_state_dict(netG, weights_dict)
+            load_partial_state_dict(netG.module, weights_dict)
             # netG.module.load_state_dict(weights_dict)# 12)
 
             start_epoch = args.load_from_epoch + 1
