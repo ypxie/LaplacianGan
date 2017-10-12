@@ -37,14 +37,17 @@ if sys.version_info[0] == 2:
 else:
     import pickle
 
-
+import json
 
 tf.app.flags.DEFINE_string('checkpoint_dir',
                            './inception_finetuned_models/birds_valid299/model.ckpt',
                            """Path where to read model checkpoints.""")
 
 tf.app.flags.DEFINE_string('image_folder', 
-							'plain_bald/',
+							'',
+							"""Path where to load the images """)
+tf.app.flags.DEFINE_string('h5_file', 
+							'',
 							"""Path where to load the images """)
 
 tf.app.flags.DEFINE_integer('num_classes', 50,      # 20 for flowers
@@ -146,24 +149,36 @@ def load_data(fullpath):
 def load_data_from_h5(fullpath):
     import glob
     import deepdish as dd
-    hflsit = glob.glob(os.path.join(fullpath, '*.h5'))
+    import h5py
+
+    if FLAGS.h5_file != '':
+        # import pdb; pdb.set_trace()
+        h5list = [os.path.join(fullpath, FLAGS.h5_file)]
+        return_path = os.path.join(fullpath, FLAGS.h5_file[:-3]+'_inception_score')
+        print ('read h5 from {}'.format(h5list[0]))
+    else:
+        h5list = glob.glob(os.path.join(fullpath, '*.h5'))
+        return_path = os.path.join(fullpath, 'inception_score')
+
+        print ('scan folder from {}'.format(fullpath))
+    
     images = []
-    import pdb; pdb.set_trace()
-    for hf in hflsit:
-        data = dd.io.load(hf)['output_256']
-        
+    for hf in h5list:
+        #data = dd.io.load(hf)['samples']
+        data = h5py.File(hf)['output_256']
         for i in range(data.shape[0]):
             img = data[i]
             # import pdb; pdb.set_trace()
-            assert(img.shape[0] == 256 and img.shape[2] == 3)
+            assert((img.shape[0] == 256 or img.shape[0] == 128 or img.shape[0] == 64) and img.shape[2] == 3)
 	    if not (img.min() >= 0 and img.max() <= 255 and img.mean() > 1):
-		print ('{}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean()))
-		continue	
+		    print ('{}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean()))
+		    continue	
             #assert img.min() >= 0 and img.max() <= 255 and img.mean() > 1, '{}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean())
             images.append(img)
         print ('read {} with {} images'.format(hf, data.shape[0]))
     print ('Totally {} images are loaded'.format(len(images)))
-    return images
+
+    return images, return_path
             
 
 
@@ -249,8 +264,10 @@ def main(unused_argv=None):
                 saver.restore(sess, FLAGS.checkpoint_dir)
                 print('Restore the model from %s).' % FLAGS.checkpoint_dir)
                 # images = load_data(fullpath)
-                images = load_data_from_h5(fullpath)
-                get_inception_score(sess, images, pred_op)
+                images, return_save_path = load_data_from_h5(fullpath)
+                mean, std = get_inception_score(sess, images, pred_op)
+
+                json.dump({'mean': '%.4f'%(mean), 'std': '%.4f'%(std)}, open(return_save_path + '.json','w'))
 
     # stackgan
     # mean: 3.89 std: 0.04

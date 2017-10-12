@@ -25,10 +25,11 @@ for k,v in pairs(dict) do
 end
 
 opt = {
-  filenames = '',
+  filenames = 'Data/birds/example_captions.t7',
   doc_length = 201,
-  queries = 'cub_queries.txt',
-  net_txt = '',
+  queries = 'Data/birds/example_captions.txt',
+  net_txt = 'demo/text_encoder/lm_sje_nc4_cub_hybrid_gru18_a1_c512_0.00070_1_10_trainvalids.txt_iter30000.t7',
+  path = 'Data/coco/val2014_ex_t7/'
 }
 
 for k,v in pairs(opt) do opt[k] = tonumber(os.getenv(k)) or os.getenv(k) or opt[k] end
@@ -46,7 +47,8 @@ local fea_txt = {}
 local raw_txt = {}
 local raw_img = {}
 for query_str in io.lines(opt.queries) do
-  local txt = torch.zeros(1,opt.doc_length,#alphabet)
+  print(query_str)
+  local txt = torch.zeros(1, opt.doc_length, #alphabet)
   for t = 1,opt.doc_length do
     local ch = query_str:sub(t,t)
     local ix = dict[ch]
@@ -56,8 +58,11 @@ for query_str in io.lines(opt.queries) do
   end
   raw_txt[#raw_txt+1] = query_str
   txt = txt:cuda()
+  feat = net_txt:forward(txt):clone()
+  print (feat)
 
-  fea_txt[#fea_txt+1] = net_txt:forward(txt):clone()
+  torch.save(opt.path..'test.t7', {txt=feat, img=fea_txt})
+
+  -- fea_txt[#fea_txt+1] = net_txt:forward(txt):clone()
 end
 
-torch.save(opt.filenames, {raw_txt=raw_txt, fea_txt=fea_txt})
