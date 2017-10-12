@@ -172,6 +172,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
     global_iter = 0
     gen_iterations = 0
+    last_ncritic = 0
     for epoch in range(start_epoch, tot_epoch):
         start_timer = time.time()
         # learning rate
@@ -193,6 +194,10 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                     #print ('>> set ncritic to {}'.format(ncritic))
             else:
                 ncritic = args.ncritic
+            
+            if last_ncritic != ncritic:
+                print ('chcange ncritic {} -> {}'.format(last_ncritic, ncritic))
+                last_ncritic = ncritic
 
             for _ in range(ncritic):
                 ''' Sample data '''

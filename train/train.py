@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, os
-sys.path.insert(0, os.path.join('..','..'))
+sys.path.insert(0, os.path.join('..'))
 
 import numpy as np
 import argparse, os
@@ -63,7 +63,7 @@ if  __name__ == '__main__':
     ## add more
     parser.add_argument('--device_id', type=int, default=0, 
                         help='which device')
-    parser.add_argument('--gpu_list', type=int, default=[0], 
+    parser.add_argument('--gpu_list', default= [0], 
                         help='which devices to parallel the data')
     parser.add_argument('--imsize', type=int, default=256, 
                         help='output image size')
@@ -85,12 +85,12 @@ if  __name__ == '__main__':
     
     parser.add_argument('--dataset', type=str, default='birds', help='which dataset to use [birds or flowers]')  
     parser.add_argument('--ncritic_epoch_range', type=int, default=600, help='How many epochs the ncritic effective')   
-    
+
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
-    data_root = os.path.join('..', '..', 'Data')
-    model_root = os.path.join('..', '..', 'Models')
+    data_root = os.path.join('..', 'Data') 
+    model_root = os.path.join('..', 'Models')
     data_name = args.dataset
     datadir = os.path.join(data_root, data_name)
 
@@ -124,10 +124,10 @@ if  __name__ == '__main__':
     print(netD) 
     
     device_id = getattr(args, 'device_id', 0)
-
+    # import pdb; pdb.set_trace()
     
-    netG = nn.DataParallel(netG, device_ids=self.gpu_list, output_device= self.device_id)
-    netD = nn.DataParallel(netD, device_ids=self.gpu_list, output_device= self.device_id)
+    # netG = nn.DataParallel(netG, device_ids=args.gpu_list, output_device= args.device_id)
+    # netD = nn.DataParallel(netD, device_ids=args.gpu_list, output_device= args.device_id)
 
     if args.cuda:
         netD = netD.cuda(device_id)
@@ -145,6 +145,7 @@ if  __name__ == '__main__':
     else:
         dataset = []
         print ('>> in debug mode')
+
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
     print ('>> START training ')
     train_gans(dataset, model_root, model_name, netG, netD, args)
