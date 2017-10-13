@@ -5,9 +5,10 @@ import argparse, os
 import torch, h5py
 
 import torch.nn as nn
+from collections import OrderedDict
 
-from LaplacianGan.paraGan import train_gans
-from LaplacianGan.fuel.zz_datasets import TextDataset
+from .HDGan import train_gans
+from .fuel.zz_datasets import TextDataset
 
 def train_worker(data_root, model_root, training_dict):
 
@@ -65,7 +66,7 @@ def train_worker(data_root, model_root, training_dict):
                         help='which device')
     parser.add_argument('--gpu_list',  default=training_dict['gpu_list'], 
                         help='which devices to parallel the data')
-    parser.add_argument('--imsize', type=int, default=training_dict['imsize'], 
+    parser.add_argument('--imsize',  default=training_dict['imsize'], 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
                         help='decay epoch image size')
@@ -78,7 +79,7 @@ def train_worker(data_root, model_root, training_dict):
                         help='The number of runs for each embeddings when testing')
     parser.add_argument('--gen_activation_type', type=str, default='relu', 
                         help='The number of runs for each embeddings when testing')
-    parser.add_argument('--debug_mode', type=bool, default=True,  
+    parser.add_argument('--debug_mode', type=bool, default=False,  
                         help='debug mode use fake dataset loader')   
     parser.add_argument('--which_gen', type=str, default=training_dict['which_gen'],  help='generator type')
     parser.add_argument('--which_disc', type=str, default=training_dict['which_disc'], help='discriminator type')
@@ -131,9 +132,6 @@ def train_worker(data_root, model_root, training_dict):
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
     
-    netG = nn.DataParallel(netG, device_ids=args.gpu_list, output_device= args.device_id)
-    netD = nn.DataParallel(netD, device_ids=args.gpu_list, output_device= args.device_id)
-
     if not args.debug_mode:
         print ('>> initialize dataset')
         dataset = TextDataset(datadir, 'cnn-rnn', 4)
