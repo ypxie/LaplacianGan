@@ -188,6 +188,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                     #print ('>> set ncritic to {}'.format(ncritic))
                 elif gen_iterations % 50 == 0:
                     ncritic = 10    
+                else:
+                    ncritic = args.ncritic
                 #print ('>> set ncritic to {}'.format(ncritic))
             else:
                 ncritic = args.ncritic
