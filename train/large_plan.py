@@ -7,12 +7,12 @@ sys.path.insert(0, os.path.join('..'))
 data_root  = os.path.join( '..', 'Data')
 model_root = os.path.join( '..', 'Models')
 
-from train_worker import train_worker
+from LaplacianGan.train_worker import train_worker
 import torch.multiprocessing as mp
 
 from LaplacianGan.proj_utils.local_utils import Indexflow
 
-large_global_local = {'reuse_weights': True, 'batch_size': 6, 'device_id': 1, 'gpu_list': [1,2,3], 
+large_global_local = {'reuse_weights': True, 'batch_size': 16, 'device_id': 0, 'gpu_list': [0], 
                    'imsize':256, 'load_from_epoch': 291, 'model_name':'large_global_local', 
                    'which_gen': 'origin', 'which_disc':'origin_global_local', 'dataset':'birds' }
 

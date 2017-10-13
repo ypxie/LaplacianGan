@@ -66,7 +66,7 @@ class Sent2FeatMap(nn.Module):
 
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
-                 output_size=256, use_upsamle_skip=False):
+                 output_size=256, use_upsamle_skip=False, side_output_at=[64, 128, 256]):
         super(Generator, self).__init__()
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
@@ -93,7 +93,7 @@ class Generator(nn.Module):
 
     
         reduce_dim_at  = [8, 32, 128, 256] # [8, 64, 256]
-        side_output_at = [64, 128, 256] 
+        
         num_resblock = 1
 
         #self.modules = OrderedDict()
@@ -117,8 +117,8 @@ class Generator(nn.Module):
             setattr(self, 'scale_%d'%(num_scales[i]), nn.Sequential(*seq) )
 
             # add upsample module to concat with upper layers 
-            if num_scales[i] in text_upsampling_at and use_upsamle_skip:
-                setattr(self, 'upsample_%d'%(num_scales[i]), MultiModalBlock(text_dim=cur_dim, img_dim=cur_dim//2, norm=norm, activation=activation))
+            # if num_scales[i] in text_upsampling_at and use_upsamle_skip:
+            #     setattr(self, 'upsample_%d'%(num_scales[i]), MultiModalBlock(text_dim=cur_dim, img_dim=cur_dim//2, norm=norm, activation=activation))
             # configure side output module
             if num_scales[i] in side_output_at:
                 setattr(self, 'tensor_to_img_%d'%(num_scales[i]), branch_out2(cur_dim))
@@ -130,9 +130,9 @@ class Generator(nn.Module):
             print ('>> initialized a {} size generator (with upsample_skip module)'.format(output_size)),
             self._foward = self.forward_upsample
         else:
-            print ('>> initialized a {} size generator (plain)'.format(output_size)),
+            print ('>> initialized a {} size generator (plain), side output at {}'.format(output_size, str(side_output_at))),
             self._foward = self.forward_plain
-        print ('\t downsample at {}'.format(str(reduce_dim_at)))
+        print (' downsample at {}'.format(str(reduce_dim_at)))
         
     def forward_upsample(self, sent_embeddings, z):
         # sent_embeddings: [B, 1024]
@@ -187,12 +187,14 @@ class Generator(nn.Module):
         if self.output_size > 64:
             # skip 8x8 feature map to 64 and send to 128
             x_128 = self.scale_128(x_64)
-            out_dict['output_128'] = self.tensor_to_img_128(x_128)
+            if hasattr(self, 'tensor_to_img_128'):
+                out_dict['output_128'] = self.tensor_to_img_128(x_128)
 
         if self.output_size > 128:
             # skip 16x16 feature map to 128 and send to 256
             out_256 = self.scale_256(x_128)
-            out_dict['output_256'] = self.tensor_to_img_256(out_256)
+            if hasattr(self, 'tensor_to_img_256'):
+                out_dict['output_256'] = self.tensor_to_img_256(out_256)
 
         return out_dict, kl_loss
     
@@ -290,7 +292,7 @@ class Discriminator(torch.nn.Module):
     '''
 
     def __init__(self, input_size, num_chan,  hid_dim, sent_dim, emb_dim, 
-                 norm='bn', disc_mode= ['global']):
+                 norm='bn', disc_mode= ['global'], disc_at=[64, 128, 256]):
 
         super(Discriminator, self).__init__()
         self.register_buffer('device_id', torch.IntTensor(1))
@@ -311,7 +313,7 @@ class Discriminator(torch.nn.Module):
         _layers += [activ]
         self.context_emb_pipe_64 = nn.Sequential(*_layers)
 
-        if input_size > 64:
+        if 128 in disc_at:
             self.img_encoder_128  = ImageDown(128,  num_chan, enc_dim, norm)  # 8
             self.pair_disc_128  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
             self.max_out_size = 128
@@ -327,7 +329,7 @@ class Discriminator(torch.nn.Module):
             _layers += [activ]
             self.context_emb_pipe_128 = nn.Sequential(*_layers)
 
-        if input_size > 128:
+        if 256 in disc_at:
             self.img_encoder_256  = ImageDown(256, num_chan, enc_dim, norm)  # 8
             
             self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
@@ -348,7 +350,7 @@ class Discriminator(torch.nn.Module):
             self.context_emb_pipe_256 = nn.Sequential(*_layers)
 
         self.apply(weights_init)
-        print ('>> initialized a {} size discriminator ({})'.format(input_size, str(self.disc_mode)))
+        print ('>> initialized a {} size discriminator ({}), disc at {}'.format(input_size, str(self.disc_mode), str(disc_at)))
 
     def forward(self, images, embdding):
         '''

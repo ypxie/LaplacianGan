@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
-
 import sys, os
-sys.path.insert(0, os.path.join('..','..'))
+sys.path.insert(0, os.path.join('..'))
 
 import numpy as np
 import argparse, os
 import torch, h5py
-
-import torch.nn as nn
+from torch.nn.utils import weight_norm
 
 from LaplacianGan.HDGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
@@ -63,8 +60,6 @@ if  __name__ == '__main__':
     ## add more
     parser.add_argument('--device_id', type=int, default=0, 
                         help='which device')
-    parser.add_argument('--gpu_list', type=int, default=[0], 
-                        help='which devices to parallel the data')
     parser.add_argument('--imsize', type=int, default=256, 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
@@ -84,13 +79,13 @@ if  __name__ == '__main__':
     parser.add_argument('--which_disc', type=str, default='origin', help='discriminator type')
     
     parser.add_argument('--dataset', type=str, default='birds', help='which dataset to use [birds or flowers]')  
-    parser.add_argument('--ncritic_epoch_range', type=int, default=600, help='How many epochs the ncritic effective')   
-    
+    parser.add_argument('--ncritic_epoch_range', type=int, default=600, help='How many epochs the ncritic effective')
+
     args = parser.parse_args()
 
     args.cuda = torch.cuda.is_available()
-    data_root = os.path.join('..', '..', 'Data')
-    model_root = os.path.join('..', '..', 'Models')
+    data_root = os.path.join('..', 'Data')
+    model_root = os.path.join('..', 'Models')
     data_name = args.dataset
     datadir = os.path.join(data_root, data_name)
 
@@ -117,17 +112,19 @@ if  __name__ == '__main__':
         from LaplacianGan.models.hd_networks import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['global', 'local'])
+    elif args.which_disc == 'custom':
+        # has global and local discriminator
+        from LaplacianGan.models.hd_networks import Discriminator 
+        netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
+                    sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_at=[64,128,256])
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
     
-    print(netG)
-    print(netD) 
+    
+    # print(netG)
+    # print(netD) 
     
     device_id = getattr(args, 'device_id', 0)
-
-    
-    netG = nn.DataParallel(netG, device_ids=self.gpu_list, output_device= self.device_id)
-    netD = nn.DataParallel(netD, device_ids=self.gpu_list, output_device= self.device_id)
 
     if args.cuda:
         netD = netD.cuda(device_id)
@@ -145,6 +142,8 @@ if  __name__ == '__main__':
     else:
         dataset = []
         print ('>> in debug mode')
+        
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
     print ('>> START training ')
+    sys.stdout.flush()
     train_gans(dataset, model_root, model_name, netG, netD, args)

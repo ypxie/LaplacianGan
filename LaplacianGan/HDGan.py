@@ -1,5 +1,5 @@
 import numpy as np
-import os
+import os, sys
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -149,7 +149,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 plot_dict = torch.load(plot_save_path)
         else:
             print ('{} or {} do not exist!!'.format(D_weightspath, G_weightspath))
-            start_epoch = 1
+            raise NotImplementedError
     else:
         start_epoch = 1
 
@@ -166,10 +166,13 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     fixed_z_data = [torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1) for _ in range(args.test_sample_num)]
     fixed_z_list = [to_device(a, netG.device_id, volatile=True) for a in fixed_z_data] # what?
 
-    print ('ncritic effective at first {} epochs'.format(args.ncritic_epoch_range))
+
+    # z_test = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
+    # z_test = to_device(z_test, netG.device_id, volatile=True)
 
     global_iter = 0
     gen_iterations = 0
+    last_ncritic = 0
     for epoch in range(start_epoch, tot_epoch):
         start_timer = time.time()
         # learning rate
@@ -182,9 +185,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
         for it in range(updates_per_epoch):
             netG.train()
-
             if epoch <= args.ncritic_epoch_range:
-                if (epoch < 2) and (gen_iterations < 200 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
+                if (epoch < 2) and (gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
                     ncritic = 5
                     #print ('>> set ncritic to {}'.format(ncritic))
                 elif gen_iterations % 50 == 0   :
@@ -192,6 +194,10 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                     #print ('>> set ncritic to {}'.format(ncritic))
             else:
                 ncritic = args.ncritic
+            
+            if last_ncritic != ncritic:
+                print ('change ncritic {} -> {}'.format(last_ncritic,ncritic))
+                last_ncritic = ncritic
 
             for _ in range(ncritic):
                 ''' Sample data '''
@@ -284,6 +290,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                     # plot_imgs(sample.cpu().data.numpy(), epoch, k, 'train_samples')
                     plot_imgs([images[k], sample.cpu().data.numpy()], epoch, k, 'train_images')
                 print ('[epoch %d/%d iter %d]: lr = %.6f g_loss = %.5f d_loss= %.5f' % (epoch, tot_epoch, it, g_lr, g_loss_val, d_loss_val))
+                sys.stdout.flush()
 
         ''' visualize test per epoch '''
         # generate samples
@@ -320,12 +327,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 for k, v in samples.items():
                     cpu_data = v.cpu().data.numpy()
                     if t == 0:
-                        if vis_samples[k][0] == None:
+                        if vis_samples[k][0] is None:
                             vis_samples[k][0] = test_images[k]
                         else:
                             vis_samples[k][0] =  np.concatenate([ vis_samples[k][0], test_images[k]], 0)
 
-                    if vis_samples[k][t+1] == None:
+                    if vis_samples[k][t+1] is None:
                         vis_samples[k][t+1] = cpu_data
                     else:
                         vis_samples[k][t+1] = np.concatenate([vis_samples[k][t+1], cpu_data], 0)
