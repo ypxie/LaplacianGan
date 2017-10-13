@@ -186,7 +186,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             else:
                 ncritic = args.ncritic
 
-            ncritic = args.ncritic
             if last_ncritic != ncritic:
                 print ('change ncritic {} -> {}'.format(last_ncritic, ncritic))
                 last_ncritic = ncritic

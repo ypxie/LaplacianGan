@@ -155,7 +155,7 @@ class Dataset(object):
             start = 0
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples
-            print (self._index_in_epoch,  self._num_examples)
+            #print (self._index_in_epoch,  self._num_examples)
             #print ('go to next round')
 
         end = self._index_in_epoch
@@ -173,12 +173,11 @@ class Dataset(object):
         images_dict = OrderedDict()
         wrongs_dict = OrderedDict()
         
-        filenames = [self._filenames[i] for i in current_ids]
-        fake_filenames = [self._filenames[i] for i in fake_ids]
+        filenames = [self._filenames[i].decode() for i in current_ids]
+        fake_filenames = [self._filenames[i].decode() for i in fake_ids]
         # import pdb; pdb.set_trace()
         sampled_images = self._images(filenames)
         sampled_wrong_images = self._images(fake_filenames)
-
     
         sampled_images = sampled_images
         sampled_wrong_images = sampled_wrong_images
