@@ -107,7 +107,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
     else:
         train_sampler = fake_sampler
-        test_sampler = fake_sampler
+        test_sampler  = fake_sampler
         number_example = 16
         updates_per_epoch = 10
 
@@ -161,11 +161,10 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     z = to_device(z, netG.device_id, requires_grad=False)
     # test the fixed image for every epoch
-    fixed_images, _, fixed_embeddings, _, _ = test_sampler(args.batch_size, 1)
+    fixed_images, _, fixed_embeddings, _, _ = test_sampler.next()
     fixed_embeddings = to_device(fixed_embeddings, netG.device_id, volatile=True)
     fixed_z_data = [torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1) for _ in range(args.test_sample_num)]
     fixed_z_list = [to_device(a, netG.device_id, volatile=True) for a in fixed_z_data] # what?
-
 
     # z_test = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     # z_test = to_device(z_test, netG.device_id, volatile=True)
@@ -184,14 +183,15 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         
         train_sampler = iter(dataset.train) # reset
         test_sampler  = iter(dataset.test)
+        
         for it in range(updates_per_epoch):
             netG.train()
             if epoch <= args.ncritic_epoch_range:
-                if (epoch < 2) and (gen_iterations < 200 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
+                if (epoch < 2) and ( gen_iterations < 200 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
                     ncritic = 5
                     #print ('>> set ncritic to {}'.format(ncritic))
                 elif gen_iterations % 50 == 0   :
-                    ncritic = 15
+                    ncritic = 10
                     #print ('>> set ncritic to {}'.format(ncritic))
             else:
                 ncritic = args.ncritic
@@ -217,7 +217,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                     this_img   = to_device(images[key], netD.device_id)
                     this_wrong = to_device(wrong_images[key], netD.device_id)
                     this_fake  = Variable(fake_images[key].data) # to cut connection to netG
-
                     real_dict   = netD(this_img,   embeddings)
                     wrong_dict  = netD(this_wrong, embeddings)
                     fake_dict   = netD(this_fake,  embeddings)
@@ -285,7 +284,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             if it % args.verbose_per_iter == 0:
                 for k, sample in fake_images.items():
                     # plot_imgs(sample.cpu().data.numpy(), epoch, k, 'train_samples')
-                    plot_imgs([images[k], sample.cpu().data.numpy()], epoch, k, 'train_images')
+                    plot_imgs([images[k].numpy(), sample.cpu().data.numpy()], epoch, k, 'train_images')
                 print ('[epoch %d/%d iter %d]: lr = %.6f g_loss = %.5f d_loss= %.5f' % (epoch, tot_epoch, it, g_lr, g_loss_val, d_loss_val))
 
         ''' visualize test per epoch '''
@@ -297,7 +296,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             #sent_emb_test, _ =  netG.condEmbedding(test_embeddings)
             if idx_test == 0:
                 test_images, test_embeddings = fixed_images, fixed_embeddings
-
             else:
                 test_images, _, test_embeddings, _, _ = test_sampler_iter.next()
                 test_embeddings = to_device(test_embeddings, netG.device_id, volatile=True)
@@ -324,9 +322,9 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                     cpu_data = v.cpu().data.numpy()
                     if t == 0:
                         if vis_samples[k][0] == None:
-                            vis_samples[k][0] = test_images[k]
+                            vis_samples[k][0] = test_images[k].numpy()
                         else:
-                            vis_samples[k][0] =  np.concatenate([ vis_samples[k][0], test_images[k]], 0)
+                            vis_samples[k][0] =  np.concatenate([ vis_samples[k][0], test_images[k].numpy() ], 0)
 
                     if vis_samples[k][t+1] == None:
                         vis_samples[k][t+1] = cpu_data

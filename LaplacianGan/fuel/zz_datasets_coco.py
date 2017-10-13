@@ -7,12 +7,33 @@ import scipy.misc as misc
 from ..proj_utils.local_utils import imresize_shape
 import torch
 
+from functools import partial
+
+IM_PATH_TRAIN = '/data/data2/Shared_YZ/coco/coco_official/train2014'
+IM_PATH_VAL   = '/data/data2/Shared_YZ/coco/coco_official/val2014'
+
+IMG_DIM = 304 # use for augmentation
 def resize_images(tensor, shape):
     out = []
     for k in range(tensor.shape[0]):
         tmp = misc.imresize(tensor[k], shape)
         out.append(tmp[np.newaxis,:,:,:])
     return np.concatenate(out, axis=0).transpose((0,3,1,2))
+
+def img_loader_func(img_names, imgpath=None):
+    res = []
+
+    for i_n in img_names:
+        img = misc.imread(os.path.join(imgpath, i_n))
+        img = misc.imresize(img, (IMG_DIM, IMG_DIM))
+        if len(img.shape) != 3:
+            # happen to be a gray image
+            img = np.tile(img[:,:,np.newaxis], [1,1,3])
+
+        res.append(img[np.newaxis,:,:,:])
+    res = np.concatenate(res, axis=0)
+    
+    return res
 
 # bugs if you use batch size 1
 class Dataset(object):
@@ -138,7 +159,7 @@ class Dataset(object):
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples
             print (self._index_in_epoch,  self._num_examples)
-            print ('go to next round')
+            #print ('go to next round')
 
         end = self._index_in_epoch
 
@@ -162,11 +183,13 @@ class Dataset(object):
         sampled_wrong_images = self._images(fake_filenames)
 
     
-        sampled_images = sampled_images.astype(np.float32)
-        sampled_wrong_images = sampled_wrong_images.astype(np.float32)
+        sampled_images = sampled_images
+        sampled_wrong_images = sampled_wrong_images
         sampled_images = self.transform(sampled_images)
         sampled_wrong_images = self.transform(sampled_wrong_images)
 
+        sampled_images = sampled_images.astype(np.float32)
+        sampled_wrong_images = sampled_wrong_images.astype(np.float32)
 
         images_dict = {}
         wrongs_dict = {}
@@ -174,23 +197,22 @@ class Dataset(object):
             tmp = resize_images(sampled_images, shape=[size, size])
             tmp = tmp * (2. / 255) - 1.
             tmp = np.squeeze(tmp, 0) # squeee is to remove the extra dimensions since we use pytorch multithread loader
-            images_dict['output_{}'.format(size)] = tmp
+            images_dict['output_{}'.format(size)] = tmp.astype(np.float32)
 
             tmp = resize_images(sampled_wrong_images, shape=[size, size])
             tmp = tmp * (2. / 255) - 1.
             tmp = np.squeeze(tmp, 0)
-            wrongs_dict['output_{}'.format(size)] = tmp
+            wrongs_dict['output_{}'.format(size)] = tmp.astype(np.float32)
 
 
         ret_list = [images_dict, wrongs_dict]
 
         if self._embeddings is not None:
-            
             # class_id = [self._class_id[i] for i in current_ids]
             sampled_embeddings, sampled_captions = \
                 self.sample_embeddings(self._embeddings[current_ids],
                                        filenames, window)
-            ret_list.append(sampled_embeddings)
+            ret_list.append(sampled_embeddings.astype(np.float32))
             ret_list.append(sampled_captions)
         else:
             ret_list.append([])
@@ -214,10 +236,11 @@ class Dataset(object):
             end = start + batch_size
 
         sampled_images = self._images[start:end]
-        sampled_images = sampled_images.astype(np.float32)
+        sampled_images = sampled_images
         # from [0, 255] to [-1.0, 1.0]
         sampled_images = sampled_images * (2. / 255) - 1.
         sampled_images = self.transform(sampled_images)
+        sampled_images = sampled_images.astype(np.float32)
 
         sampled_embeddings = self._embeddings[start:end]
         _, embedding_num, _ = sampled_embeddings.shape
@@ -239,19 +262,7 @@ class Dataset(object):
                 self._saveIDs[start:end], sampled_captions]
 
 
-def img_loader_func(img_names):
-    res = []
-    for i_n in img_names:
-        img = misc.imread(os.path.join(IMG_PATH, i_n))
-        img = misc.imresize(img, (IMG_DIM, IMG_DIM))
-        if len(img.shape) != 3:
-            # happen to be a gray image
-            img = np.tile(img[:,:,np.newaxis], [1,1,3])
 
-        res.append(img[np.newaxis,:,:,:])
-    res = np.concatenate(res, axis=0)
-    
-    return res
 
 class TextDataset(object):
     def __init__(self, hr_lr_ratio=4):
@@ -277,14 +288,15 @@ class TextDataset(object):
         # with open(pickle_path + self.image_filename, 'rb') as f:
         #     images = pickle.load(f)
         #     images = np.array(images)
-        global IMG_PATH
+
+    
         if 'train' in pickle_path:
             IMG_PATH = IM_PATH_TRAIN
         elif 'val' in pickle_path:
             IMG_PATH = IM_PATH_VAL
         
         print ('read data from {}'.format(IMG_PATH))
-        images = img_loader_func
+        img_load = partial(img_loader_func, imgpath=IMG_PATH)
 
         with open(pickle_path + self.embedding_filename, 'rb') as f:
             if sys.version_info.major > 2:
@@ -304,7 +316,7 @@ class TextDataset(object):
             print ('read {} captions '.format(len(captions)))
         
 
-        return Dataset(images, self.image_shape[0], embeddings,
+        return Dataset(img_load, self.image_shape[0], embeddings,
                        list_filenames, None, None,
                        aug_flag, captions=captions)
 
@@ -350,9 +362,3 @@ class MultiThreadLoader():
     def __len__(self):
         return len(self.dataset)
 
-
-IM_PATH_TRAIN = 'Data/coco/coco_official/train2014'
-IM_PATH_VAL = 'Data/coco/coco_official/val2014'
-IMG_PATH = IM_PATH_TRAIN
-
-IMG_DIM = 304 # use for augmentation

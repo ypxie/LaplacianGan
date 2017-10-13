@@ -1,42 +1,52 @@
 # -*- coding: utf-8 -*-
 
-import sys, os
-sys.path.insert(0, os.path.join('..','..'))
-
 import numpy as np
 import argparse, os
 import torch, h5py
-from torch.nn.utils import weight_norm
 
-from LaplacianGan.HDGan import train_gans
-from LaplacianGan.fuel.zz_datasets_coco import MultiThreadLoader
+import torch.nn as nn
+from collections import OrderedDict
 
-if  __name__ == '__main__':
+from .HDGan_COCO import train_gans
+from .fuel.zz_datasets_coco import MultiThreadLoader
+
+class Dataset():
+    def __init__(self, train_loader, test_loader):
+        self.train = train_loader
+        self.test = test_loader
+        
+def train_worker(data_root, model_root, training_dict):
+
+    save_freq           = getattr(training_dict, 'save_freq', 3)
+    ncritic_epoch_range = getattr(training_dict, 'ncritic_epoch_range', 600)
+    g_lr                = getattr(training_dict, 'g_lr', .0002)
+    d_lr                = getattr(training_dict, 'd_lr', .0002)
+    dataset             = getattr(training_dict, 'dataset', 'coco')
 
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')
     parser.add_argument('--maxepoch', type=int, default=600, metavar='N',
                         help='number of epochs to train (default: 10)')
-    parser.add_argument('--g_lr', type=float, default = .0002, metavar='LR',
+    parser.add_argument('--g_lr', type=float, default = g_lr, metavar='LR',
                         help='learning rate (default: 0.01)')
-    parser.add_argument('--d_lr', type=float, default = .0002, metavar='LR',
+    parser.add_argument('--d_lr', type=float, default = d_lr, metavar='LR',
                         help='learning rate (default: 0.01)')
     
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--reuse_weights', action='store_true', 
+    parser.add_argument('--reuse_weights',  default= training_dict['reuse_weights'],
                         help='continue from last checkout point')
     parser.add_argument('--show_progress', action='store_false', default = True,
                         help='show the training process using images')
     
-    parser.add_argument('--save_freq', type=int, default= 20, metavar='N',
+    parser.add_argument('--save_freq', type=int, default= save_freq, metavar='N',
                         help='how frequent to save the model')
     parser.add_argument('--display_freq', type=int, default= 200, metavar='N',
                         help='plot the results every {} batches')
     parser.add_argument('--verbose_per_iter', type=int, default= 50, 
                         help='print losses per iteration')
-    parser.add_argument('--batch_size', type=int, default=8, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=training_dict['batch_size'], metavar='N',
                         help='batch size.')
     parser.add_argument('--num_emb', type=int, default=4, metavar='N',
                         help='number of emb chosen for each image.')
@@ -54,40 +64,41 @@ if  __name__ == '__main__':
                         help='the channel of each image.')
     parser.add_argument('--KL_COE', type=float, default= 4, metavar='N',
                         help='kl divergency coefficient.')
-    parser.add_argument('--use_content_loss', type=bool, default= False, metavar='N',
+    parser.add_argument('--use_content_loss', type=bool, default= True, metavar='N',
                         help='whether or not to use content loss.')
-    parser.add_argument('--save_folder', type=str, default= 'tmp_images', metavar='N',
-                        help='folder to save the temper images.')
 
     ## add more
-    parser.add_argument('--device_id', type=int, default=0, 
+    parser.add_argument('--device_id', type=int, default=training_dict['device_id'], 
                         help='which device')
-    parser.add_argument('--imsize', type=int, default=256, 
+    parser.add_argument('--gpu_list',  default=training_dict['gpu_list'], 
+                        help='which devices to parallel the data')
+    parser.add_argument('--imsize',  default=training_dict['imsize'], 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
                         help='decay epoch image size')
-    parser.add_argument('--load_from_epoch', type=int, default= 0, 
+    parser.add_argument('--load_from_epoch', type=int, default= training_dict['load_from_epoch'], 
                         help='load from epoch')
-    parser.add_argument('--model_name', type=str, default='zz_gan')
+    parser.add_argument('--model_name', type=str, default=training_dict['model_name'])
     parser.add_argument('--test_sample_num', type=int, default=4, 
                         help='The number of runs for each embeddings when testing')
     parser.add_argument('--norm_type', type=str, default='bn', 
                         help='The number of runs for each embeddings when testing')
     parser.add_argument('--gen_activation_type', type=str, default='relu', 
                         help='The number of runs for each embeddings when testing')
-    parser.add_argument('--debug_mode', action='store_true',  
+    parser.add_argument('--debug_mode', type=bool, default=False,  
                         help='debug mode use fake dataset loader')   
-    parser.add_argument('--which_gen', type=str, default='origin',  help='generator type')
-    parser.add_argument('--which_disc', type=str, default='origin', help='discriminator type')
+    parser.add_argument('--which_gen', type=str, default=training_dict['which_gen'],  help='generator type')
+    parser.add_argument('--which_disc', type=str, default=training_dict['which_disc'], help='discriminator type')
     
-    parser.add_argument('--dataset', type=str, default='birds', help='which dataset to use [birds or flowers]')  
+    parser.add_argument('--dataset', type=str, default = dataset, help='which dataset to use [birds or flowers]') 
+    parser.add_argument('--ncritic_epoch_range', type=int, default=ncritic_epoch_range, help='How many epochs the ncritic effective')   
 
     args = parser.parse_args()
 
-    args.cuda = torch.cuda.is_available()
-    data_root = os.path.join('..', '..', 'Data')
-    model_root = os.path.join('..', '..', 'Models')
-    data_name = args.dataset
+    args.cuda  = torch.cuda.is_available()
+    
+    data_name  = args.dataset
+    assert data_name is 'coco', 'dataset must be coco!!!'
     datadir = os.path.join(data_root, data_name)
 
     # Generator
@@ -115,10 +126,9 @@ if  __name__ == '__main__':
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['global', 'local'])
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
-    
-    print(netG)
-    print(netD) 
-    
+
+    print(args)
+
     device_id = getattr(args, 'device_id', 0)
 
     if args.cuda:
@@ -126,22 +136,11 @@ if  __name__ == '__main__':
         netG = netG.cuda(device_id)
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
-    
-    class Dataset():
-        def __init__(self, train_loader, test_loader):
-            self.train = train_loader
-            self.test = test_loader
 
     if not args.debug_mode:
-        print ('>> initialize dataset')
-        # dataset = TextDataset(datadir, 'cnn-rnn', 4)
-        # filename_test = os.path.join(datadir, 'test')
-        # dataset.test = dataset.get_data(filename_test)
-        # filename_train = os.path.join(datadir, 'train')
-        # dataset.train = dataset.get_data(filename_train)
-        
-        train_loader = MultiThreadLoader('Data/coco/train', batch_size=args.batch_size, num_embed=4, threads=4).load_data()
-        test_loader = MultiThreadLoader('Data/coco/train', batch_size=args.batch_size, num_embed=1, threads=4, aug_flag=False).load_data()
+        print ('>> initialize dataset')    
+        train_loader = MultiThreadLoader(os.path.join(datadir, 'train'), batch_size=args.batch_size, num_embed=4, threads=0).load_data()
+        test_loader  = MultiThreadLoader(os.path.join(datadir,  'val'), batch_size=args.batch_size, num_embed=1, threads=0, aug_flag=False).load_data()
         dataset = Dataset(train_loader, test_loader)
 
     else:

@@ -126,7 +126,7 @@ class condEmbedding(nn.Module):
         inputs: (B, dim)
         return: mean (B, dim), logsigma (B, dim)
         '''
-        print('cont embedding',inputs.get_device(),  self.linear.weight.get_device())
+        #print('cont embedding',inputs.get_device(),  self.linear.weight.get_device())
         out = F.leaky_relu( self.linear(inputs), 0.2, inplace=True )
         mean = out[:, :self.emb_dim]
         log_sigma = out[:, self.emb_dim:]
