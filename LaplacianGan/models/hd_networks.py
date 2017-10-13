@@ -357,7 +357,6 @@ class Discriminator(torch.nn.Module):
             # shrink is used for mapping 8x8 FM to 4x4
             self.shrink = conv_norm(enc_dim, enc_dim,  norm_layer, stride=1, activation=activ, kernel_size=5, padding=0)
 
-            self.max_out_size = 256
             if 'local' in self.disc_mode:
                 _layers = [nn.Conv2d(enc_dim, 1, kernel_size=1, padding=0, bias=True)]   # 8
                 self.local_img_disc_256 = nn.Sequential(*_layers)
@@ -385,7 +384,7 @@ class Discriminator(torch.nn.Module):
         out_dict = OrderedDict()
         this_img_size = images.size()[3]
         assert this_img_size in [32, 64, 128, 256], 'wrong input size {} in image discriminator'.format(this_img_size)
-        assert self.max_out_size >= this_img_size, 'image size {} exceeds expected maximum size {}'.format(this_img_size, self.max_out_size)
+        assert self.max_output_size >= this_img_size, 'image size {} exceeds expected maximum size {}'.format(this_img_size, self.max_out_size)
 
         img_encoder = getattr(self, 'img_encoder_{}'.format(this_img_size))
         local_img_disc    = getattr(self, 'local_img_disc_{}'.format(this_img_size), None)

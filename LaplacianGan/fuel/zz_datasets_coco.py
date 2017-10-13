@@ -9,9 +9,6 @@ import torch
 
 from functools import partial
 
-IM_PATH_TRAIN = '/data/data2/Shared_YZ/coco/coco_official/train2014'
-IM_PATH_VAL   = '/data/data2/Shared_YZ/coco/coco_official/val2014'
-
 IMG_DIM = 304 # use for augmentation
 def resize_images(tensor, shape):
     out = []
@@ -284,16 +281,14 @@ class TextDataset(object):
         self.embedding_filename = '/char-CNN-RNN-embeddings.pickle'
 
 
-    def get_data(self, pickle_path, aug_flag=True):
+    def get_data(self, pickle_path, aug_flag=True,data_dir=None):
         # with open(pickle_path + self.image_filename, 'rb') as f:
         #     images = pickle.load(f)
         #     images = np.array(images)
-
-    
         if 'train' in pickle_path:
-            IMG_PATH = IM_PATH_TRAIN
+            IMG_PATH = os.path.join(data_dir,'coco_official', 'train2014')
         elif 'val' in pickle_path:
-            IMG_PATH = IM_PATH_VAL
+            IMG_PATH = os.path.join(data_dir,'coco_official', 'val2014')
         
         print ('read data from {}'.format(IMG_PATH))
         img_load = partial(img_loader_func, imgpath=IMG_PATH)
@@ -322,10 +317,9 @@ class TextDataset(object):
 
 
 class WrapperLoader():
-    def __init__(self, pickle_path, num_embed, test_mode, aug_flag):
+    def __init__(self, pickle_path, num_embed, test_mode, aug_flag,data_dir):
         
-
-        self.dataset = TextDataset().get_data(pickle_path, aug_flag=aug_flag)
+        self.dataset = TextDataset().get_data(pickle_path, aug_flag=aug_flag, data_dir=data_dir)
         self.num_embed = num_embed
         self.num_samples = self.dataset.num_examples
         self.test_mode = test_mode
@@ -344,10 +338,10 @@ class WrapperLoader():
 
 class MultiThreadLoader():
 
-    def __init__(self, pickle_path, batch_size, num_embed, threads=0, test_mode=False, aug_flag=True):
+    def __init__(self, pickle_path, batch_size, num_embed, threads=0, test_mode=False, aug_flag=True,data_dir=None):
         print ('create multithread loader with {} threads ...'.format(threads))
 
-        self.dataset = WrapperLoader(pickle_path, num_embed, test_mode, aug_flag=aug_flag)
+        self.dataset = WrapperLoader(pickle_path, num_embed, test_mode, aug_flag=aug_flag, data_dir=data_dir)
         import torch.utils.data
 
         self.dataloader = torch.utils.data.DataLoader(

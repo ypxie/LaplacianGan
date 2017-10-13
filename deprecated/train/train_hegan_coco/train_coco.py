@@ -141,7 +141,7 @@ if  __name__ == '__main__':
         # dataset.train = dataset.get_data(filename_train)
         
         train_loader = MultiThreadLoader('Data/coco/train', batch_size=args.batch_size, num_embed=4, threads=4).load_data()
-        test_loader = MultiThreadLoader('Data/coco/train', batch_size=args.batch_size, num_embed=1, threads=4, aug_flag=False).load_data()
+        test_loader  = MultiThreadLoader('Data/coco/train', batch_size=args.batch_size, num_embed=1, threads=4, aug_flag=False).load_data()
         dataset = Dataset(train_loader, test_loader)
 
     else:

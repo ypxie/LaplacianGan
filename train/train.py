@@ -82,7 +82,7 @@ if  __name__ == '__main__':
     parser.add_argument('--ncritic_epoch_range', type=int, default=600, help='How many epochs the ncritic effective')
 
     args = parser.parse_args()
-
+    
     args.cuda = torch.cuda.is_available()
     data_root = os.path.join('..', 'Data')
     model_root = os.path.join('..', 'Models')

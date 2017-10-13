@@ -123,7 +123,7 @@ class Dataset(object):
 
         start = self._index_in_epoch
         self._index_in_epoch += batch_size
-
+        
         if self._index_in_epoch > self._num_examples:
             # Finished epoch
             self._epochs_completed += 1
@@ -136,7 +136,7 @@ class Dataset(object):
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples
         end = self._index_in_epoch
-        
+
         current_ids = self._perm[start:end]
         fake_ids = np.random.randint(self._num_examples, size=batch_size)
         collision_flag =\

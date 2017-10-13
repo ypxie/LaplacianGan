@@ -138,9 +138,12 @@ def train_worker(data_root, model_root, training_dict):
         cudnn.benchmark = True
 
     if not args.debug_mode:
-        print ('>> initialize dataset')    
-        train_loader = MultiThreadLoader(os.path.join(datadir, 'train'), batch_size=args.batch_size, num_embed=4, threads=0).load_data()
-        test_loader  = MultiThreadLoader(os.path.join(datadir,  'val'), batch_size=args.batch_size, num_embed=1, threads=0, aug_flag=False).load_data()
+        print ('>> initialize dataset')   
+
+        train_loader = MultiThreadLoader(os.path.join(datadir, 'train'), batch_size=args.batch_size, 
+                                         num_embed=4, threads= 4, data_dir=datadir).load_data()
+        test_loader  = MultiThreadLoader(os.path.join(datadir,  'val'), batch_size=args.batch_size, 
+                                         num_embed=1, threads= 4, aug_flag=False, data_dir=datadir).load_data()
         dataset = Dataset(train_loader, test_loader)
 
     else:
@@ -148,5 +151,5 @@ def train_worker(data_root, model_root, training_dict):
         print ('>> in debug mode')
 
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
-    print ('>> START training ')
+    print ('>> START training {}'.format(model_name))
     train_gans(dataset, model_root, model_name, netG, netD, args)
