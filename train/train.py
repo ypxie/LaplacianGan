@@ -98,8 +98,13 @@ if  __name__ == '__main__':
         from LaplacianGan.models.hd_networks import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True)              
+    elif args.which_gen == 'custom':   
+        from LaplacianGan.models.hd_networks import Generator 
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize, side_output_at=[64,128,256])             
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
+
 
     # Discriminator
     if args.which_disc == 'origin': 

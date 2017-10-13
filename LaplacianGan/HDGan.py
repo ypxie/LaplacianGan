@@ -167,9 +167,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     fixed_z_list = [to_device(a, netG.device_id, volatile=True) for a in fixed_z_data] # what?
 
 
-    # z_test = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
-    # z_test = to_device(z_test, netG.device_id, volatile=True)
-
     global_iter = 0
     gen_iterations = 0
     last_ncritic = 0
@@ -189,14 +186,14 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 if (epoch < 2) and (gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
                     ncritic = 5
                     #print ('>> set ncritic to {}'.format(ncritic))
-                elif gen_iterations % 50 == 0   :
-                    ncritic = 10
-                    #print ('>> set ncritic to {}'.format(ncritic))
+                elif gen_iterations % 50 == 0:
+                    ncritic = 10    
+                #print ('>> set ncritic to {}'.format(ncritic))
             else:
                 ncritic = args.ncritic
             
             if last_ncritic != ncritic:
-                print ('change ncritic {} -> {}'.format(last_ncritic,ncritic))
+                print ('change ncritic {} -> {}'.format(last_ncritic, ncritic))
                 last_ncritic = ncritic
 
             for _ in range(ncritic):
@@ -249,11 +246,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             ''' update G '''
             for p in netD.parameters(): p.requires_grad = False  # to avoid computation
             netG.zero_grad()
-            #_, _, embeddings, _, _ = train_sampler(args.batch_size, args.num_emb)
-            ''' Interpolate across samples '''
-            # if args.emb_interp:
-            #     np_embeddings = inter_across(np_embeddings)
-            #     embeddings = to_device(np_embeddings, netD.device_id, requires_grad=False)
+           
 
             z.data.normal_(0, 1) # resample random noises
             fake_images, kl_loss = netG(embeddings, z)

@@ -3,7 +3,7 @@ D=256
 name='zz_mmgan_plain_gl_disc'
 
 ## if you pretrained from an outside model 
-root=/home/zizhao/work/LaplacianGan/Models
+root=../Models
 folder=${name}_flowers_${D}
 mkdir -p ${root}/${folder}
 
