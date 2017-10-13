@@ -125,12 +125,11 @@ if  __name__ == '__main__':
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
     
-    
     # print(netG)
     # print(netD) 
     
     device_id = getattr(args, 'device_id', 0)
-
+    print ('>> model initialized')
     if args.cuda:
         netD = netD.cuda(device_id)
         netG = netG.cuda(device_id)
@@ -147,7 +146,7 @@ if  __name__ == '__main__':
     else:
         dataset = []
         print ('>> in debug mode')
-        
+
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
     print ('>> START training ')
     sys.stdout.flush()

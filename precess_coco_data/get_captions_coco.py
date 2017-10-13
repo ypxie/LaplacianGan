@@ -15,7 +15,7 @@ import os as os
 # from log_utils import print
 import tables, json
 import pandas as pd
-import cPickle
+import pickle
 from pprint import pprint
 # from data_helpers import *
 # from w2v import train_word2vec
@@ -98,8 +98,8 @@ def load_data(data_type,
         # save everything
         path = '/home/zizhaozhang/work/LaplacianGan/Data/coco/' + data_type[:-4]
 
-        # cPickle.dump(tmp_captions, open(os.path.join(path, data_type+'_captions.pickle'), 'wb'))
-        # cPickle.dump(images, open(os.path.join(path, data_type+'_256images.pickle'), 'wb'))
+        pickle.dump(tmp_captions, open(os.path.join(path, 'captions.pickle'), 'wb'))
+        #pickle.dump(images, open(os.path.join(path, data_type+'_256images.pickle'), 'wb'))
         # json.dump(tmp_captions, open(os.path.join(path, data_type+'_captions.json'), 'wb'))
         # torchf.save(os.path.join(path, data_type+'_captions.t7'),tmp_captions)
         
@@ -185,5 +185,5 @@ def generate_ranking_info(batch_label):
     return S
 
 if __name__ == '__main__':
-    #load_data('train2014')
+    load_data('train2014')
     load_data('val2014')

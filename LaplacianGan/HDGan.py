@@ -15,7 +15,6 @@ import time, json
 
 TINY = 1e-8
 
-
 def compute_d_pair_loss(real_logit, wrong_logit, fake_logit, wgan=False):
     if wgan:
         disc = wrong_logit  + fake_logit - 2*real_logit
@@ -72,15 +71,6 @@ def load_partial_state_dict(model, state_dict):
                           name, own_state[name].size(), param.size()))
                 raise
         print ('>> load partial state dict: {} initialized'.format(len(state_dict)))
-
-def inter_across(embeddings):
-    # embeddings (b, dim)
-    B, _ = embeddings.shape
-    res = embeddings.copy()
-    for idx in range(B):
-        ridx = random.randint(0, B-1)
-        res[idx] = 0.5*(embeddings[idx], embeddings[ridx])
-    return res
 
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
     print('>> using hd gan trainer')
@@ -189,9 +179,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 elif gen_iterations % 50 == 0:
                     ncritic = 10    
                     #print ('>> set ncritic to {}'.format(ncritic))
+                else:
+                    ncritic = args.ncritic
             else:
                 ncritic = args.ncritic
-            
+
+            ncritic = args.ncritic
             if last_ncritic != ncritic:
                 print ('change ncritic {} -> {}'.format(last_ncritic, ncritic))
                 last_ncritic = ncritic

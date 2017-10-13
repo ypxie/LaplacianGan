@@ -1,6 +1,6 @@
 
 D=256
-name='zz_mmgan_plain_gl_disc'
+name='zz_mmgan_plain_gl_disc_allncric'
 
 ## if you pretrained from an outside model 
 root=../Models
