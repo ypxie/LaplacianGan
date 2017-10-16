@@ -25,10 +25,6 @@ CUDA_VISIBLE_DEVICES=1 python test_gan.py --device_id 0 --test_sample_num 11 --b
 # python test_gan.py --device_id 3 --batch_size 1 --save_spec ${save_spec} --imsize 256 --model_name ${name}  --load_from_epoch 560 --which_gen ${gen} --which_disc ${disc} 
 
 
-
-
-
-
 #name='large_plan'
 #gen='origin'
 #disc='origin_global_local'

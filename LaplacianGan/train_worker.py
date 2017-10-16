@@ -12,10 +12,17 @@ from .fuel.zz_datasets import TextDataset
 
 def train_worker(data_root, model_root, training_dict):
 
-    save_freq           = getattr(training_dict, 'save_freq', 3)
-    ncritic_epoch_range = getattr(training_dict, 'ncritic_epoch_range', 600)
-    g_lr                = getattr(training_dict, 'g_lr', .0002)
-    d_lr                = getattr(training_dict, 'd_lr', .0002)
+    save_freq           = training_dict.get('save_freq', 3)
+    ncritic_epoch_range = training_dict.get('ncritic_epoch_range', 100)
+    g_lr                = training_dict.get('g_lr', .0002)
+    d_lr                = training_dict.get('d_lr', .0002)
+    reduce_dim_at       = training_dict.get('reduce_dim_at', [8, 32, 128, 256])
+    use_img_loss        = training_dict.get('use_img_loss', True)
+    # save_freq           = training_dict.get('save_freq', 3)
+    # ncritic_epoch_range = training_dict.get('ncritic_epoch_range', 600)
+    # g_lr                = training_dict.get('g_lr', .0002)
+    # d_lr                = training_dict.get('d_lr', .0002)
+    # reduce_dim_at       = training_dict.get('reduce_dim_at', [8, 32, 128, 256])
 
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
@@ -64,7 +71,7 @@ def train_worker(data_root, model_root, training_dict):
     ## add more
     parser.add_argument('--device_id', type=int, default=training_dict['device_id'], 
                         help='which device')
-    parser.add_argument('--gpu_list',  default=training_dict['gpu_list'], 
+    parser.add_argument('--gpu_list',  default = [], 
                         help='which devices to parallel the data')
     parser.add_argument('--imsize',  default=training_dict['imsize'], 
                         help='output image size')
@@ -85,8 +92,10 @@ def train_worker(data_root, model_root, training_dict):
     parser.add_argument('--which_disc', type=str, default=training_dict['which_disc'], help='discriminator type')
     
     parser.add_argument('--dataset', type=str, default=training_dict['dataset'], help='which dataset to use [birds or flowers]') 
-    parser.add_argument('--ncritic_epoch_range', type=int, default=ncritic_epoch_range, help='How many epochs the ncritic effective')   
-
+    parser.add_argument('--ncritic_epoch_range', type=int, default=ncritic_epoch_range, help='How many epochs the ncritic effective')  
+    parser.add_argument('--use_img_loss', type=bool, default = use_img_loss,
+                        help='whether to use image loss')
+     
     args = parser.parse_args()
 
     args.cuda  = torch.cuda.is_available()
@@ -98,14 +107,14 @@ def train_worker(data_root, model_root, training_dict):
     if args.which_gen == 'origin':
         from LaplacianGan.models.hd_networks import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
-                        norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize,reduce_dim_at=reduce_dim_at)
     elif args.which_gen == 'upsample_skip':   
         from LaplacianGan.models.hd_networks import Generator 
-        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
-                        norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True)              
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
+               activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True,reduce_dim_at=reduce_dim_at)              
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
-
+        
     # Discriminator
     if args.which_disc == 'origin': 
         # only has global discriminator

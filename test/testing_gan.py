@@ -1,0 +1,62 @@
+import os
+import sys, os
+import numpy as np
+sys.path.insert(0, os.path.join('..'))
+
+home = os.path.expanduser('~')
+proj_root = os.path.join('..')
+data_root = os.path.join(proj_root, 'Data')
+
+model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
+save_root  =  os.path.join(home, 'devbox', 'Shared_YZ', 'Results')
+
+import torch.multiprocessing as mp
+from LaplacianGan.proj_utils.local_utils import Indexflow
+from LaplacianGan.test_worker import test_worker
+
+save_spec = 'eval_bs_1'
+
+flower_400   = {'batch_size': 8, 'device_id': 0,'imsize':256, 'load_from_epoch': 400, 'train_mode': False,
+                'model_name':'zz_mmgan_plain_gl_disc_baldg2_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
+                'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256] }
+
+flower_500 = flower_400.copy()
+flower_500['load_from_epoch'] = 500
+flower_500['device_id'] = 1
+
+flower_580 = flower_400.copy()
+flower_580['load_from_epoch'] = 580
+flower_580['device_id'] = 0
+
+birds_300 = {'batch_size': 8, 'device_id': 1,'imsize':256, 'load_from_epoch': 300, 'train_mode': False,
+             'model_name':'zz_mmgan_plain_gl_disc_continue_ncric_birds_256', 'save_spec': save_spec, 
+             'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+birds_400 = birds_300.copy()
+birds_400['load_from_epoch'] = 400
+birds_400['device_id'] = 0
+
+birds_500 = birds_300.copy()
+birds_500['load_from_epoch'] = 500
+birds_400['device_id'] = 1
+
+training_pool = np.array([
+                 flower_400, flower_500, flower_580,
+                 #birds_300, birds_400, birds_500
+                 ])
+
+show_progress = 0
+processes = []
+Totalnum = len(training_pool)
+
+for select_ind in Indexflow(Totalnum, 2, random=False):
+    select_pool = training_pool[select_ind]
+
+    for this_dick in select_pool:
+
+        p = mp.Process(target=test_worker, args= (data_root, model_root, save_root, this_dick) )
+        p.start()
+        processes.append(p)
+    for p in processes:
+        p.join()
+    print('Finish the round with', select_pool)
+

@@ -54,3 +54,10 @@
 - go to process_data/get_captions_coco.py to get [image]\_captions.txt and captions.pickle
 - go to process_data/get_embedding_coco.lua to compute embedding in txt files [image]\_captions.txt.
 - go to process_data/prepare_coco.py to merge embeddings in t7 to pickle and fileinfo.pickle
+
+
+## Currently I am testing
+# does bigger model help? does local help?
+- bigmachine: bigger model [16, 64, 128], for local+gloabl disc, coco
+- bigmachine: small model [8, 32, 128, 256] for local+gloabl disc, coco
+- devbox:     bigger model [16, 64, 128] for birds                  

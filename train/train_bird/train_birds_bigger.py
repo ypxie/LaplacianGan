@@ -9,20 +9,16 @@ model_root = os.path.join( '..','..', 'Models')
 import torch.multiprocessing as mp
 
 from LaplacianGan.proj_utils.local_utils import Indexflow
-from LaplacianGan.train_worker_coco import train_worker
+from LaplacianGan.train_worker import train_worker
 
-reduce_dim_at = [8, 32, 128, 256]
-large_global = {'reuse_weights': True, 'batch_size': 12, 'device_id': 6, 'gpu_list': [0], 
-                      'imsize':[64, 128, 256], 'load_from_epoch': 12, 'model_name':'gen_origin_disc_origin', 
-                      'which_gen': 'origin', 'which_disc':'origin', 'dataset':'coco','reduce_dim_at':[8, 32, 128, 256] }
+# local_global disc. We test both large and small model
 
-small_global = {'reuse_weights': False, 'batch_size': 24, 'device_id': 7, 'gpu_list': [0], 
-                      'imsize':[64, 128], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_origin', 
-                      'which_gen': 'origin', 'which_disc':'origin', 'dataset':'coco','reduce_dim_at':[8, 32, 128, 256] }
+large_global_local_bigger = {'reuse_weights': False, 'batch_size': 10, 'device_id': 2, 'gpu_list': [0], 
+                            'imsize':[64, 128, 256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_origin_bigger', 
+                            'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[16, 128, 256] }
 
 training_pool = np.array([
-                 large_global,
-                 small_global
+                 large_global_local_bigger
                  ])
 
 show_progress = 0
