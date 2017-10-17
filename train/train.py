@@ -79,7 +79,7 @@ if  __name__ == '__main__':
     parser.add_argument('--which_disc', type=str, default='origin', help='discriminator type')
     
     parser.add_argument('--dataset', type=str, default='birds', help='which dataset to use [birds or flowers]')  
-    parser.add_argument('--ncritic_epoch_range', type=int, default=600, help='How many epochs the ncritic effective')
+    parser.add_argument('--ncritic_epoch_range', type=int, default=100, help='How many epochs the ncritic effective')
 
     args = parser.parse_args()
     
@@ -98,10 +98,15 @@ if  __name__ == '__main__':
         from LaplacianGan.models.hd_networks import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True)              
-    elif args.which_gen == 'custom':   
+    elif args.which_gen == 'single_256':   
         from LaplacianGan.models.hd_networks import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
-                        norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize, side_output_at=[64,128,256])             
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=[256])   
+    elif args.which_gen == 'comb_64_256':   
+        from LaplacianGan.models.hd_networks import Generator 
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=[64, 256])           
+
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 
@@ -117,11 +122,16 @@ if  __name__ == '__main__':
         from LaplacianGan.models.hd_networks import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['global', 'local'])
-    elif args.which_disc == 'custom':
+    elif args.which_disc == 'single_256':
         # has global and local discriminator
         from LaplacianGan.models.hd_networks import Discriminator 
-        netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
-                    sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_at=[64,128,256])
+        netD = Discriminator(input_size=[256], num_chan = 3, hid_dim = 128, 
+                    sent_dim=1024, emb_dim=128, norm=args.norm_type)
+    elif args.which_disc == 'comb_64_256':
+        # has global and local discriminator
+        from LaplacianGan.models.hd_networks import Discriminator 
+        netD = Discriminator(input_size=[64, 256], num_chan = 3, hid_dim = 128, 
+                    sent_dim=1024, emb_dim=128, norm=args.norm_type)
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
     
@@ -138,6 +148,7 @@ if  __name__ == '__main__':
 
     if not args.debug_mode:
         print ('>> initialize dataset')
+        sys.stdout.flush()
         dataset = TextDataset(datadir, 'cnn-rnn', 4)
         filename_test = os.path.join(datadir, 'test')
         dataset.test = dataset.get_data(filename_test)

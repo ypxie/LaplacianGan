@@ -87,7 +87,7 @@ class Generator(nn.Module):
             self.side_output_at = output_size
         # 64, 128, or 256 version
         self.max_output_size = max(self.side_output_at)
-
+        
         if self.max_output_size == 256:
             num_scales = [4, 8, 16, 32, 64, 128, 256]
             text_upsampling_at = [4, 8, 16] 

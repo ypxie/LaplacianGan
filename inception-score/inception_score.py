@@ -164,15 +164,16 @@ def load_data_from_h5(fullpath):
     
     images = []
     for hf in h5list:
+        
         #data = dd.io.load(hf)['samples']
         data = h5py.File(hf)['output_256']
         for i in range(data.shape[0]):
             img = data[i]
             # import pdb; pdb.set_trace()
             assert((img.shape[0] == 256 or img.shape[0] == 128 or img.shape[0] == 64) and img.shape[2] == 3)
-	    if not (img.min() >= 0 and img.max() <= 255 and img.mean() > 1):
-		    print ('{}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean()))
-		    continue	
+            if not (img.min() >= 0 and img.max() <= 255 and img.mean() > 1):
+                print ('{}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean()))
+                continue	
             #assert img.min() >= 0 and img.max() <= 255 and img.mean() > 1, '{}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean())
             images.append(img)
         print ('read {} with {} images'.format(hf, data.shape[0]))

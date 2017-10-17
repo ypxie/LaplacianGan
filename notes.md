@@ -41,14 +41,28 @@
 - ~~use balanced disc has mean: 3.41 std: 0.04~~
 - ~~use unbalanced disc (ncric=5) has mean: 3.53 std: 0.03~~
 
-
-- ~~zz_mmgan_plain_gl_disc_birds_256_G_epoch_400.h5: 3.43 0.04~~
+## Birds
+- ~~zz_mmgan_plain_gl_disc_birds_256_G_epoch_400.h5: 3.43 0.04~~ # mistakenly use training mode
 - ~~zz_mmgan_plain_gl_disc_birds_256_G_epoch_300.h5: 3.44 0.05~~
-- zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5 mean: 4.01 std: 0.04
+
+### use ncritnic for the first 100 epoches
+- zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5 mean: 4.01 std: 0.04 
 - zz_mmgan_plain_gl_disc_birds_256_G_epoch_560.h5 mean: 4.0 std 0.03
 - zz_mmgan_plain_gl_disc_birds_256_G_epoch_300.h5 mean: 3.96 std: 0.02
 - zz_mmgan_plain_gl_disc_birds_256_G_epoch_400.h5 mean: 3.99 std: 0.02
-- eval_bs_1testing_num_11/ mean: 3.99 std: 0.05
+- eval_bs_1testing_num_11/ mean: 3.99 std: 0.05 # evaluate 11 images per data
+
+### all use ncritic 
+- zz_mmgan_plain_gl_disc_continue_ncric_birds_256_G_epoch_400.h5: mean 3.97 std: 0.03
+- zz_mmgan_plain_gl_disc_continue_ncric_birds_256_G_epoch_500.h5: mean: 3.97 std: 0.03
+- zz_mmgan_plain_gl_disc_continue_ncric_birds_256_G_epoch_300.h5: mean: 3.86 std: 0.05
+
+## Flower
+### do not use ncritic
+zz_mmgan_plain_gl_disc_baldg2_flowers_256_G_epoch_500_inception_score (11550 samples): mean: 3.40 std: 0.07
+zz_mmgan_plain_gl_disc_baldg2_flowers_256_G_epoch_580_inception_score (11550 samples): mean: 3.45 std: 0.07 
+
+zz_mmgan_plain_gl_disc_baldg2_flowers_256_G_epoch_580_inception_score (30000 samples): mean: 3.45 std: 0.07     
 
 ## how to generate coco training data
 - go to process_data/get_captions_coco.py to get [image]\_captions.txt and captions.pickle
