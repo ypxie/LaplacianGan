@@ -66,9 +66,9 @@ class Sent2FeatMap(nn.Module):
 
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',output_size=256, 
-                 use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256],num_resblock = 1):
-        
+                 use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], num_resblock = 1):
         super(Generator, self).__init__()
+        print('locals of gen: ', locals())
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
@@ -99,7 +99,6 @@ class Generator(nn.Module):
             text_upsampling_at = [4]     
             
         #reduce_dim_at  = [8, 32, 128, 256] # [8, 64, 256]
-        
         
         #self.modules = OrderedDict()
         #self.side_modules = OrderedDict()
@@ -409,7 +408,9 @@ class Discriminator(torch.nn.Module):
             out_dict['local_img_disc']  = local_img_disc_out
             
         if 'global' in self.disc_mode:
-            global_img_disc_out         = global_img_disc(img_code)
+            global_code = shrink_img_code if this_img_size == 256 else img_code
+            global_img_disc_out         = global_img_disc(global_code)
+            assert global_img_disc_out.size()[3] == 1, 'global output does not equal 1x1'
             out_dict['global_img_disc'] = global_img_disc_out
             
         out_dict['pair_disc']     = pair_disc_out

@@ -16,39 +16,68 @@ from LaplacianGan.test_worker import test_worker
 
 save_spec = 'eval_bs_1'
 
-flower_400   = {'batch_size': 8, 'device_id': 0,'imsize':256, 'load_from_epoch': 400, 'train_mode': False,
-                'model_name':'zz_mmgan_plain_gl_disc_baldg2_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
+# flower_400   = {'batch_size': 8, 'device_id': 0,'imsize':256, 'load_from_epoch': 400, 'train_mode': False,
+#                 'model_name':'zz_mmgan_plain_gl_disc_baldg2_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
+#                 'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256] }
+
+# flower_500 = flower_400.copy()
+# flower_500['load_from_epoch'] = 500
+# flower_500['device_id'] = 1
+
+# flower_580 = flower_400.copy()
+# flower_580['load_from_epoch'] = 580
+# flower_580['device_id'] = 0
+
+# birds_300 = {'batch_size': 8, 'device_id': 1,'imsize':256, 'load_from_epoch': 300, 'train_mode': False,
+#              'model_name':'zz_mmgan_plain_gl_disc_continue_ncric_birds_256', 'save_spec': save_spec, 
+#              'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+# birds_400 = birds_300.copy()
+# birds_400['load_from_epoch'] = 400
+# birds_400['device_id'] = 0
+
+# birds_500 = birds_300.copy()
+# birds_500['load_from_epoch'] = 500
+# birds_400['device_id'] = 1
+
+# training_pool = np.array([
+#                  flower_400, flower_500, flower_580,
+#                  #birds_300, birds_400, birds_500
+#                  ])
+
+flower_plain_gl_disc_allncric   = {'batch_size': 8, 'device_id': 1,'imsize':256, 'load_from_epoch': 500, 'train_mode': False,
+                'model_name':'zz_mmgan_plain_gl_disc_allncric_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
                 'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256] }
 
-flower_500 = flower_400.copy()
-flower_500['load_from_epoch'] = 500
-flower_500['device_id'] = 1
+flower_plain_gl_disc_ncric   = {'batch_size': 8, 'device_id': 0,'imsize':256, 'load_from_epoch': 500, 'train_mode': False,
+                'model_name':'zz_mmgan_plain_gl_disc_ncric_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
+                'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256] }
 
-flower_580 = flower_400.copy()
-flower_580['load_from_epoch'] = 580
-flower_580['device_id'] = 0
+bird_plain_gl_disc_ncric_comb_64_256v2   = {'batch_size': 8, 'device_id': 1,'imsize':[64, 256], 'load_from_epoch': 500, 'train_mode': False,
+                'model_name':'zz_mmgan_plain_gl_disc_ncric_comb_64_256v2_birds_256', 'save_spec': save_spec, 'test_sample_num' : 10,
+                'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256] }
 
-birds_300 = {'batch_size': 8, 'device_id': 1,'imsize':256, 'load_from_epoch': 300, 'train_mode': False,
-             'model_name':'zz_mmgan_plain_gl_disc_continue_ncric_birds_256', 'save_spec': save_spec, 
-             'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
-birds_400 = birds_300.copy()
-birds_400['load_from_epoch'] = 400
-birds_400['device_id'] = 0
+bird_plain_gl_disc_ncric_single_256   = {'batch_size': 8, 'device_id': 0, 'imsize':[256], 'load_from_epoch': 500, 'train_mode': False,
+                'model_name':'zz_mmgan_plain_gl_disc_ncric_single_256_birds_256', 'save_spec': save_spec, 'test_sample_num' : 10,
+                'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256] }
 
-birds_500 = birds_300.copy()
-birds_500['load_from_epoch'] = 500
-birds_400['device_id'] = 1
+bird_plain_gl_disc_birds  = {'batch_size': 8, 'device_id': 0,'imsize':256, 'load_from_epoch': 500, 'train_mode': False,
+                'model_name':'zz_mmgan_plain_gl_disc_birds_256', 'save_spec': save_spec, 'test_sample_num' : 10,
+                'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256] }
 
 training_pool = np.array([
-                 flower_400, flower_500, flower_580,
-                 #birds_300, birds_400, birds_500
+                 flower_plain_gl_disc_allncric,
+                 flower_plain_gl_disc_ncric,
+                 bird_plain_gl_disc_ncric_comb_64_256v2,
+                 bird_plain_gl_disc_ncric_single_256,
+                 bird_plain_gl_disc_birds
                  ])
+
 
 show_progress = 0
 processes = []
 Totalnum = len(training_pool)
 
-for select_ind in Indexflow(Totalnum, 2, random=False):
+for select_ind in Indexflow(Totalnum, 3, random=False):
     select_pool = training_pool[select_ind]
 
     for this_dick in select_pool:

@@ -13,14 +13,9 @@ from LaplacianGan.train_worker import train_worker
 
 # local_global disc. We test both large and small model
 
-#large_global_local_bigger = {'reuse_weights': False, 'batch_size': 16, 'device_id': 5, 'gpu_list': [0], 
-#                            'imsize':[64, 128, 256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_both_bigger', 
-#                            'which_gen': 'origin', 'which_disc':'origin_global_local', 'dataset':'birds','reduce_dim_at':[16, 128, 256] }
-
-large_global_local        = {'reuse_weights': False, 'batch_size': 12, 'device_id': 7, 'gpu_list': [0], 
-                            'imsize':[256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_origin', 
-                            'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256]}
-
+large_global_local = {'reuse_weights': False, 'batch_size': 12, 'device_id': 2, 'gpu_list': [0], 
+                    'imsize':[256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_origin', 
+                    'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256]}
 
 training_pool = np.array([
                  #large_global_local_bigger,

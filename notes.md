@@ -56,8 +56,8 @@
 - go to process_data/prepare_coco.py to merge embeddings in t7 to pickle and fileinfo.pickle
 
 
-## Currently I am testing
+## Currently I am testing (all old models are backup. Currently bug-free version)
 # does bigger model help? does local help?
-- bigmachine: bigger model [16, 64, 128], for local+gloabl disc, coco
-- bigmachine: small model [8, 32, 128, 256] for local+gloabl disc, coco
-- devbox:     bigger model [16, 64, 128] for birds                  
+- bigmachine: coco, global loss , 64 and 128
+- bigmachine: birds_no_img_loss. birds_disc_both
+- devbox:     birds with vanilla 256 model. 

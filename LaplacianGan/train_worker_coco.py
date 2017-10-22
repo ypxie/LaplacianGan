@@ -24,7 +24,8 @@ def train_worker(data_root, model_root, training_dict):
     dataset             = training_dict.get('dataset', 'coco')
     reduce_dim_at       = training_dict.get('reduce_dim_at', [8, 32, 128, 256])
     use_img_loss        = training_dict.get('use_img_loss', True)
-
+    num_resblock        = training_dict.get('num_resblock', 1)
+    
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')
@@ -97,6 +98,7 @@ def train_worker(data_root, model_root, training_dict):
     
     parser.add_argument('--use_img_loss', type=bool, default = use_img_loss,
                         help='whether to use image loss')
+    parser.add_argument('--num_resblock', type=int, default = num_resblock, help='number of resblock')
 
     args = parser.parse_args()
 
@@ -108,25 +110,27 @@ def train_worker(data_root, model_root, training_dict):
     
     # Generator
     if args.which_gen == 'origin':
-        from LaplacianGan.models.hd_networks import Generator
+        from LaplacianGan.models.hd_bugfree import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
-                         activation=args.gen_activation_type, output_size=args.imsize, reduce_dim_at=reduce_dim_at)
+                         activation=args.gen_activation_type, output_size=args.imsize, reduce_dim_at=reduce_dim_at,
+                         num_resblock = args.num_resblock)
     elif args.which_gen == 'upsample_skip':   
-        from LaplacianGan.models.hd_networks import Generator 
+        from LaplacianGan.models.hd_bugfree import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
-                         activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True, reduce_dim_at=reduce_dim_at)              
+                         activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True, 
+                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock)              
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 
     # Discriminator
     if args.which_disc == 'origin': 
         # only has global discriminator
-        from LaplacianGan.models.hd_networks import Discriminator 
+        from LaplacianGan.models.hd_bugfree import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
     elif args.which_disc == 'origin_global_local':
         # has global and local discriminator
-        from LaplacianGan.models.hd_networks import Discriminator 
+        from LaplacianGan.models.hd_bugfree import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['global', 'local'])
     else:

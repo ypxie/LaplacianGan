@@ -112,7 +112,6 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
         superimage = drawCaption(np.uint8(superimage), valid_caption[idx], level)
         scipy.misc.imsave(save_path, superimage)
 
-
 def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     # helper function
     if args.train_mode:
@@ -149,9 +148,9 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     init_flag = True
 
     all_choosen_caption = []
-    file_not_exists = not os.path.exists(org_h5path)
+    org_file_not_exists = not os.path.exists(org_h5path)
 
-    if file_not_exists:
+    if org_file_not_exists:
         org_h5 = h5py.File(org_h5path,'w')
         org_dset = org_h5.create_dataset('output_256', shape=(num_examples,256, 256,3), dtype=np.uint8)
     else:
@@ -162,11 +161,10 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
         data_count = {}
         dset = {}
 
-        
         while True:
             if start_count >= num_examples:
                 break
-            test_images, test_embeddings_list, saveIDs, test_captions = test_sampler(args.batch_size, start_count, 1)
+            test_images, test_embeddings_list, saveIDs, classIDs, test_captions = test_sampler(args.batch_size, start_count, 1)
             
             this_batch_size = test_images.shape[0]
             #print('start: {}, this_batch size {}, num_examples {}'.format(start_count, test_images.shape[0], dataset.test._num_examples  ))
@@ -198,50 +196,32 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                 this_test_embeddings = to_device(this_test_embeddings, netG.device_id, volatile=True)
                 test_outputs, _ = netG(this_test_embeddings, testing_z[0:this_batch_size])
                 
-                if  t == 0:  
-                    for k in test_outputs.keys():
-                        vis_samples[k] = [None for i in range(args.test_sample_num)] # +1 to fill real image
-                        img_shape = test_outputs[k].size()[2::]
-                        
-                        if init_flag is True:
-                            #if '256' in k:
+                if  t == 0: 
+                    if init_flag is True:
+                        dset['classIDs'] = h5file.create_dataset('classIDs', shape=(total_number,), dtype=np.int64)
+
+                        for k in test_outputs.keys():
+                            vis_samples[k] = [None for i in range(args.test_sample_num)] # +1 to fill real image
+                            img_shape = test_outputs[k].size()[2::]
+                            
                             print('total number of images is: ', total_number)
                             dset[k] = h5file.create_dataset(k, shape=(total_number,)+ img_shape + (3,), dtype=np.uint8)
                             data_count[k] = 0
-                            
-
                     init_flag = False    
+                
+                #print('keys print: ', vis_samples.keys(), test_outputs.keys())
+                for typ, img_val in test_outputs.items():
+                    cpu_data = img_val.cpu().data.numpy()
 
-                for k, v in test_outputs.items():
-                    cpu_data = v.cpu().data.numpy()
-                    # if t == 0:
-                    #     if vis_samples[k][0] == None:
-                    #         vis_samples[k][0] = test_images
-                    #     else:
-                    #         vis_samples[k][0] =  np.concatenate([ vis_samples[k][0], test_images], 0) 
-                    
-                    if vis_samples[k][t] == None:
-                        vis_samples[k][t] = cpu_data
-                    else:
-                        vis_samples[k][t] = np.concatenate([vis_samples[k][t+1], cpu_data], 0)
-            
-            #save_super_images(vis_samples, chosen_captions, this_batch_size, save_folder, saveIDs)
-
-            for typ, img_list in vis_samples.items():
-                #print('img list lenght is: ', len(img_list))
-                #img_tensor = np.stack(img_list, 1) # N * T * 3
-                #data_dict[typ].append( np.stack(v, 1)  ) # list of N*T*3*row*col
-                for this_img in img_list:
-                    bs = this_img.shape[0]
+                    bs = cpu_data.shape[0]
                     
                     start = data_count[typ]
-                    this_sample = ((this_img + 1) * 127.5 ).astype(np.uint8)
-                    
+                    this_sample = ((cpu_data + 1) * 127.5 ).astype(np.uint8)
                     this_sample = this_sample.transpose(0, 2,3,1)
                     #print(start, start+bs, this_sample.shape)
 
                     dset[typ][start: start + bs] = this_sample
-
+                    dset['classIDs'][start: start + bs] = classIDs
                     data_count[typ] = start + bs
                     
             print('saved files: ', data_count)  

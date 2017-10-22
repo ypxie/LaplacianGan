@@ -12,19 +12,25 @@ from LaplacianGan.proj_utils.local_utils import Indexflow
 from LaplacianGan.train_worker import train_worker
 
 # local_global disc. We test both large and small model
+# 101 201 301 401 501 601
+# 2   4   8   16  32  64
+large_global_no_img   =  {'reuse_weights': True, 'batch_size': 16, 'device_id': 4,  
+                          'g_lr': .0002/(2**3),'d_lr': .0002/(2**3), 
+                          'imsize':[64, 128, 256], 'load_from_epoch': 339, 'model_name':'gen_origin_disc_global_no_img', 'use_img_loss' : False,
+                          'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds',
+                          'reduce_dim_at':[8, 32, 128, 256] }
 
-large_local               =  {'reuse_weights': False, 'batch_size': 16, 'device_id': 5,  'imsize':[64, 128, 256], 
-                              'load_from_epoch': 0, 'model_name':'gen_origin_disc_global_no_img', 'use_img_loss' : False,
-                              'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+large_both            = {'reuse_weights': False, 'batch_size': 16, 'device_id': 5,  
+                         'g_lr': .0002/(2**0),'d_lr': .0002/(2**0),
+                         'imsize':[64, 128, 256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_both', 
+                         'which_gen': 'origin', 'which_disc':'origin_global_local', 
+                         'dataset':'birds','reduce_dim_at':[8, 32, 128, 256]}
 
-large_global_local        = {'reuse_weights': True, 'batch_size': 16, 'device_id': 4,  'g_lr': .0001,'d_lr': .0001,
-                             'imsize':[64, 128, 256], 'load_from_epoch': 150, 'model_name':'gen_origin_disc_both', 
-                             'which_gen': 'origin', 'which_disc':'origin_global_local', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256]}
 
 
 training_pool = np.array([
-                 large_local,
-                 large_global_local
+                 large_global_no_img,
+                 large_both
                  ])
 
 show_progress = 0
