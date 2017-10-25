@@ -139,8 +139,8 @@ class GeneratorSuperSmall(nn.Module):
 
         return out, 0
 class Generator(nn.Module):
-    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',output_size=256, 
-                 use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256],num_resblock = 1):
+    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
+                 output_size=256, use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], num_resblock = 1):
         
         super(Generator, self).__init__()
         self.__dict__.update(locals())
@@ -174,7 +174,7 @@ class Generator(nn.Module):
             
         #reduce_dim_at  = [8, 32, 128, 256] # [8, 64, 256]
         
-        
+
         #self.modules = OrderedDict()
         #self.side_modules = OrderedDict()
 
@@ -573,7 +573,7 @@ class Discriminator(torch.nn.Module):
         if 'global' in self.disc_mode:
             global_img_disc_out         = global_img_disc(img_code)
             #global_img_disc_out         = global_img_disc(shrink_img_code) # pls note it is probably a bug and make it a local disc
-            # print('{} global dis shape {}'.format(this_img_size, global_img_disc_out.size()))
+                # print('{} global dis shape {}'.format(this_img_size, global_img_disc_out.size()))
             out_dict['global_img_disc'] = global_img_disc_out
             
         out_dict['pair_disc']     = pair_disc_out
