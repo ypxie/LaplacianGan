@@ -58,10 +58,10 @@
 - eval_bs_1testing_num_11/ mean: 3.99 std: 0.05 # evaluate 11 images per data
 - zz_mmgan_plain_gl_disc_ncric_fulglo_256_birds_256_G_epoch_500 scale: output_256 mean: 3.970097780227661 std:0.04089314490556717 (bug free)
 
-## Yuanpu's (bug free)
+## **Yuanpu's (bug free)**
 - gen_origin_disc_global_no_img_birds_[64, 128, 256]_G_epoch_501 scale: output_256 mean: 4.0969719886779785 std:0.04281013458967209
 - gen_origin_disc_both_birds_[64, 128, 256]_G_epoch_405 scale: output_256 mean: 4.0880842208862305 std:0.04456903785467148
-- gen_origin_disc_global_no_img_birds_[64, 128, 256]_G_epoch_597 scale: output_256 mean: 4.270041465759277 std:0.046753715723752975
+- **gen_origin_disc_global_no_img_birds_[64, 128, 256]_G_epoch_597 scale: output_256 mean: 4.270041465759277 std:0.046753715723752975**
 
 #### Different supervision
 - zz_mmgan_plain_gl_disc_ncric_single_256_birds_256_G_epoch_500 output_256 mean: 3.518810749053955 std:0.044894989579916
@@ -84,31 +84,13 @@ zz_mmgan_plain_gl_disc_ncric_flowers_256_G_epoch_500_inception_score : 3.3664 st
 - go to process_data/get_embedding_coco.lua to compute embedding in txt files [image]\_captions.txt.
 - go to process_data/prepare_coco.py to merge embeddings in t7 to pickle and fileinfo.pickle
 
-
-# Ideas
-- Why vanilla 256 GAN is hard to train?
-- Large variances, training instability, graident vanishing, low-high mapping is 
-- 
-
 ## COCO
-zizhao(server_2):eval_nobugtesting_num_1$ cat gen_origin_disc_origin_coco_[64]_G_epoch_195_inception_score.json
-{
- "mean": {
-  "output_64": 8.25843334197998,
-  "output_128": 3.024834156036377
- },
- "std": {
-  "output_64": 0.08759678900241852,
-  "output_128": 0.040978457778692245
- }
-}zizhao(server_2):eval_nobugtesting_num_1$ cat gen_origin_disc_origin_coco_[64]_G_epoch_261_inception_score.json
-{
- "mean": {
-  "output_64": 8.308503150939941
- },
- "std": {
-  "output_64": 0.13465775549411774
- }
+gen_origin_disc_origin_coco_[64]_G_epoch_195_inception_score.json
+mean: 8.25843334197998, std: 0.08759678900241852,
+
+gen_origin_disc_origin_coco_[64]_G_epoch_261_inception_score.json
+mean: 8.308503150939941 std: 0.13465775549411774
+
 
 ## Currently I am testing (all old models are backup. Currently bug-free version)
 # does bigger model help? does local help?
@@ -116,3 +98,9 @@ zizhao(server_2):eval_nobugtesting_num_1$ cat gen_origin_disc_origin_coco_[64]_G
 - bigmachine: birds_no_img_loss. birds_disc_both
 - devbox:     birds with vanilla 256 model. 
 
+
+
+# Ideas
+- Why vanilla 256 GAN is hard to train?
+- Large variances, training instability, graident vanishing, low-high mapping is 
+- 
