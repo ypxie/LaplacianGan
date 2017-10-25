@@ -72,17 +72,9 @@ def load_partial_state_dict(model, state_dict):
                 raise
         print ('>> load partial state dict: {} initialized'.format(len(state_dict)))
 
-def inter_across(embeddings):
-    # embeddings (b, dim)
-    B, _ = embeddings.shape
-    res = embeddings.copy()
-    for idx in range(B):
-        ridx = random.randint(0, B-1)
-        res[idx] = 0.5*(embeddings[idx], embeddings[ridx])
-    return res
-
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
     use_img_loss = getattr(args, 'use_img_loss', True)
+    img_loss_ratio = getattr(args, 'img_loss_ratio', 1)
     print('>> using hd gan trainer')
     # helper function
     def plot_imgs(samples, epoch, typ, name, path=''):
@@ -234,14 +226,16 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
                     # compute loss
                     #chose_img_real = wrong_img_logit if random.random() > 0.1 else real_img_logit
+                    
+                    discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan)
                     if use_img_loss:
-                        discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan)
-                        local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local, prob=0.5, wgan=args.wgan )
-                        global_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global, fake_img_logit_global, prob=0.5, wgan=args.wgan )
+                        local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local,  prob=0.5, wgan=args.wgan )
+                        global_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global,  fake_img_logit_global, prob=0.5, wgan=args.wgan )
                         if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
-                            discriminator_loss += local_loss + global_loss
+                            img_loss = local_loss + global_loss
                         else:
-                            discriminator_loss += (local_loss + global_loss)*0.5
+                            img_loss = (local_loss + global_loss)*0.5
+                        discriminator_loss +=  img_loss_ratio * img_loss 
 
                 d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
                 d_loss_val = -d_loss_val if args.wgan else d_loss_val

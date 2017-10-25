@@ -120,8 +120,8 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     else:
         print('Using testing mode')
         netG.eval()
-
-    test_sampler  = dataset.test.next_batch_test
+    
+    test_sampler = dataset.next_batch_test
 
     model_folder = os.path.join(model_root, mode_name)
     model_marker = mode_name + '_G_epoch_{}'.format(args.load_from_epoch)
@@ -141,11 +141,10 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     testing_z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     testing_z = to_device(testing_z, netG.device_id, volatile=True)
 
-    num_examples = dataset.test._num_examples
-    dataset.test._num_examples = num_examples
+    num_examples = dataset.num_examples
     
     total_number = num_examples * args.test_sample_num
-
+    
     all_choosen_caption = []
     org_file_not_exists = not os.path.exists(org_h5path)
 
@@ -164,13 +163,14 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
         vis_samples = {}
         tmp_samples = {}
         init_flag = True
-        
         while True:
             if start_count >= num_examples:
                 break
-            test_images, test_embeddings_list, saveIDs, classIDs, test_captions = test_sampler(args.batch_size, start_count, 1)
+            
+            test_images, test_embeddings_list, saveIDs, test_captions = test_sampler(args.batch_size, start_count, 1)
             
             this_batch_size = test_images.shape[0]
+            
             #print('start: {}, this_batch size {}, num_examples {}'.format(start_count, test_images.shape[0], dataset.test._num_examples  ))
             chosen_captions = []
             for this_caption_list in test_captions:
@@ -198,7 +198,7 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                 
                 if  t == 0: 
                     if init_flag is True:
-                        dset['classIDs'] = h5file.create_dataset('classIDs', shape=(total_number,), dtype=np.int64)
+                        dset['saveIDs'] = h5file.create_dataset('saveIDs', shape=(total_number,), dtype=np.int64)
 
                         for k in test_outputs.keys():
                             vis_samples[k] = [None for i in range(args.test_sample_num)] # +1 to fill real image
@@ -211,7 +211,7 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                 
                 for typ, img_val in test_outputs.items():
                     cpu_data = img_val.cpu().data.numpy()
-                    
+                    #print(vis_samples.keys())
                     vis_samples[typ][t] = cpu_data
 
                     bs = cpu_data.shape[0]
@@ -219,10 +219,12 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                     start = data_count[typ]
                     this_sample = ((cpu_data + 1) * 127.5 ).astype(np.uint8)
                     this_sample = this_sample.transpose(0, 2,3,1)
+                    #print(start, start+bs, this_sample.shape)
 
                     dset[typ][start: start + bs] = this_sample
-                    dset['classIDs'][start: start + bs] = classIDs
+                    dset['saveIDs'][start: start + bs] = saveIDs
                     data_count[typ] = start + bs
+
             if args.save_images:
                 save_super_images(vis_samples, chosen_captions, this_batch_size, save_folder, saveIDs)
 
@@ -233,3 +235,4 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
         h5file.create_dataset("captions", data=caption_array, dtype=string_dt)
         if org_dset is not None:
             org_h5.close() 
+

@@ -21,22 +21,22 @@ from LaplacianGan.train_worker import train_worker
 #                           'use_img_loss' : False, 'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers',
 #                           'reduce_dim_at':[8, 32, 128, 256] }
 
-large_both            = {'reuse_weights': False, 'batch_size': 16, 'device_id': 1,  
-                         'g_lr': .0002/(2**0),'d_lr': .0002/(2**0),
-                         'imsize':[64, 128, 256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_both', 
+large_both            = {'reuse_weights': True, 'batch_size': 16, 'device_id': 0,  
+                         'g_lr': .0002/(2**5),'d_lr': .0002/(2**5),
+                         'imsize':[64, 128, 256], 'load_from_epoch': 504, 'model_name':'gen_origin_disc_both', 
                          'which_gen': 'origin', 'which_disc':'origin_global_local', 'dataset':'flowers',
                          'reduce_dim_at':[8, 32, 128, 256]}
 
-large_global          = {'reuse_weights': False, 'batch_size': 16, 'device_id': 0,  
-                         'g_lr': .0002/(2**0),'d_lr': .0002/(2**0),
-                         'imsize':[64, 128, 256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_origin', 
-                         'which_gen': 'origin', 'which_disc':'origin_global_local', 'dataset':'flowers',
+large_local          = {'reuse_weights': False, 'batch_size': 16, 'device_id': 1,  
+                         'g_lr': .0002/(3**0),'d_lr': .0002/(3**0),
+                         'imsize':[64, 128, 256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_local', 
+                         'which_gen': 'origin', 'which_disc':'local', 'dataset':'flowers',
                          'reduce_dim_at':[8, 32, 128, 256]}
 
 training_pool = np.array([
                  #large_global_no_img,
                  large_both,
-                 large_global
+                 large_local
                  ])
 
 show_progress = 0

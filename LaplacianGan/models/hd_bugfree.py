@@ -179,6 +179,7 @@ class Generator(nn.Module):
         # sent_embeddings: [B, 1024]
         out_dict = OrderedDict()
         sent_random, kl_loss  = self.condEmbedding(sent_embeddings) # sent_random [B, 128]
+        
         text = torch.cat([sent_random, z], dim=1)
 
         x = self.vec_to_tensor(text)

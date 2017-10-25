@@ -25,7 +25,8 @@ def train_worker(data_root, model_root, training_dict):
     reduce_dim_at       = training_dict.get('reduce_dim_at', [8, 32, 128, 256])
     use_img_loss        = training_dict.get('use_img_loss', True)
     num_resblock        = training_dict.get('num_resblock', 1)
-    
+    img_loss_ratio      = training_dict.get('img_loss_ratio', 1.0)
+
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')
@@ -99,7 +100,8 @@ def train_worker(data_root, model_root, training_dict):
     parser.add_argument('--use_img_loss', type=bool, default = use_img_loss,
                         help='whether to use image loss')
     parser.add_argument('--num_resblock', type=int, default = num_resblock, help='number of resblock')
-
+    parser.add_argument('--img_loss_ratio', type=float, default = img_loss_ratio, help='coefficient of img_loss')
+    
     args = parser.parse_args()
 
     args.cuda  = torch.cuda.is_available()
@@ -133,6 +135,11 @@ def train_worker(data_root, model_root, training_dict):
         from LaplacianGan.models.hd_bugfree import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['global', 'local'])
+    elif args.which_disc == 'local':
+        # has global and local discriminator
+        from LaplacianGan.models.hd_bugfree import Discriminator 
+        netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
+                    sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['local'])
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
 
