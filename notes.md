@@ -25,7 +25,7 @@
 
 
 
-# Model saved
+# Model savede
 - zz_mmgan_noupsample_revisedisc_birds_64: do not use any upsample skip connection, pair discriminator has an extra 1x1
 - zz_mmgan_256_birds_256: has pretty resonable results, but the style is inaccurate
 
@@ -37,20 +37,35 @@
 
 
 # inception score
-- StackGAN (reported) ha mean 3.89(3.70) std: 0.05 (0.04)
+- StackGAN (reported) birds mean 3.89(3.70) std: 0.05 (0.04)
+- StackGAN (reported) flowers mean: 3.16(3.20) std: 0.03(0.01)
+
+## Birds (WRONG Results)
 - ~~use balanced disc has mean: 3.41 std: 0.04~~
 - ~~use unbalanced disc (ncric=5) has mean: 3.53 std: 0.03~~
-
-## Birds
 - ~~zz_mmgan_plain_gl_disc_birds_256_G_epoch_400.h5: 3.43 0.04~~ # mistakenly use training mode
 - ~~zz_mmgan_plain_gl_disc_birds_256_G_epoch_300.h5: 3.44 0.05~~
 
 ### use ncritnic for the first 100 epoches
-- zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5 mean: 4.01 std: 0.04 
+- **zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5** mean: 4.01 std: 0.04
+    - scale: output_64 mean: 3.461111068725586 std:0.042458079755306244
+    - scale: output_128 mean: 3.8552157878875732 std:0.03652472421526909
+    - scale: output_256 mean: 4.0113630294799805 std:0.05708415433764458
+    
 - zz_mmgan_plain_gl_disc_birds_256_G_epoch_560.h5 mean: 4.0 std 0.03
 - zz_mmgan_plain_gl_disc_birds_256_G_epoch_300.h5 mean: 3.96 std: 0.02
 - zz_mmgan_plain_gl_disc_birds_256_G_epoch_400.h5 mean: 3.99 std: 0.02
 - eval_bs_1testing_num_11/ mean: 3.99 std: 0.05 # evaluate 11 images per data
+- zz_mmgan_plain_gl_disc_ncric_fulglo_256_birds_256_G_epoch_500 scale: output_256 mean: 3.970097780227661 std:0.04089314490556717 (bug free)
+
+## Yuanpu's (bug free)
+- gen_origin_disc_global_no_img_birds_[64, 128, 256]_G_epoch_501 scale: output_256 mean: 4.0969719886779785 std:0.04281013458967209
+- gen_origin_disc_both_birds_[64, 128, 256]_G_epoch_405 scale: output_256 mean: 4.0880842208862305 std:0.04456903785467148
+- gen_origin_disc_global_no_img_birds_[64, 128, 256]_G_epoch_597 scale: output_256 mean: 4.270041465759277 std:0.046753715723752975
+
+#### Different supervision
+- zz_mmgan_plain_gl_disc_ncric_single_256_birds_256_G_epoch_500 output_256 mean: 3.518810749053955 std:0.044894989579916
+- zz_mmgan_plain_gl_disc_ncric_comb_64_256v2_birds_256_G_epoch_500 scale: output_256 mean: 4.135245323181152 std:0.03427153825759888
 
 ### all use ncritic 
 - zz_mmgan_plain_gl_disc_continue_ncric_birds_256_G_epoch_400.h5: mean 3.97 std: 0.03
@@ -61,10 +76,36 @@
 ### do not use ncritic
 zz_mmgan_plain_gl_disc_baldg2_flowers_256_G_epoch_500_inception_score (11550 samples): mean: 3.40 std: 0.07
 zz_mmgan_plain_gl_disc_baldg2_flowers_256_G_epoch_580_inception_score (11550 samples): mean: 3.45 std: 0.07 
-
 zz_mmgan_plain_gl_disc_baldg2_flowers_256_G_epoch_580_inception_score (30000 samples): mean: 3.45 std: 0.07     
+zz_mmgan_plain_gl_disc_ncric_flowers_256_G_epoch_500_inception_score : 3.3664 std 0.023 # not as good as expected
 
 ## how to generate coco training data
 - go to process_data/get_captions_coco.py to get [image]\_captions.txt and captions.pickle
 - go to process_data/get_embedding_coco.lua to compute embedding in txt files [image]\_captions.txt.
 - go to process_data/prepare_coco.py to merge embeddings in t7 to pickle and fileinfo.pickle
+
+
+# Ideas
+- Why vanilla 256 GAN is hard to train?
+- Large variances, training instability, graident vanishing, low-high mapping is 
+- 
+
+## COCO
+zizhao(server_2):eval_nobugtesting_num_1$ cat gen_origin_disc_origin_coco_[64]_G_epoch_195_inception_score.json
+{
+ "mean": {
+  "output_64": 8.25843334197998,
+  "output_128": 3.024834156036377
+ },
+ "std": {
+  "output_64": 0.08759678900241852,
+  "output_128": 0.040978457778692245
+ }
+}zizhao(server_2):eval_nobugtesting_num_1$ cat gen_origin_disc_origin_coco_[64]_G_epoch_261_inception_score.json
+{
+ "mean": {
+  "output_64": 8.308503150939941
+ },
+ "std": {
+  "output_64": 0.13465775549411774
+ }

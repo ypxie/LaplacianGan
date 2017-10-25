@@ -27,7 +27,7 @@ import tensorflow as tf
 
 import math
 import os.path
-import scipy.misc
+import scipy.misc 
 # import time
 # import scipy.io as sio
 # from datetime import datetime
@@ -107,7 +107,8 @@ def get_inception_score(sess, images, pred_op):
             # print('*****', img.shape)
             img = preprocess(img)
             inp.append(img)
-        print("%d of %d batches" % (i, n_batches))
+        print("%d of %d batches" % (i, n_batches)),
+        sys.stdout.flush()
         # inp = inps[(i * bs):min((i + 1) * bs, len(inps))]
         inp = np.concatenate(inp, 0)
         #  print('inp', inp.shape)
@@ -126,7 +127,7 @@ def get_inception_score(sess, images, pred_op):
               np.log(np.expand_dims(np.mean(part, 0), 0))))
         kl = np.mean(np.sum(kl, 1))
         scores.append(np.exp(kl))
-    print('mean:', "%.2f" % np.mean(scores), 'std:', "%.2f" % np.std(scores))
+    # print('mean:', "%.2f" % np.mean(scores), 'std:', "%.2f" % np.std(scores))
     return np.mean(scores), np.std(scores)
 
 
@@ -151,36 +152,70 @@ def load_data_from_h5(fullpath):
     import deepdish as dd
     import h5py
 
-    if FLAGS.h5_file != '':
-        # import pdb; pdb.set_trace()
-        h5list = [os.path.join(fullpath, FLAGS.h5_file)]
-        return_path = os.path.join(fullpath, FLAGS.h5_file[:-3]+'_inception_score')
-        print ('read h5 from {}'.format(h5list[0]))
-    else:
-        h5list = glob.glob(os.path.join(fullpath, '*.h5'))
-        return_path = os.path.join(fullpath, 'inception_score')
+    # import pdb; pdb.set_trace()
+    h5file = os.path.join(fullpath, FLAGS.h5_file)
+    return_path = os.path.join(fullpath, FLAGS.h5_file[:-3]+'_inception_score')
+    print ('read h5 from {}'.format(h5file))
 
-        print ('scan folder from {}'.format(fullpath))
     
-    images = []
-    for hf in h5list:
-        
-        #data = dd.io.load(hf)['samples']
-        data = h5py.File(hf)['output_256']
+    # ms_images = {'output_64': [], 'output_128': [], 'output_256': [], }
+    ms_images = {'output_256': [], }
+    # assert len(ms_data.keys()) == 3, 'keys {}'.format(ms_data.keys())   
+
+    for k in ms_images.keys():
+        data = h5py.File(h5file)[k]
+        images = []
         for i in range(data.shape[0]):
             img = data[i]
             # import pdb; pdb.set_trace()
             assert((img.shape[0] == 256 or img.shape[0] == 128 or img.shape[0] == 64) and img.shape[2] == 3)
             if not (img.min() >= 0 and img.max() <= 255 and img.mean() > 1):
-                print ('{}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean()))
+                print ('WARNING {}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean()))
                 continue	
             #assert img.min() >= 0 and img.max() <= 255 and img.mean() > 1, '{}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean())
             images.append(img)
-        print ('read {} with {} images'.format(hf, data.shape[0]))
-    print ('Totally {} images are loaded'.format(len(images)))
+        print ('read {} with {} images'.format(k, data.shape[0]))
+        ms_images[k] = images
 
-    return images, return_path
-            
+    print ('Totally {} images/scale are loaded at scales {}'.format(len(images), ms_images.keys() ))
+
+    return ms_images, return_path
+
+def load_data_from_h5_fakehr(fullpath):
+    import glob
+    import deepdish as dd
+    import h5py
+    print ('use fake h5 loader for hr')
+    # import pdb; pdb.set_trace()
+    h5file = os.path.join(fullpath, FLAGS.h5_file)
+    return_path = os.path.join(fullpath, FLAGS.h5_file[:-3]+'_inception_score')
+    print ('read h5 from {}'.format(h5file))
+
+    
+    ms_images = {'output_64': [], 'output_128': [], 'output_256': [], }
+
+    # assert len(ms_data.keys()) == 3, 'keys {}'.format(ms_data.keys())   
+
+    k = 'output_64'
+    data = h5py.File(h5file)[k]
+    images = []
+    for i in range(data.shape[0]):
+        img = data[i]
+        # import pdb; pdb.set_trace()
+        assert((img.shape[0] == 256 or img.shape[0] == 128 or img.shape[0] == 64) and img.shape[2] == 3)
+        if not (img.min() >= 0 and img.max() <= 255 and img.mean() > 1):
+            print ('WARNING {}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean()))
+            continue	
+        #assert img.min() >= 0 and img.max() <= 255 and img.mean() > 1, '{}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean())
+        ms_images['output_64'].append(img)
+        ms_images['output_128'].append(scipy.misc.imresize(img, [128, 128]))
+        ms_images['output_256'].append(scipy.misc.imresize(img, [256, 256]))
+
+    print ('read {} with {} images'.format(k, data.shape[0]))
+
+    print ('Totally {} images/scale are loaded at scales {}'.format(len(images), ms_images.keys() ))
+
+    return ms_images, return_path      
 
 
 def inference(images, num_classes, for_training=False, restore_logits=True,
@@ -265,13 +300,19 @@ def main(unused_argv=None):
                 saver.restore(sess, FLAGS.checkpoint_dir)
                 print('Restore the model from %s).' % FLAGS.checkpoint_dir)
                 # images = load_data(fullpath)
-                images, return_save_path = load_data_from_h5(fullpath)
-                mean, std = get_inception_score(sess, images, pred_op)
+                ms_images, return_save_path = load_data_from_h5(fullpath)
+                #ms_images, return_save_path = load_data_from_h5_fakehr(fullpath)
+                ms_means = {k:[] for k in ms_images.keys()}
+                ms_std = {k:[] for k in ms_images.keys()}
+                for scale, images in ms_images.items():
+                    mean, std = get_inception_score(sess, images, pred_op)
+                    ms_means[scale] = float(mean)
+                    ms_std[scale] = float(std)
+                    print ('scale: {} mean: {} std:{}'.format(scale, mean, std))
+                print (ms_means, ms_std)
+                json.dump({'mean': ms_means, 'std': ms_std}, open(return_save_path + '.json','w'), indent=True)
 
-                json.dump({'mean': '%.4f'%(mean), 'std': '%.4f'%(std)}, open(return_save_path + '.json','w'))
-
-    # stackgan
-    # mean: 3.89 std: 0.04
+  
 
 if __name__ == '__main__':
     tf.app.run()

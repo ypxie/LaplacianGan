@@ -10,7 +10,7 @@ from torch.nn.utils import weight_norm
 
 from LaplacianGan.HDGan import train_gans
 from LaplacianGan.fuel.zz_datasets import TextDataset
-from LaplacianGan.testGan import test_gans
+from LaplacianGan.testGan import test_gans, generate_layer_features
 from LaplacianGan.proj_utils.local_utils import mkdirs
 
 home = os.path.expanduser('~')
@@ -19,7 +19,8 @@ data_root = os.path.join(proj_root, 'Data')
 
 data_name = 'birds'
 datadir = os.path.join(data_root, data_name)
-model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
+model_root = os.path.join('..', 'Models')
+# model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
 
 
 if  __name__ == '__main__':
@@ -59,7 +60,7 @@ if  __name__ == '__main__':
 
     args.cuda = torch.cuda.is_available()
     
-    # Generator
+     # Generator
     if args.which_gen == 'origin':
         from LaplacianGan.models.hd_networks import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
@@ -68,30 +69,30 @@ if  __name__ == '__main__':
         from LaplacianGan.models.hd_networks import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True)              
+    elif args.which_gen == 'single_256':   
+        from LaplacianGan.models.hd_networks import Generator 
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=[256])   
+    elif args.which_gen == 'comb_64_256':   
+        from LaplacianGan.models.hd_networks import Generator 
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=[64, 256])           
+    elif args.which_gen == 'super':   
+        from LaplacianGan.models.hd_networks import GeneratorSuper
+        netG = GeneratorSuper(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+            norm=args.norm_type, activation=args.gen_activation_type)   
+    elif args.which_gen == 'super_small':   
+        from LaplacianGan.models.hd_networks import GeneratorSuperSmall
+        netG = GeneratorSuperSmall(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+            norm=args.norm_type, activation=args.gen_activation_type) 
+        print(netG) 
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 
-    # Discriminator
-    if args.which_disc == 'origin': 
-        # only has global discriminator
-        from LaplacianGan.models.hd_networks import Discriminator 
-        netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
-                    sent_dim=1024, emb_dim=128, norm=args.norm_type)
-    elif args.which_disc == 'origin_global_local':
-        # has global and local discriminator
-        from LaplacianGan.models.hd_networks import Discriminator 
-        netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
-                    sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['global', 'local'])
-    else:
-        raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
-    
-    #print(netG)
-    #print(netD) 
-    
     device_id = getattr(args, 'device_id', 0)
 
     if args.cuda:
-        netD = netD.cuda(device_id)
+        # netD = netD.cuda(device_id)
         netG = netG.cuda(device_id)
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
@@ -103,10 +104,13 @@ if  __name__ == '__main__':
 
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
 
-    save_root = os.path.join(home, 'devbox', 'Shared_YZ', 'Results',data_name, args.save_spec + 'testing_num_{}'.format(args.test_sample_num) )
-    mkdirs(save_root)
+    # save_root = os.path.join(home, 'devbox', 'Shared_YZ', 'Results',data_name, args.save_spec + 'testing_num_{}'.format(args.test_sample_num) )
+   
+    save_root = os.path.join(model_root, model_name, 'results/')
+    if not os.path.isdir(save_root):
+        mkdirs(save_root)
 
-    test_gans(dataset, model_root, model_name, save_root, netG, args)
-
+    # test_gans(dataset, model_root, model_name, save_root, netG, args)
+    generate_layer_features(dataset, model_root, model_name, save_root, netG, args)
     
     

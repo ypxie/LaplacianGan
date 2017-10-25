@@ -4,6 +4,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision.utils import make_grid
 from torch import autograd
 from torch.autograd import Variable
 from torch.nn import Parameter
@@ -113,6 +114,76 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
         scipy.misc.imsave(save_path, superimage)
 
 
+
+def generate_layer_features(dataset, model_root, mode_name, save_root , netG,  args):
+
+    print('Using testing mode')
+    netG.eval()
+
+    test_sampler  = dataset.test.next_batch_test
+
+    model_folder = os.path.join(model_root, mode_name)
+    model_marker = mode_name + '_G_epoch_{}'.format(args.load_from_epoch)
+    
+    ''' load model '''
+    assert args.load_from_epoch != '', 'args.load_from_epoch is empty'
+    G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
+    print('reload weights from {}'.format(G_weightspath))
+    weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
+    load_partial_state_dict(netG, weights_dict)
+    
+    testing_z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
+    testing_z = to_device(testing_z, netG.device_id, volatile=True)
+
+
+    num_examples = 100
+    start_count = 0
+    while True:
+        if start_count >= num_examples:
+            break
+        test_images, test_embeddings_list, saveIDs, test_captions = test_sampler(args.batch_size, start_count, 1)
+        imname = str(saveIDs[0])
+        this_batch_size = test_images.shape[0]
+        # print('start: {}, this_batch size {}, num_examples {}'.format(start_count, test_images.shape[0], dataset.test._nu   m_examples  ))
+       
+        start_count += this_batch_size
+        
+        #test_embeddings_list is a list of (B,emb_dim)
+        ''' visualize test per epoch '''
+        # generate samples
+        
+        for t in range(1):
+            testing_z.data.normal_(0, 1)
+
+            this_test_embeddings = test_embeddings_list[0] # just use the first one
+            this_test_embeddings = to_device(this_test_embeddings, netG.device_id, volatile=True)
+            test_outputs, _ = netG(this_test_embeddings, testing_z[0:this_batch_size])
+            images = []
+            # import pdb; pdb.set_trace()
+
+            for k, v in test_outputs.items():
+                dim = k.split('_')[1]
+                feat = getattr(netG, 'keep_out_'+dim).cpu().data[0]
+                import pdb; pdb.set_trace()
+                img = (v.cpu().data[0].numpy().transpose((1,2,0)) + 1) / 2
+                images.append(misc.imresize(img, (256,256)))
+                num = feat.size()[0]
+                
+                res = make_grid(feat.unsqueeze(1), nrow=int(np.sqrt(num)))
+                res = res.mul(255).clamp(0, 255).byte().permute(1, 2, 0).numpy()
+
+                misc.imsave(os.path.join(save_root, imname+'_feat_'+dim+'.png'), res)
+            import pdb; pdb.set_trace()
+            images = np.concatenate(images, axis=1)
+            misc.imsave(os.path.join(save_root, imname+'_images.png'), images)
+
+
+
+                
+
+
+                
+
 def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     # helper function
     if args.train_mode:
@@ -168,7 +239,7 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                 break
             test_images, test_embeddings_list, saveIDs, test_captions = test_sampler(args.batch_size, start_count, 1)
             
-            this_batch_size = test_images.shape[0]
+            this_batch_size =  test_images.shape[0]
             #print('start: {}, this_batch size {}, num_examples {}'.format(start_count, test_images.shape[0], dataset.test._num_examples  ))
             chosen_captions = []
             for this_caption_list in test_captions:

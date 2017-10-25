@@ -7,6 +7,7 @@ import torch, h5py
 from torch.nn.utils import weight_norm
 
 from LaplacianGan.HDGan import train_gans
+from LaplacianGan.HDGan512 import train_gans_super
 from LaplacianGan.fuel.zz_datasets import TextDataset
 
 if  __name__ == '__main__':
@@ -105,8 +106,21 @@ if  __name__ == '__main__':
     elif args.which_gen == 'comb_64_256':   
         from LaplacianGan.models.hd_networks import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
-                        norm=args.norm_type, activation=args.gen_activation_type, output_size=[64, 256])           
-
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=[64, 256]) 
+    elif args.which_gen == 'comb_128_256':
+        from LaplacianGan.models.hd_networks import Generator
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128,
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=[128, 256])          
+    elif args.which_gen == 'super':   
+        from LaplacianGan.models.hd_networks import GeneratorSuper
+        netG = GeneratorSuper(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+            norm=args.norm_type, activation=args.gen_activation_type)   
+            
+    elif args.which_gen == 'super_small':   
+        from LaplacianGan.models.hd_networks import GeneratorSuperSmall
+        netG = GeneratorSuperSmall(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+            norm=args.norm_type, activation=args.gen_activation_type) 
+        print(netG) 
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 
@@ -132,11 +146,28 @@ if  __name__ == '__main__':
         from LaplacianGan.models.hd_networks import Discriminator 
         netD = Discriminator(input_size=[64, 256], num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
+    elif args.which_disc == 'comb_128_256':
+        # has global and local discriminator
+        from LaplacianGan.models.hd_networks import Discriminator
+        netD = Discriminator(input_size=[128, 256], num_chan = 3, hid_dim = 128,
+                    sent_dim=1024, emb_dim=128, norm=args.norm_type)
+    elif args.which_disc == 'super':
+        # has global and local discriminator
+        from LaplacianGan.models.hd_networks import DiscriminatorSuper
+        netD = DiscriminatorSuper(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
+                    sent_dim=1024, emb_dim=128, norm=args.norm_type)
+        print(netD) 
+    elif args.which_disc == 'super_local':
+        # has global and local discriminator
+        from LaplacianGan.models.hd_networks import DiscriminatorSuper
+        netD = DiscriminatorSuper(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
+                    sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['local'])
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
+        
     
-    # print(netG)
-    # print(netD) 
+    #print(netG)
+    #print(netD) 
     
     device_id = getattr(args, 'device_id', 0)
     print ('>> model initialized')
@@ -161,4 +192,7 @@ if  __name__ == '__main__':
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
     print ('>> START training ')
     sys.stdout.flush()
-    train_gans(dataset, model_root, model_name, netG, netD, args)
+    if 'super' in args.which_gen:
+        train_gans_super(dataset, model_root, model_name, netG, netD, args)
+    else:
+        train_gans(dataset, model_root, model_name, netG, netD, args)

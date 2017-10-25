@@ -118,7 +118,7 @@ class Dataset(object):
             sampled_embeddings_array = np.array(sampled_embeddings)
             return np.squeeze(sampled_embeddings_array), sampled_captions
 
-    def next_batch(self, batch_size, window):
+    def next_batch(self, batch_size, window, super_resolution=False):
         """Return the next `batch_size` examples from this data set."""
 
         start = self._index_in_epoch
@@ -157,7 +157,11 @@ class Dataset(object):
         sampled_wrong_images = self.transform(sampled_wrong_images)
         images_dict = {}
         wrongs_dict = {}
-        for size in [64, 128, 256]:
+        output_res = [64, 128, 256]
+        if super_resolution:
+            output_res += [512]
+
+        for size in output_res:
             tmp = resize_images(sampled_images, shape=[size, size])
             tmp = tmp * (2. / 255) - 1.
             images_dict['output_{}'.format(size)] = tmp
