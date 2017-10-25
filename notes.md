@@ -109,3 +109,10 @@ zizhao(server_2):eval_nobugtesting_num_1$ cat gen_origin_disc_origin_coco_[64]_G
  "std": {
   "output_64": 0.13465775549411774
  }
+
+## Currently I am testing (all old models are backup. Currently bug-free version)
+# does bigger model help? does local help?
+- bigmachine: coco, global loss , 64 and 128
+- bigmachine: birds_no_img_loss. birds_disc_both
+- devbox:     birds with vanilla 256 model. 
+

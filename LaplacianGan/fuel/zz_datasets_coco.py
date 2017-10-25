@@ -84,6 +84,7 @@ class Dataset(object):
         return self._saveIDs
 
     def readCaptions(self, filenames):
+        #import pdb; pdb.set_trace()
         
         cap = self.captions[filenames]
         # print ('can not find {} in captions'.format(filenames))
@@ -230,8 +231,10 @@ class Dataset(object):
             self.end_of_data = True
         else:
             end = start + batch_size
-
-        sampled_images = self._images[start:end]
+        
+        sampled_filenames = [self._filenames[i].decode() for i in range(start, end)] 
+        sampled_images = self._images(sampled_filenames)
+        
         sampled_images = sampled_images
         # from [0, 255] to [-1.0, 1.0]
         sampled_images = sampled_images * (2. / 255) - 1.
@@ -243,8 +246,9 @@ class Dataset(object):
         sampled_embeddings_batchs = []
         
         sampled_captions = []
-        sampled_filenames = self._filenames[start:end]
-        sampled_class_id = self._class_id[start:end]
+        
+        #print(type(self._class_id), start, end, len(self._class_id))
+        #sampled_class_id  = self._class_id[start:end]
         for i in range(len(sampled_filenames)):
             captions = self.readCaptions(sampled_filenames[i])
             # print(captions)
@@ -256,8 +260,6 @@ class Dataset(object):
 
         return [sampled_images, sampled_embeddings_batchs,
                 self._saveIDs[start:end], sampled_captions]
-
-
 
 
 class TextDataset(object):
@@ -308,8 +310,6 @@ class TextDataset(object):
         with open(pickle_path + '/captions.pickle', 'rb') as f:
             captions = pickle.load(f)
             print ('read {} captions '.format(len(captions)))
-        
-
         return Dataset(img_load, self.image_shape[0], embeddings,
                        list_filenames, None, None,
                        aug_flag, captions=captions)
@@ -320,7 +320,8 @@ class WrapperLoader():
         
         self.dataset = TextDataset().get_data(pickle_path, aug_flag=aug_flag, data_dir=data_dir)
         self.num_embed = num_embed
-        self.num_samples = self.dataset.num_examples
+        self.num_examples = self.dataset.num_examples
+        self.num_samples  = self.num_examples
         self.test_mode = test_mode
 
     def __getitem__(self, index):
@@ -333,11 +334,11 @@ class WrapperLoader():
         return data
 
     def __len__(self):
-        return self.num_samples
+        return self.num_examples
 
 class MultiThreadLoader():
 
-    def __init__(self, pickle_path, batch_size, num_embed, threads=0, test_mode=False, aug_flag=True,data_dir=None):
+    def __init__(self, pickle_path, batch_size, num_embed, threads=0, test_mode=False, aug_flag=True,data_dir=None,drop_last=True):
         print ('create multithread loader with {} threads ...'.format(threads))
 
         self.dataset = WrapperLoader(pickle_path, num_embed, test_mode, aug_flag=aug_flag, data_dir=data_dir)
@@ -347,8 +348,10 @@ class MultiThreadLoader():
             self.dataset,
             batch_size=batch_size,
             shuffle=True,
-            num_workers=threads)
-        
+            num_workers=threads,
+            drop_last = drop_last)
+        self.dataloader.num_examples = self.dataset.num_examples
+
     def load_data(self):
         return self.dataloader
 

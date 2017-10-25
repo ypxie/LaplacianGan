@@ -118,12 +118,12 @@ class Dataset(object):
             sampled_embeddings_array = np.array(sampled_embeddings)
             return np.squeeze(sampled_embeddings_array), sampled_captions
 
-    def next_batch(self, batch_size, window, super_resolution=False):
+    def next_batch(self, batch_size, window):
         """Return the next `batch_size` examples from this data set."""
 
         start = self._index_in_epoch
         self._index_in_epoch += batch_size
-        
+
         if self._index_in_epoch > self._num_examples:
             # Finished epoch
             self._epochs_completed += 1
@@ -157,11 +157,7 @@ class Dataset(object):
         sampled_wrong_images = self.transform(sampled_wrong_images)
         images_dict = {}
         wrongs_dict = {}
-        output_res = [64, 128, 256]
-        if super_resolution:
-            output_res += [512]
-
-        for size in output_res:
+        for size in [64, 128, 256]:
             tmp = resize_images(sampled_images, shape=[size, size])
             tmp = tmp * (2. / 255) - 1.
             images_dict['output_{}'.format(size)] = tmp
@@ -222,8 +218,8 @@ class Dataset(object):
             batch = sampled_embeddings[:, i, :]
             sampled_embeddings_batchs.append(batch)
             #sampled_embeddings_batchs.append(np.squeeze(batch))
-        return [sampled_images, sampled_embeddings_batchs,self._saveIDs[start:end],
-                 self._class_id[start:end], sampled_captions]
+        return [sampled_images, sampled_embeddings_batchs,
+                self._saveIDs[start:end], sampled_captions]
 
 
 class TextDataset(object):

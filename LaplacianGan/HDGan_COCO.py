@@ -15,7 +15,6 @@ import time, json
 
 TINY = 1e-8
 
-
 def compute_d_pair_loss(real_logit, wrong_logit, fake_logit, wgan=False):
     if wgan:
         disc = wrong_logit  + fake_logit - 2*real_logit
@@ -73,16 +72,9 @@ def load_partial_state_dict(model, state_dict):
                 raise
         print ('>> load partial state dict: {} initialized'.format(len(state_dict)))
 
-def inter_across(embeddings):
-    # embeddings (b, dim)
-    B, _ = embeddings.shape
-    res = embeddings.copy()
-    for idx in range(B):
-        ridx = random.randint(0, B-1)
-        res[idx] = 0.5*(embeddings[idx], embeddings[ridx])
-    return res
-
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
+    use_img_loss = getattr(args, 'use_img_loss', True)
+    img_loss_ratio = getattr(args, 'img_loss_ratio', 1)
     print('>> using hd gan trainer')
     # helper function
     def plot_imgs(samples, epoch, typ, name, path=''):
@@ -100,15 +92,16 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     g_lr = args.g_lr
     tot_epoch = args.maxepoch
     if not args.debug_mode:
-        train_sampler = iter(dataset.train)
-        test_sampler  = iter(dataset.test)
-        number_example = len(dataset.train)
-        updates_per_epoch = int(number_example / args.batch_size)
-
+        train_sampler  = iter(dataset.train)
+        test_sampler   = iter(dataset.test)
+        #number_example = len(dataset.train)
+        #updates_per_epoch = int(number_example / args.batch_size)
+        updates_per_epoch =  len(dataset.train) 
+        
     else:
         train_sampler = fake_sampler
         test_sampler  = fake_sampler
-        number_example = 16
+        #number_example = 16
         updates_per_epoch = 10
 
     ''' configure optimizer '''
@@ -200,7 +193,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
             for _ in range(ncritic):
                 ''' Sample data '''
-                images, wrong_images, np_embeddings, _, _ = train_sampler.next()
+                try:
+                    images, wrong_images, np_embeddings, _, _ = train_sampler.next()
+                except:
+                    train_sampler = iter(dataset.train) # reset
+                    images, wrong_images, np_embeddings, _, _ = train_sampler.next()
+                    
                 embeddings = to_device(np_embeddings, netD.device_id, requires_grad=False)
                 z.data.normal_(0, 1)
 
@@ -228,13 +226,16 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
                     # compute loss
                     #chose_img_real = wrong_img_logit if random.random() > 0.1 else real_img_logit
+                    
                     discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan)
-                    local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local, prob=0.5, wgan=args.wgan )
-                    global_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global, fake_img_logit_global, prob=0.5, wgan=args.wgan )
-                    if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
-                        discriminator_loss += local_loss + global_loss
-                    else:
-                        discriminator_loss += (local_loss + global_loss)*0.5
+                    if use_img_loss:
+                        local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local,  prob=0.5, wgan=args.wgan )
+                        global_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global,  fake_img_logit_global, prob=0.5, wgan=args.wgan )
+                        if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
+                            img_loss = local_loss + global_loss
+                        else:
+                            img_loss = (local_loss + global_loss)*0.5
+                        discriminator_loss +=  img_loss_ratio * img_loss 
 
                 d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
                 d_loss_val = -d_loss_val if args.wgan else d_loss_val
@@ -265,12 +266,13 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 fake_pair_logit, fake_img_logit_local, fake_img_logit_global, fake_img_code  = \
                 fake_dict['pair_disc'], fake_dict['local_img_disc'], fake_dict['global_img_disc'], fake_dict['content_code']
                 generator_loss += compute_g_loss(fake_pair_logit, args.wgan)
-                local_loss  = compute_g_loss(fake_img_logit_local, args.wgan)
-                global_loss = compute_g_loss(fake_img_logit_global, args.wgan)
-                if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
-                    generator_loss += local_loss + global_loss
-                else:
-                    generator_loss += (local_loss + global_loss)*0.5
+                if use_img_loss:
+                    local_loss  = compute_g_loss(fake_img_logit_local, args.wgan)
+                    global_loss = compute_g_loss(fake_img_logit_global, args.wgan)
+                    if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
+                        generator_loss += local_loss + global_loss
+                    else:
+                        generator_loss += (local_loss + global_loss)*0.5
 
             generator_loss.backward()
             g_loss_val = generator_loss.cpu().data.numpy().mean()
@@ -299,7 +301,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             if idx_test == 0:
                 test_images, test_embeddings = fixed_images, fixed_embeddings
             else:
-                test_images, _, test_embeddings, _, _ = test_sampler_iter.next()
+                test_images, _, test_embeddings, _, _ = test_sampler.next()
                 test_embeddings = to_device(test_embeddings, netG.device_id, volatile=True)
                 testing_z = Variable(z.data, volatile=True)
 
@@ -340,10 +342,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
         # save weights
         if epoch % args.save_freq == 0:
+            netD = netD.cpu()
+            netG = netG.cpu()
             torch.save(netD.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
             torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
             print('save weights at {}'.format(model_folder))
             torch.save(plot_dict, plot_save_path)
-
-
+            netD = netD.cuda(args.device_id)
+            netG = netG.cuda(args.device_id)
         print ('epoch {}/{} finished [time = {}s] ...'.format(epoch, tot_epoch, end_timer))

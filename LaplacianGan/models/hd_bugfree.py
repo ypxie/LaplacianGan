@@ -64,85 +64,11 @@ class Sent2FeatMap(nn.Module):
         output = output.view(-1, self.channel, self.row, self.col)
         return output
 
-class GeneratorSuper(nn.Module):
-    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512):
-        super(GeneratorSuper, self).__init__()
-        self.__dict__.update(locals())
-        self.register_buffer('device_id', torch.IntTensor(1))
-        norm_layer = getNormLayer(norm)
-        act_layer = get_activation_layer(activation)
-        
-        self.generator_256 = Generator(sent_dim, noise_dim, emb_dim, hid_dim)
-
-        # puch it to every high dimension
-        scale = 512
-        cur_dim = 64
-        num_resblock = 4
-        seq = []
-        for i in range(num_resblock):
-            seq += [ResnetBlock(cur_dim, norm, activation=activation)]
-        
-        seq += [pad_conv_norm(cur_dim, cur_dim//2, norm_layer, activation=act_layer)]
-        cur_dim = cur_dim // 2
-        seq += [nn.Upsample(scale_factor=2, mode='nearest')]
-
-        setattr(self, 'scale_%d'%(scale), nn.Sequential(*seq) )
-        setattr(self, 'tensor_to_img_%d'%(scale), branch_out2(cur_dim))
-        self.apply(weights_init)
-
-        print ('>> initialized a {} size generator'.format(output_size))
-
-    def forward(self, sent_embeddings, z):
-
-        out, _ = self.generator_256(sent_embeddings, z)
-        scale_256 = self.generator_256.keep_out_256.detach() #Variable(self.generator_256.keep_out_256.data, volatile=True) 
-        # print (scale_256.size())
-        scale_512 = self.scale_512(scale_256)
-        out['output_512'] = self.tensor_to_img_512(scale_512)
-
-        return out, 0
-
-class GeneratorSuperSmall(nn.Module):
-    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512):
-        super(GeneratorSuperSmall, self).__init__()
-        self.__dict__.update(locals())
-        self.register_buffer('device_id', torch.IntTensor(1))
-        norm_layer = getNormLayer(norm)
-        act_layer = get_activation_layer(activation)
-        
-        self.generator_256 = Generator(sent_dim, noise_dim, emb_dim, hid_dim)
-
-        # puch it to every high dimension
-        scale = 512
-        cur_dim = 64
-        num_resblock = 2
-        seq = []
-        seq += [pad_conv_norm(cur_dim, cur_dim//2, norm_layer, activation=act_layer)]
-        cur_dim = cur_dim // 2
-        seq += [nn.Upsample(scale_factor=2, mode='nearest')]
-        for i in range(num_resblock):
-            seq += [ResnetBlock(cur_dim, norm, activation=activation)]
-
-        setattr(self, 'scale_%d'%(scale), nn.Sequential(*seq) )
-        setattr(self, 'tensor_to_img_%d'%(scale), branch_out2(cur_dim))
-        self.apply(weights_init)
-
-        print ('>> initialized a {} size supersmall generator'.format(output_size))
-
-    def forward(self, sent_embeddings, z):
-
-        out, _ = self.generator_256(sent_embeddings, z)
-        scale_256 = self.generator_256.keep_out_256.detach() #Variable(self.generator_256.keep_out_256.data, volatile=True) 
-        # print (scale_256.size())
-        scale_512 = self.scale_512(scale_256)
-        out['output_512'] = self.tensor_to_img_512(scale_512)
-
-        return out, 0
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',output_size=256, 
-                 use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256],num_resblock = 1):
-        
+                 use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], num_resblock = 1):
         super(Generator, self).__init__()
+        print('locals of gen: ', locals())
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
@@ -161,7 +87,7 @@ class Generator(nn.Module):
             self.side_output_at = output_size
         # 64, 128, or 256 version
         self.max_output_size = max(self.side_output_at)
-        
+
         if self.max_output_size == 256:
             num_scales = [4, 8, 16, 32, 64, 128, 256]
             text_upsampling_at = [4, 8, 16] 
@@ -173,7 +99,6 @@ class Generator(nn.Module):
             text_upsampling_at = [4]     
             
         #reduce_dim_at  = [8, 32, 128, 256] # [8, 64, 256]
-        
         
         #self.modules = OrderedDict()
         #self.side_modules = OrderedDict()
@@ -254,6 +179,7 @@ class Generator(nn.Module):
         # sent_embeddings: [B, 1024]
         out_dict = OrderedDict()
         sent_random, kl_loss  = self.condEmbedding(sent_embeddings) # sent_random [B, 128]
+        
         text = torch.cat([sent_random, z], dim=1)
 
         x = self.vec_to_tensor(text)
@@ -266,19 +192,16 @@ class Generator(nn.Module):
         x_64 = self.scale_64(x_32)
         if 64 in self.side_output_at:
             out_dict['output_64'] = self.tensor_to_img_64(x_64)
-            self.keep_out_64 = x_64
-            
+
         if self.max_output_size > 64:
             # skip 8x8 feature map to 64 and send to 128
             x_128 = self.scale_128(x_64)
-            self.keep_out_128 = x_128
             if 128 in self.side_output_at:
                 out_dict['output_128'] = self.tensor_to_img_128(x_128)
 
         if self.max_output_size > 128:
             # skip 16x16 feature map to 128 and send to 256
             out_256 = self.scale_256(x_128)
-            self.keep_out_256 = out_256
             if 256 in self.side_output_at:
                 out_dict['output_256'] = self.tensor_to_img_256(out_256)
 
@@ -326,17 +249,7 @@ class ImageDown(torch.nn.Module):
             _layers += [conv_norm(cur_dim*4, cur_dim*8,  norm_layer, stride=2, activation=activ)] # 16
             _layers += [conv_norm(cur_dim*8, out_dim,  norm_layer, stride=2, activation=activ)] # 8
             #_layers += [conv_norm(cur_dim*16, out_dim,  norm_layer, stride=2, activation=activ)] # 4
-
-        if input_size == 512:
-            cur_dim = 16 # for testing
-            _layers += [conv_norm(num_chan, cur_dim, norm_layer, stride=2, activation=activ, use_norm=False)] # 256
-            _layers += [conv_norm(cur_dim, cur_dim*2,  norm_layer, stride=2, activation=activ)] # 128
-            _layers += [conv_norm(cur_dim*2, cur_dim*4,  norm_layer, stride=2, activation=activ)] # 64
-            _layers += [conv_norm(cur_dim*4, cur_dim*8,  norm_layer, stride=2, activation=activ)] # 32
-            _layers += [conv_norm(cur_dim*8, cur_dim*16,  norm_layer, stride=2, activation=activ)] # 16
-            _layers += [conv_norm(cur_dim*16, out_dim,  norm_layer, stride=2, activation=activ)] # 8
-            #_layers += [conv_norm(cur_dim*16, out_dim,  norm_layer, stride=2, activation=activ)] # 4
-
+            
         self.node = nn.Sequential(*_layers)
 
     def forward(self, inputs):
@@ -381,81 +294,6 @@ class DiscClassifier(nn.Module):
 
         return output
 
-class DiscriminatorSuper(nn.Module):
-    def __init__(self, input_size, num_chan,  hid_dim, sent_dim, emb_dim, 
-                 norm='bn', disc_mode= ['global']):
-        super(DiscriminatorSuper, self).__init__()
-        self.register_buffer('device_id', torch.IntTensor(1))
-        self.__dict__.update(locals())
-        activ = discAct()
-        norm_layer = getNormLayer(norm)
-        
-        enc_dim = hid_dim * 4
-        self.img_encoder_512   = ImageDown(input_size,  num_chan,  enc_dim, norm)  # 4x4
-        self.pair_disc_512   = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
-
-
-        if 'local' in self.disc_mode:
-            _layers = [nn.Conv2d(enc_dim, 1, kernel_size=1, padding=0, bias=True)]   # 4
-            self.local_img_disc_512 = nn.Sequential(*_layers)
-        if 'global' in self.disc_mode:
-            _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 4
-            self.global_img_disc_512 = nn.Sequential(*_layers)
-
-        self.shrink = conv_norm(enc_dim, enc_dim, norm_layer, stride=1, activation=activ, kernel_size=5, padding=0)
-
-        _layers = [nn.Linear(sent_dim, emb_dim)]
-        _layers += [activ]
-        self.context_emb_pipe_512 = nn.Sequential(*_layers)
-
-        self.apply(weights_init)
-        print ('>> initialized a {} size discriminator {}'.format(input_size, self.disc_mode) )
-
-    def forward(self, images, embdding):
-        '''
-        images: (B, C, H, W)
-        embdding : (B, sent_dim)
-        outptuts:
-        -----------
-        img_code B*chan*col*row
-        pair_disc_out: B*1
-        img_disc: B*1*col*row
-        '''
-        out_dict = OrderedDict()
-        this_img_size = images.size()[3]
-
-        img_encoder = getattr(self, 'img_encoder_{}'.format(this_img_size))
-        local_img_disc    = getattr(self, 'local_img_disc_{}'.format(this_img_size), None)
-        global_img_disc   = getattr(self, 'global_img_disc_{}'.format(this_img_size), None)
-        pair_disc         = getattr(self, 'pair_disc_{}'.format(this_img_size))
-        context_emb_pipe  = getattr(self, 'context_emb_pipe_{}'.format(this_img_size))
-
-        sent_code = context_emb_pipe(embdding)
-        img_code = img_encoder(images) 
-        shrink_img_code = self.shrink(img_code)
-        pair_disc_out = pair_disc(sent_code, shrink_img_code)
-
-        out_dict['local_img_disc']   = 1
-        out_dict['global_img_disc']  = 1
-
-        # 64 never uses local discriminator
-        if 'local' in self.disc_mode and this_img_size != 64:
-            local_img_disc_out          = local_img_disc(img_code) 
-            out_dict['local_img_disc']  = local_img_disc_out
-            
-        if 'global' in self.disc_mode:
-            # global_img_disc_out         = global_img_disc(img_code)
-            global_img_disc_out         = global_img_disc(shrink_img_code)
-           
-            out_dict['global_img_disc'] = global_img_disc_out
-            
-        out_dict['pair_disc']     = pair_disc_out
-        out_dict['content_code']  = None # useless
-
-        return out_dict
-
-
-
 class Discriminator(torch.nn.Module):
     '''
     input_size can be int or list.
@@ -497,7 +335,7 @@ class Discriminator(torch.nn.Module):
             self.context_emb_pipe_64 = nn.Sequential(*_layers)
 
         if 128 in self.side_output_at:
-            self.img_encoder_128   = ImageDown(128,  num_chan, enc_dim, norm)  # 8
+            self.img_encoder_128  = ImageDown(128,  num_chan, enc_dim, norm)  # 8
             self.pair_disc_128  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
 
             if 'local' in self.disc_mode:
@@ -513,6 +351,7 @@ class Discriminator(torch.nn.Module):
 
         if 256 in self.side_output_at:
             self.img_encoder_256  = ImageDown(256, num_chan, enc_dim, norm)  # 8
+            
             self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
             
             # shrink is used for mapping 8x8 FM to 4x4
@@ -560,7 +399,6 @@ class Discriminator(torch.nn.Module):
             pair_disc_out = pair_disc(sent_code, shrink_img_code)
         else:
             pair_disc_out = pair_disc(sent_code, img_code)
-            #shrink_img_code = img_code
 
         out_dict['local_img_disc']   = 1
         out_dict['global_img_disc']  = 1
@@ -571,9 +409,9 @@ class Discriminator(torch.nn.Module):
             out_dict['local_img_disc']  = local_img_disc_out
             
         if 'global' in self.disc_mode:
-            global_img_disc_out         = global_img_disc(img_code)
-            #global_img_disc_out         = global_img_disc(shrink_img_code) # pls note it is probably a bug and make it a local disc
-            # print('{} global dis shape {}'.format(this_img_size, global_img_disc_out.size()))
+            global_code = shrink_img_code if this_img_size == 256 else img_code
+            global_img_disc_out         = global_img_disc(global_code)
+            assert global_img_disc_out.size()[3] == 1, 'global output does not equal 1x1'
             out_dict['global_img_disc'] = global_img_disc_out
             
         out_dict['pair_disc']     = pair_disc_out
