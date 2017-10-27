@@ -21,6 +21,7 @@ def img_loader_func(img_names, imgpath=None):
     res = []
 
     for i_n in img_names:
+        #print (imgpath, i_n)
         img = misc.imread(os.path.join(imgpath, i_n))
         img = misc.imresize(img, (IMG_DIM, IMG_DIM))
         if len(img.shape) != 3:
@@ -225,12 +226,19 @@ class Dataset(object):
 
     def next_batch_test(self, batch_size, start, max_captions):
         """Return the next `batch_size` examples from this data set."""
+        
         if (start + batch_size) > self._num_examples:
             end = self._num_examples
-            start = end - batch_size
+            #start = end - batch_size
             self.end_of_data = True
         else:
             end = start + batch_size
+        # if (start + batch_size) > self._num_examples:
+        #     end = self._num_examples
+        #     start = end - batch_size
+        #     self.end_of_data = True
+        # else:
+        #     end = start + batch_size
         
         sampled_filenames = [self._filenames[i].decode() for i in range(start, end)] 
         sampled_images = self._images(sampled_filenames)
@@ -343,7 +351,7 @@ class MultiThreadLoader():
 
         self.dataset = WrapperLoader(pickle_path, num_embed, test_mode, aug_flag=aug_flag, data_dir=data_dir)
         import torch.utils.data
-
+        print ('length of dataset', len(self.dataset))
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=batch_size,

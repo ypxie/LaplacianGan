@@ -18,7 +18,7 @@ class Dataset():
 def train_worker(data_root, model_root, training_dict):
 
     save_freq           = training_dict.get('save_freq', 3)
-    ncritic_epoch_range = training_dict.get('ncritic_epoch_range', 100)
+    ncritic_epoch_range = training_dict.get('ncritic_epoch_range', 30)
     g_lr                = training_dict.get('g_lr', .0002)
     d_lr                = training_dict.get('d_lr', .0002)
     dataset             = training_dict.get('dataset', 'coco')
@@ -26,7 +26,9 @@ def train_worker(data_root, model_root, training_dict):
     use_img_loss        = training_dict.get('use_img_loss', True)
     num_resblock        = training_dict.get('num_resblock', 1)
     img_loss_ratio      = training_dict.get('img_loss_ratio', 1.0)
-
+    detach_list         = training_dict.get('detach_list', [])
+    tune_img_loss       = training_dict.get('tune_img_loss', False)
+    
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')
@@ -76,7 +78,7 @@ def train_worker(data_root, model_root, training_dict):
                         help='which device')
     parser.add_argument('--gpu_list',  default= [], 
                         help='which devices to parallel the data')
-    parser.add_argument('--imsize',  default=training_dict['imsize'], 
+    parser.add_argument('--imsize',  default = training_dict['imsize'], 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
                         help='decay epoch image size')
@@ -101,6 +103,9 @@ def train_worker(data_root, model_root, training_dict):
                         help='whether to use image loss')
     parser.add_argument('--num_resblock', type=int, default = num_resblock, help='number of resblock')
     parser.add_argument('--img_loss_ratio', type=float, default = img_loss_ratio, help='coefficient of img_loss')
+    parser.add_argument('--tune_img_loss', type=bool, default = tune_img_loss, help='tune_img_loss')
+    
+    parser.add_argument('--detach_list', type=float, default = detach_list, help='detach_list')
     
     args = parser.parse_args()
 
@@ -115,12 +120,12 @@ def train_worker(data_root, model_root, training_dict):
         from LaplacianGan.models.hd_bugfree import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
                          activation=args.gen_activation_type, output_size=args.imsize, reduce_dim_at=reduce_dim_at,
-                         num_resblock = args.num_resblock)
+                         num_resblock = args.num_resblock, detach_list=detach_list)
     elif args.which_gen == 'upsample_skip':   
         from LaplacianGan.models.hd_bugfree import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
                          activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True, 
-                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock)              
+                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock, detach_list=detach_list)              
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 

@@ -24,6 +24,7 @@ def test_worker(data_root, model_root, save_root, testing_dict):
     test_sample_num     = testing_dict.get('test_sample_num', 10)
     num_resblock        = testing_dict.get('num_resblock', 2)
     save_images         = testing_dict.get('save_images', False)
+    imsize              = testing_dict.get('imsize')
 
     parser = argparse.ArgumentParser(description = 'Gans')    
 
@@ -37,7 +38,7 @@ def test_worker(data_root, model_root, save_root, testing_dict):
     ## add more
     parser.add_argument('--device_id', type=int, default= device_id, 
                         help='which device')
-    parser.add_argument('--imsize', type=int, default=256, 
+    parser.add_argument('--imsize', type=int, default=imsize, 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
                         help='decay epoch image size')

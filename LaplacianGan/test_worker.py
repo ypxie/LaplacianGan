@@ -18,6 +18,7 @@ def test_worker(data_root, model_root, save_root, testing_dict):
     device_id           = testing_dict.get('device_id')
     test_sample_num     = testing_dict.get('test_sample_num', 10)
     save_images         = testing_dict.get('save_images', False)
+    imsize              = testing_dict.get('imsize')
 
     parser = argparse.ArgumentParser(description = 'Gans')    
 
@@ -31,7 +32,7 @@ def test_worker(data_root, model_root, save_root, testing_dict):
     ## add more
     parser.add_argument('--device_id', type=int, default= device_id, 
                         help='which device')
-    parser.add_argument('--imsize', type=int, default=256, 
+    parser.add_argument('--imsize', type=int, default=imsize, 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
                         help='decay epoch image size')
@@ -67,6 +68,11 @@ def test_worker(data_root, model_root, save_root, testing_dict):
         from LaplacianGan.models.hd_networks import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
                activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True,reduce_dim_at=reduce_dim_at)              
+    elif args.which_gen == 'super':   
+        from LaplacianGan.models.hd_networks import GeneratorSuper
+        netG = GeneratorSuper(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+                norm=args.norm_type, activation=args.gen_activation_type)
+
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 

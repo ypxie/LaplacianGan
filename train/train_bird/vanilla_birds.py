@@ -3,11 +3,13 @@ import sys, os
 import numpy as np
 sys.path.insert(0, os.path.join('..','..'))
 
+home = os.path.expanduser("~")
 data_root  = os.path.join('..','..', 'Data')
+data_root  = os.path.join(home, 'ganData')
+
 model_root = os.path.join( '..','..', 'Models')
 
 import torch.multiprocessing as mp
-
 from LaplacianGan.proj_utils.local_utils import Indexflow
 from LaplacianGan.train_worker import train_worker
 

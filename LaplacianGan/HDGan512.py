@@ -54,7 +54,7 @@ def compute_g_loss(fake_logit, wgan=False):
             return generator_loss
 
 def load_partial_state_dict(model, state_dict):
-
+    
         own_state = model.state_dict()
         for name, param in state_dict.items():
             if name not in own_state:
@@ -119,7 +119,7 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
     plot_dict = {'disc':[], 'gen':[]}
 
     ''' load model '''
-    
+
     if args.reuse_weights :
         D_weightspath = os.path.join(model_folder, 'D_epoch{}.pth'.format(args.load_from_epoch))
         G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))

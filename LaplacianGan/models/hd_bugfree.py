@@ -65,8 +65,8 @@ class Sent2FeatMap(nn.Module):
         return output
 
 class Generator(nn.Module):
-    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',output_size=256, 
-                 use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], num_resblock = 1):
+    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=256, 
+                 use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], num_resblock = 1, detach_list=[]):
         super(Generator, self).__init__()
         print('locals of gen: ', locals())
         self.__dict__.update(locals())
@@ -155,16 +155,22 @@ class Generator(nn.Module):
         x_32_4 = self.upsample_4(x_4, x_32)
         x_64 = self.scale_64(x_32_4)
 
-        if 64 in self.side_output_at:
-            out_dict['output_64'] = self.tensor_to_img_64(x_64)
-        
+        if 64 in self.detach_list:
+            x_64 = x_64.detach()
+        else:
+            if 64 in self.side_output_at:
+                out_dict['output_64'] = self.tensor_to_img_64(x_64)
+            
         if self.max_output_size > 64:
             # skip 8x8 feature map to 64 and send to 128
             x_64_8 = self.upsample_8(x_8, x_64)
             x_128 = self.scale_128(x_64_8)
-            if 128 in self.side_output_at:
-                out_dict['output_128'] = self.tensor_to_img_128(x_128)
-
+            if 128 in self.detach_list:
+               x_128 = x_128.detach() 
+            else:
+                if 128 in self.side_output_at:
+                    out_dict['output_128'] = self.tensor_to_img_128(x_128)
+             
         if self.max_output_size > 128:
             # skip 16x16 feature map to 128 and send to 256
             x_128_16 = self.upsample_16(x_16, x_128)
@@ -172,7 +178,7 @@ class Generator(nn.Module):
 
             if 256 in self.side_output_at:
                 out_dict['output_256'] = self.tensor_to_img_256(out_256)
-
+              
         return out_dict, kl_loss
     
     def forward_plain(self, sent_embeddings, z):
@@ -190,15 +196,21 @@ class Generator(nn.Module):
         
         # skip 4x4 feature map to 32 and send to 64
         x_64 = self.scale_64(x_32)
-        if 64 in self.side_output_at:
-            out_dict['output_64'] = self.tensor_to_img_64(x_64)
+        if 64 in self.detach_list:
+            x_64 = x_64.detach()
+        else:
+            if 64 in self.side_output_at:
+                out_dict['output_64'] = self.tensor_to_img_64(x_64)
 
         if self.max_output_size > 64:
             # skip 8x8 feature map to 64 and send to 128
             x_128 = self.scale_128(x_64)
-            if 128 in self.side_output_at:
-                out_dict['output_128'] = self.tensor_to_img_128(x_128)
-
+            if 128 in self.detach_list:
+                   x_128 = x_128.detach() 
+            else:
+                if 128 in self.side_output_at:
+                    out_dict['output_128'] = self.tensor_to_img_128(x_128)
+                    
         if self.max_output_size > 128:
             # skip 16x16 feature map to 128 and send to 256
             out_256 = self.scale_256(x_128)
