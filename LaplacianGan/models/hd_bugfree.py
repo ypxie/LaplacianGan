@@ -66,7 +66,8 @@ class Sent2FeatMap(nn.Module):
 
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=256, 
-                 use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], num_resblock = 1, detach_list=[]):
+                 use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], num_resblock = 1, detach_list=[],
+                 use_cond = True):
         super(Generator, self).__init__()
         print('locals of gen: ', locals())
         self.__dict__.update(locals())
@@ -74,7 +75,7 @@ class Generator(nn.Module):
         act_layer = get_activation_layer(activation)
 
         self.register_buffer('device_id', torch.IntTensor(1))
-        self.condEmbedding = condEmbedding(sent_dim, emb_dim)
+        self.condEmbedding = condEmbedding(sent_dim, emb_dim, use_cond=use_cond)
         self.vec_to_tensor = Sent2FeatMap(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm=norm)
         self.use_upsamle_skip = use_upsamle_skip
 

@@ -25,7 +25,9 @@ def test_worker(data_root, model_root, save_root, testing_dict):
     num_resblock        = testing_dict.get('num_resblock', 2)
     save_images         = testing_dict.get('save_images', False)
     imsize              = testing_dict.get('imsize')
-
+    detach_list         = training_dict.get('detach_list', [])
+    use_cond            = training_dict.get('use_cond', True)
+    
     parser = argparse.ArgumentParser(description = 'Gans')    
 
     parser.add_argument('--noise_dim', type=int, default= 100, metavar='N',
@@ -70,12 +72,12 @@ def test_worker(data_root, model_root, save_root, testing_dict):
         from LaplacianGan.models.hd_bugfree import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
                          activation=args.gen_activation_type, output_size=args.imsize, reduce_dim_at=reduce_dim_at,
-                         num_resblock = args.num_resblock)
+                         num_resblock = args.num_resblock,detach_list=detach_list, use_cond=use_cond)
     elif args.which_gen == 'upsample_skip':   
         from LaplacianGan.models.hd_bugfree import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
                          activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True, 
-                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock)              
+                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock, detach_list=detach_list, use_cond=use_cond)              
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 

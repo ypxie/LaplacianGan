@@ -28,7 +28,9 @@ def train_worker(data_root, model_root, training_dict):
     img_loss_ratio      = training_dict.get('img_loss_ratio', 1.0)
     detach_list         = training_dict.get('detach_list', [])
     tune_img_loss       = training_dict.get('tune_img_loss', False)
-    
+    KL_COE              = training_dict.get('KL_COE', 4)
+    use_cond            = training_dict.get('use_cond', True)
+
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')
@@ -68,7 +70,7 @@ def train_worker(data_root, model_root, training_dict):
                         help='the channel of each image.')
     parser.add_argument('--ngen', type=int, default= 1, metavar='N',
                         help='the channel of each image.')
-    parser.add_argument('--KL_COE', type=float, default= 4, metavar='N',
+    parser.add_argument('--KL_COE', type=float, default= KL_COE, metavar='N',
                         help='kl divergency coefficient.')
     parser.add_argument('--use_content_loss', type=bool, default= True, metavar='N',
                         help='whether or not to use content loss.')
@@ -120,12 +122,13 @@ def train_worker(data_root, model_root, training_dict):
         from LaplacianGan.models.hd_bugfree import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
                          activation=args.gen_activation_type, output_size=args.imsize, reduce_dim_at=reduce_dim_at,
-                         num_resblock = args.num_resblock, detach_list=detach_list)
+                         num_resblock = args.num_resblock, detach_list=detach_list, use_cond=use_cond)
     elif args.which_gen == 'upsample_skip':   
         from LaplacianGan.models.hd_bugfree import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
                          activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True, 
-                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock, detach_list=detach_list)              
+                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock, 
+                         detach_list=detach_list, use_cond=use_cond)              
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 

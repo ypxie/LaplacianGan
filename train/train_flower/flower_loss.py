@@ -28,14 +28,14 @@ from LaplacianGan.train_worker import train_worker
 #                          'reduce_dim_at':[8, 32, 128, 256]}
 
 large_local          = { 'reuse_weights': True, 'batch_size': 16, 'device_id': 1,  
-                         'g_lr': .0002/(3**3),'d_lr': .0002/(3**3), 'img_loss_ratio': 1, 'tune_img_loss': False,
+                         'g_lr': .0002/(2**3),'d_lr': .0002/(2**3), 'img_loss_ratio': 1, 'tune_img_loss': False,
                          'imsize':[64, 128, 256], 'load_from_epoch': 360, 'model_name':'gen_origin_disc_local', 
                          'which_gen': 'origin', 'which_disc':'local', 'dataset':'flowers',
                          'reduce_dim_at':[8, 32, 128, 256]}
 
-large_local_low      = {'reuse_weights': False, 'batch_size': 16, 'device_id': 0,  
-                         'g_lr': .0002/(3**0),'d_lr': .0002/(3**0), 'img_loss_ratio': 0.5, 'tune_img_loss':True,
-                         'imsize':[64, 128, 256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_local_low', 
+large_local_low      = {'reuse_weights': True, 'batch_size': 16, 'device_id': 0,  
+                         'g_lr': .0002/(2**0),'d_lr': .0002/(2**0), 'img_loss_ratio': 0.5, 'tune_img_loss':True,
+                         'imsize':[64, 128, 256], 'load_from_epoch': 45, 'model_name':'gen_origin_disc_local_low', 
                          'which_gen': 'origin', 'which_disc':'local', 'dataset':'flowers',
                          'reduce_dim_at':[8, 32, 128, 256]}
 

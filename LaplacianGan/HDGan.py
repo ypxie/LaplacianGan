@@ -236,7 +236,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                             img_loss = (local_loss + global_loss)*0.5
                         
                         discriminator_loss +=  this_img_loss_ratio * img_loss 
-
+                    #else:
+                    #    print('Hey, ya are not using img loss in disc')      
                 d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
                 d_loss_val = -d_loss_val if args.wgan else d_loss_val
                 discriminator_loss.backward()
@@ -273,8 +274,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                         img_loss_ = (local_loss + global_loss)*0.5
                     
                     generator_loss += img_loss_ * this_img_loss_ratio
-                else:
-                    print('Hey, ya are not using img loss')        
+                #else:
+                #    print('Hey, ya are not using img loss in generator')        
             generator_loss.backward()
             g_loss_val = generator_loss.cpu().data.numpy().mean()
 

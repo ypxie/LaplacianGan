@@ -149,6 +149,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
 
     d_loss_plot = plot_scalar(name = "d_loss", env= mode_name, rate = args.display_freq)
     g_loss_plot = plot_scalar(name = "g_loss", env= mode_name, rate = args.display_freq)
+    kl_loss_plot = plot_scalar(name = "kl_loss", env= mode_name, rate = args.display_freq)
+
     content_loss_plot = plot_scalar(name = "content_loss", env= mode_name, rate = args.display_freq)
     lr_plot = plot_scalar(name = "lr", env= mode_name, rate = args.display_freq)
 
@@ -261,6 +263,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             fake_images, kl_loss = netG(embeddings, z)
 
             loss_val  = 0
+            kl_loss_plot.plot(kl_loss if type(kl_loss) in [int, float] else kl_loss.cpu().data.numpy().mean() )
             generator_loss = args.KL_COE*kl_loss
             for key, _ in fake_images.items():
                 # iterate over image of different sizes.
