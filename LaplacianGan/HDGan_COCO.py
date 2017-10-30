@@ -73,8 +73,10 @@ def load_partial_state_dict(model, state_dict):
         print ('>> load partial state dict: {} initialized'.format(len(state_dict)))
 
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
-    use_img_loss = getattr(args, 'use_img_loss', True)
-    img_loss_ratio = getattr(args, 'img_loss_ratio', 1)
+    use_img_loss   = getattr(args, 'use_img_loss', True)
+    img_loss_ratio = getattr(args, 'img_loss_ratio', 1.0)
+    tune_img_loss  = getattr(args, 'tune_img_loss', False)
+    this_img_loss_ratio = img_loss_ratio
     print('>> using hd gan trainer')
     # helper function
     def plot_imgs(samples, epoch, typ, name, path=''):
@@ -126,7 +128,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
 
         if os.path.exists(D_weightspath) and os.path.exists(G_weightspath):
-
             #assert os.path.exists(D_weightspath) and os.path.exists(G_weightspath)
             weights_dict = torch.load(D_weightspath, map_location=lambda storage, loc: storage)
             print('reload weights from {}'.format(D_weightspath))
@@ -142,12 +143,14 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 plot_dict = torch.load(plot_save_path)
         else:
             print ('{} or {} do not exist!!'.format(D_weightspath, G_weightspath))
-            raise NotImplementedError
+            #raise NotImplementedError
     else:
         start_epoch = 1
 
     d_loss_plot = plot_scalar(name = "d_loss", env= mode_name, rate = args.display_freq)
     g_loss_plot = plot_scalar(name = "g_loss", env= mode_name, rate = args.display_freq)
+    kl_loss_plot = plot_scalar(name = "kl_loss", env= mode_name, rate = args.display_freq)
+
     content_loss_plot = plot_scalar(name = "content_loss", env= mode_name, rate = args.display_freq)
     lr_plot = plot_scalar(name = "lr", env=mode_name, rate = args.display_freq)
 
@@ -170,7 +173,9 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         if epoch % args.epoch_decay == 0:
             d_lr = d_lr/2
             g_lr = g_lr/2
-
+            if tune_img_loss:
+                this_img_loss_ratio = this_img_loss_ratio/2
+                print('this_img_loss_ratio: ', this_img_loss_ratio)
             set_lr(optimizerD, d_lr)
             set_lr(optimizerG, g_lr)
         
@@ -235,7 +240,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                             img_loss = local_loss + global_loss
                         else:
                             img_loss = (local_loss + global_loss)*0.5
-                        discriminator_loss +=  img_loss_ratio * img_loss 
+                        discriminator_loss +=  this_img_loss_ratio * img_loss 
 
                 d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
                 d_loss_val = -d_loss_val if args.wgan else d_loss_val
@@ -258,6 +263,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             fake_images, kl_loss = netG(embeddings, z)
 
             loss_val  = 0
+            kl_loss_plot.plot(kl_loss if type(kl_loss) in [int, float] else kl_loss.cpu().data.numpy().mean() )
             generator_loss = args.KL_COE*kl_loss
             for key, _ in fake_images.items():
                 # iterate over image of different sizes.
@@ -266,13 +272,15 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                 fake_pair_logit, fake_img_logit_local, fake_img_logit_global, fake_img_code  = \
                 fake_dict['pair_disc'], fake_dict['local_img_disc'], fake_dict['global_img_disc'], fake_dict['content_code']
                 generator_loss += compute_g_loss(fake_pair_logit, args.wgan)
-                if use_img_loss:
+
+                if use_img_loss:        
                     local_loss  = compute_g_loss(fake_img_logit_local, args.wgan)
                     global_loss = compute_g_loss(fake_img_logit_global, args.wgan)
                     if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
-                        generator_loss += local_loss + global_loss
+                        img_loss_ = local_loss + global_loss
                     else:
-                        generator_loss += (local_loss + global_loss)*0.5
+                        img_loss_ = (local_loss + global_loss)*0.5
+                    generator_loss += img_loss_ * this_img_loss_ratio
 
             generator_loss.backward()
             g_loss_val = generator_loss.cpu().data.numpy().mean()
@@ -341,13 +349,17 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             plot_imgs(v, epoch, typ, 'test_samples', path=model_folder)
 
         # save weights
-        if epoch % args.save_freq == 0:
-            netD = netD.cpu()
-            netG = netG.cpu()
-            torch.save(netD.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
-            torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
-            print('save weights at {}'.format(model_folder))
-            torch.save(plot_dict, plot_save_path)
-            netD = netD.cuda(args.device_id)
-            netG = netG.cuda(args.device_id)
-        print ('epoch {}/{} finished [time = {}s] ...'.format(epoch, tot_epoch, end_timer))
+        try:
+            if epoch % args.save_freq == 0:
+                netD = netD.cpu()
+                netG = netG.cpu()
+                torch.save(netD.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
+                torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
+                print('save weights at {}'.format(model_folder))
+                torch.save(plot_dict, plot_save_path)
+                netD = netD.cuda(args.device_id)
+                netG = netG.cuda(args.device_id)
+            print ('epoch {}/{} finished [time = {}s] ...'.format(epoch, tot_epoch, end_timer))
+        except:
+            print('Failed to save model, will try next time')
+            

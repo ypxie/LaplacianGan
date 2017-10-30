@@ -46,23 +46,29 @@ save_spec = 'eval_nobug'
 #                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256] }
 
 
-gen_origin_disc_both_birds_561   = {'batch_size': 8, 'device_id': 0,'imsize':256, 'load_from_epoch': 561, 'train_mode': False,
-                'model_name':'gen_origin_disc_both_birds_[64, 128, 256]', 'save_spec': save_spec, 'test_sample_num' : 10,
-                'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+# gen_origin_disc_both_birds_561   = {'batch_size': 8, 'device_id': 0,'imsize':256, 'load_from_epoch': 561, 'train_mode': False,
+#                 'model_name':'gen_origin_disc_both_birds_[64, 128, 256]', 'save_spec': save_spec, 'test_sample_num' : 10,
+#                 'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
 
-gen_origin_disc_both_birds_540  = {'batch_size': 8, 'device_id': 1,'imsize':256, 'load_from_epoch': 540, 'train_mode': False,
-                'model_name':'gen_origin_disc_both_birds_[64, 128, 256]', 'save_spec': save_spec, 'test_sample_num' : 10,
-                'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+# gen_origin_disc_both_birds_540  = {'batch_size': 8, 'device_id': 1,'imsize':256, 'load_from_epoch': 540, 'train_mode': False,
+#                 'model_name':'gen_origin_disc_both_birds_[64, 128, 256]', 'save_spec': save_spec, 'test_sample_num' : 10,
+#                 'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
 
-gen_origin_disc_both_birds_510  = {'batch_size': 8, 'device_id': 2,'imsize':256, 'load_from_epoch': 510, 'train_mode': False,
-                'model_name':'gen_origin_disc_both_birds_[64, 128, 256]', 'save_spec': save_spec, 'test_sample_num' : 10,
-                'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+# gen_origin_disc_both_birds_510  = {'batch_size': 8, 'device_id': 2,'imsize':256, 'load_from_epoch': 510, 'train_mode': False,
+#                 'model_name':'gen_origin_disc_both_birds_[64, 128, 256]', 'save_spec': save_spec, 'test_sample_num' : 10,
+#                 'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+
+
+zz_mmgan_plain_gl_512_birds_512_460  = {'batch_size': 8, 'device_id': 6,'imsize':256, 'load_from_epoch': 460, 'train_mode': False,
+                'model_name':'zz_mmgan_plain_gl_512_birds_512', 'save_spec': save_spec, 'test_sample_num' : 10,
+                'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
 
 
 training_pool = np.array([
-                gen_origin_disc_both_birds_561,
-                gen_origin_disc_both_birds_540,
-                gen_origin_disc_both_birds_510
+                zz_mmgan_plain_gl_512_birds_512_460
+                #gen_origin_disc_both_birds_561,
+                #gen_origin_disc_both_birds_540,
+                #gen_origin_disc_both_birds_510
                 #gen_origin_disc_global_no_img_birds,
                 #gen_origin_disc_both_birds
                  #gen_origin_disc_origin_flowers_all,

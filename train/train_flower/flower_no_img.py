@@ -3,7 +3,10 @@ import sys, os
 import numpy as np
 sys.path.insert(0, os.path.join('..','..'))
 
-data_root  = os.path.join('..','..', 'Data')
+
+home = os.path.expanduser("~")
+#data_root  = os.path.join('..','..', 'Data')
+data_root  = os.path.join(home, 'ganData')
 model_root = os.path.join( '..','..', 'Models')
 
 import torch.multiprocessing as mp
@@ -12,13 +15,18 @@ from LaplacianGan.proj_utils.local_utils import Indexflow
 from LaplacianGan.train_worker import train_worker
 
 # local_global disc. We test both large and small model
+# 101 201 301 401 501 601
+# 2   4   8   16  32  64
 
-large_global_local_bigger = {'reuse_weights': True, 'batch_size': 9, 'device_id': 3, 'gpu_list': [0], 
-                            'imsize':[64, 128, 256], 'load_from_epoch': 90, 'model_name':'gen_origin_disc_origin_bigger', 
-                            'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[16, 128, 256] }
+large_local_no_img      = { 'reuse_weights': True, 'batch_size': 16, 'device_id': 0,  'use_img_loss' : False,
+                            'which_gen': 'origin', 'which_disc':'local', 'g_lr': .0002/(2**0),'d_lr': .0002/(2**0), 
+                            'imsize':[64, 128, 256], 'load_from_epoch': 6, 'model_name':'gen_origin_disc_local_no_img', 
+                             'dataset':'flowers',
+                            'reduce_dim_at':[8, 32, 128, 256]}
+
 
 training_pool = np.array([
-                 large_global_local_bigger
+                 large_local_no_img
                  ])
 
 show_progress = 0

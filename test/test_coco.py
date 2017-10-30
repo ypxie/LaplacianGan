@@ -5,7 +5,10 @@ sys.path.insert(0, os.path.join('..'))
 
 home = os.path.expanduser('~')
 proj_root = os.path.join('..')
+
 data_root = os.path.join(proj_root, 'Data')
+#data_root = os.path.join(home, 'ganData')
+
 
 model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
 save_root  =  os.path.join(home, 'devbox', 'Shared_YZ', 'Results')
@@ -16,11 +19,25 @@ from LaplacianGan.test_worker_coco import test_worker
 
 save_spec = 'eval_nobug'
 
+# 261
 gen_origin_disc_origin_coco_64  =   \
-               {'test_sample_num' : 1,  'load_from_epoch': 261, 'dataset':'coco', 
+               {'test_sample_num' : 1,  'load_from_epoch': 120, 'dataset':'coco', 
                 'device_id': 0,'imsize':[64], 'model_name':'gen_origin_disc_origin_coco_[64]',
-                'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
-                 'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+                'train_mode': False,  'save_spec': save_spec, 'batch_size': 64, 'which_gen': 'origin',
+                'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+
+gen_origin_disc_origin_coco_128  =   \
+               {'test_sample_num' : 1,  'load_from_epoch': 99, 'dataset':'coco', 
+                'device_id': 0,'imsize':[64, 128], 'model_name':'gen_origin_disc_origin_coco_[64, 128]',
+                'train_mode': False,  'save_spec': save_spec, 'batch_size': 16, 'which_gen': 'origin',
+                'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+
+gen_origin_disc_origin_coco_128_114  =   \
+               {'test_sample_num' : 1,  'load_from_epoch': 114, 'dataset':'coco', 
+                'device_id': 0,'imsize':[64, 128], 'model_name':'gen_origin_disc_origin_coco_[64, 128]',
+                'train_mode': False,  'save_spec': save_spec, 'batch_size': 16, 'which_gen': 'origin',
+                'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+
 
 # gen_origin_disc_origin_coco_64_128  =   \
 #                {'test_sample_num' : 1,  'load_from_epoch': 114, 'dataset':'coco', 
@@ -30,7 +47,9 @@ gen_origin_disc_origin_coco_64  =   \
 
 
 training_pool = np.array([
-                 gen_origin_disc_origin_coco_64,
+                 #gen_origin_disc_origin_coco_64,
+                 #gen_origin_disc_origin_coco_128,
+                 gen_origin_disc_origin_coco_128_114
                  #gen_origin_disc_origin_coco_64_128
                  ])
 

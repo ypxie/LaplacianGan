@@ -19,7 +19,8 @@ def train_worker(data_root, model_root, training_dict):
     use_img_loss        = training_dict.get('use_img_loss', True)
     num_resblock        = training_dict.get('num_resblock', 1)
     img_loss_ratio      = training_dict.get('img_loss_ratio', 1.0)
-    
+    tune_img_loss       = training_dict.get('tune_img_loss', False)
+
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')
@@ -93,7 +94,7 @@ def train_worker(data_root, model_root, training_dict):
                         help='whether to use image loss')
     parser.add_argument('--num_resblock', type=int, default = num_resblock, help='number of resblock')
     parser.add_argument('--img_loss_ratio', type=float, default = img_loss_ratio, help='coefficient of img_loss')
-    
+    parser.add_argument('--tune_img_loss', type=bool, default = tune_img_loss, help='tune_img_loss')
 
     args = parser.parse_args()
 

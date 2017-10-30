@@ -74,8 +74,9 @@ def load_partial_state_dict(model, state_dict):
 
 def train_gans(dataset, model_root, mode_name, netG, netD, args):
     use_img_loss   = getattr(args, 'use_img_loss', True)
-    img_loss_ratio = getattr(args, 'img_loss_ratio', 1)
-
+    img_loss_ratio = getattr(args, 'img_loss_ratio', 1.0)
+    tune_img_loss  = getattr(args, 'tune_img_loss', False)
+    this_img_loss_ratio = img_loss_ratio
     print('>> using hd gan trainer')
     # helper function
     def plot_imgs(samples, epoch, typ, name, path=''):
@@ -97,7 +98,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         test_sampler  = dataset.test.next_batch
         number_example = dataset.train._num_examples
         updates_per_epoch = int(number_example / args.batch_size)
-
     else:
         train_sampler = fake_sampler
         test_sampler = fake_sampler
@@ -169,6 +169,9 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
         if epoch % args.epoch_decay == 0:
             d_lr = d_lr/2
             g_lr = g_lr/2
+            if tune_img_loss:
+                this_img_loss_ratio = this_img_loss_ratio/2
+                print('this_img_loss_ratio: ', this_img_loss_ratio)
 
             set_lr(optimizerD, d_lr)
             set_lr(optimizerG, g_lr)
@@ -231,7 +234,10 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                             img_loss = local_loss + global_loss
                         else:
                             img_loss = (local_loss + global_loss)*0.5
-                        discriminator_loss +=  img_loss_ratio * img_loss 
+                        
+                        discriminator_loss +=  this_img_loss_ratio * img_loss 
+                    #else:
+                    #    print('Hey, ya are not using img loss in disc')      
                 d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
                 d_loss_val = -d_loss_val if args.wgan else d_loss_val
                 discriminator_loss.backward()
@@ -262,11 +268,13 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                     local_loss  = compute_g_loss(fake_img_logit_local, args.wgan)
                     global_loss = compute_g_loss(fake_img_logit_global, args.wgan)
                     if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
-                        generator_loss += local_loss + global_loss
+                        img_loss_ = local_loss + global_loss
                     else:
-                        generator_loss += (local_loss + global_loss)*0.5
-                else:
-                    print('Hey, ya are not using img loss')        
+                        img_loss_ = (local_loss + global_loss)*0.5
+                    
+                    generator_loss += img_loss_ * this_img_loss_ratio
+                #else:
+                #    print('Hey, ya are not using img loss in generator')        
             generator_loss.backward()
             g_loss_val = generator_loss.cpu().data.numpy().mean()
 
@@ -336,13 +344,17 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             plot_imgs(v, epoch, typ, 'test_samples', path=model_folder)
 
         # save weights
-        if epoch % args.save_freq == 0:
-            netD = netD.cpu()
-            netG = netG.cpu()
-            torch.save(netD.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
-            torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
-            print('save weights at {}'.format(model_folder))
-            torch.save(plot_dict, plot_save_path)
-            netD = netD.cuda(args.device_id)
-            netG = netG.cuda(args.device_id)
-        print ('epoch {}/{} finished [time = {}s] ...'.format(epoch, tot_epoch, end_timer))
+        try:
+            if epoch % args.save_freq == 0:
+                netD = netD.cpu()
+                netG = netG.cpu()
+                torch.save(netD.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
+                torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
+                print('save weights at {}'.format(model_folder))
+                torch.save(plot_dict, plot_save_path)
+                netD = netD.cuda(args.device_id)
+                netG = netG.cuda(args.device_id)
+            print ('epoch {}/{} finished [time = {}s] ...'.format(epoch, tot_epoch, end_timer))
+        except:
+            print('Failed to save model, will try next time')
+            

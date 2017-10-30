@@ -203,7 +203,8 @@ class GeneratorSuperSmall(nn.Module):
         return out, 0
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
-                 output_size=256, use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], num_resblock = 1):
+                 output_size=256, use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], 
+                 num_resblock = 1):
         
         super(Generator, self).__init__()
         self.__dict__.update(locals())

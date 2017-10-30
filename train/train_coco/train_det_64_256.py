@@ -3,7 +3,10 @@ import sys, os
 import numpy as np
 sys.path.insert(0, os.path.join('..','..'))
 
-data_root  = os.path.join('..','..', 'Data')
+home = os.path.expanduser("~")
+#data_root  = os.path.join('..','..', 'Data')
+data_root  = os.path.join(home, 'ganData')
+
 model_root = os.path.join( '..','..', 'Models')
 
 import torch.multiprocessing as mp
@@ -12,13 +15,17 @@ from LaplacianGan.proj_utils.local_utils import Indexflow
 from LaplacianGan.train_worker_coco import train_worker
 
 reduce_dim_at = [8, 32, 128, 256]
-large_global = {'reuse_weights': False, 'batch_size': 12, 'device_id': 4, 'gpu_list': [0], 
-                'imsize':[64, 128, 256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_origin', 
+coco_64_256 = { 'reuse_weights': False, 'batch_size': 12, 'device_id': 0, 'gpu_list': [0], 
+                'img_loss_ratio':0.5, 'tune_img_loss':True, 'KL_COE':0.01, "use_cond":False,
+                'imsize':[64, 256],   'load_from_epoch': 12, 'model_name':'gen_origin_disc_local_det', 
                 'which_gen': 'origin', 'which_disc':'origin', 'dataset':'coco',
                 'reduce_dim_at':[8, 32, 128, 256], 'num_resblock':2 }
 
 training_pool = np.array([
-                 large_global
+                 #coco_64,
+                  coco_64_256,
+                  #coco_256_fine
+                 #coco_128,
                  ])
 
 show_progress = 0
@@ -27,7 +34,7 @@ Totalnum = len(training_pool)
 
 for select_ind in Indexflow(Totalnum, 2, random=False):
     select_pool = training_pool[select_ind]
-    print('selcted training pool: ', select_pool)
+    print('selcted training pool: ', select_ind)
     
     for this_dick in select_pool:
 
@@ -36,5 +43,5 @@ for select_ind in Indexflow(Totalnum, 2, random=False):
         processes.append(p)
     for p in processes:
         p.join()
-    print('Finish the round with', select_pool)
+    print('Finish the round with', select_ind)
 

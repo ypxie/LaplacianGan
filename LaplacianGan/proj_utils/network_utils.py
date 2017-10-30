@@ -114,13 +114,16 @@ def sample_encoded_context(mean, logsigma, kl_loss=False):
     return c, kl_loss
 
 class condEmbedding(nn.Module):
-    def __init__(self, noise_dim, emb_dim):
+    def __init__(self, noise_dim, emb_dim, use_cond=True):
         super(condEmbedding, self).__init__()
         self.register_buffer('device_id', torch.zeros(1))
         self.noise_dim = noise_dim
         self.emb_dim = emb_dim
-        self.linear  = nn.Linear(noise_dim, emb_dim*2)
-        
+        self.use_cond = use_cond
+        if use_cond:
+            self.linear  = nn.Linear(noise_dim, emb_dim*2)
+        else:
+            self.linear  = nn.Linear(noise_dim, emb_dim)
     def forward(self, inputs, kl_loss=True):
         '''
         inputs: (B, dim)
@@ -128,11 +131,15 @@ class condEmbedding(nn.Module):
         '''
         #print('cont embedding',inputs.get_device(),  self.linear.weight.get_device())
         out = F.leaky_relu( self.linear(inputs), 0.2, inplace=True )
-        mean = out[:, :self.emb_dim]
-        log_sigma = out[:, self.emb_dim:]
+        
+        if self.use_cond:
+            mean = out[:, :self.emb_dim]
+            log_sigma = out[:, self.emb_dim:]
 
-        c, kl_loss = sample_encoded_context(mean, log_sigma, kl_loss)
-        return c, kl_loss
+            c, kl_loss = sample_encoded_context(mean, log_sigma, kl_loss)
+            return c, kl_loss
+        else:
+            return out, 0
 
 def genAct():
     return nn.ReLU(True)
