@@ -68,7 +68,6 @@ class GeneratorSuper2(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512):
         super(GeneratorSuper2, self).__init__()
         self.__dict__.update(locals())
-        self.register_buffer('device_id', torch.IntTensor(1))
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
         
@@ -116,11 +115,42 @@ class GeneratorSuper2(nn.Module):
 
         return out2, pwloss
 
+class condEmbedding2(nn.Module):
+    def __init__(self, noise_dim, emb_dim):
+        super(condEmbedding2, self).__init__()
+        # self.register_buffer('device_id', torch.zeros(1))
+        self.noise_dim = noise_dim
+        self.emb_dim = emb_dim
+        self.linear  = nn.Linear(noise_dim, emb_dim*2)
+        self.relu = nn.LeakyReLU(0.2, inplace=True)
+
+    def sample_encoded_context(self, mean, logsigma, kl_loss=False):
+    
+        # epsilon = Variable(torch.randn(mean.size())).cuda()
+        epsilon = Variable(torch.cuda.FloatTensor(mean.size()).normal_())
+        stddev  = torch.exp(logsigma)
+        epsilon.mul(stddev).add_(mean)
+        # kl_loss = self.KL_loss(mean, logsigma) if kl_loss else None
+
+        return epsilon
+
+    def forward(self, inputs, kl_loss=True):
+        '''
+        inputs: (B, dim)
+        return: mean (B, dim), logsigma (B, dim)
+        '''
+        #print('cont embedding',inputs.get_device(),  self.linear.weight.get_device())
+        out = self.relu(self.linear(inputs))
+        mean = out[:, :self.emb_dim]
+        log_sigma = out[:, self.emb_dim:]
+
+        c = self.sample_encoded_context(mean, log_sigma)
+        return c, mean, log_sigma
+
 class GeneratorSuper(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512):
         super(GeneratorSuper, self).__init__()
         self.__dict__.update(locals())
-        self.register_buffer('device_id', torch.IntTensor(1))
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
         
@@ -169,7 +199,6 @@ class GeneratorSuperSmall(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512):
         super(GeneratorSuperSmall, self).__init__()
         self.__dict__.update(locals())
-        self.register_buffer('device_id', torch.IntTensor(1))
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
         
@@ -210,8 +239,7 @@ class Generator(nn.Module):
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
 
-        self.register_buffer('device_id', torch.IntTensor(1))
-        self.condEmbedding = condEmbedding(sent_dim, emb_dim)
+        self.condEmbedding = condEmbedding2(sent_dim, emb_dim)
         self.vec_to_tensor = Sent2FeatMap(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm=norm)
         self.use_upsamle_skip = use_upsamle_skip
 
@@ -236,8 +264,6 @@ class Generator(nn.Module):
             text_upsampling_at = [4]     
             
         #reduce_dim_at  = [8, 32, 128, 256] # [8, 64, 256]
-        
-
         #self.modules = OrderedDict()
         #self.side_modules = OrderedDict()
 
@@ -264,23 +290,20 @@ class Generator(nn.Module):
             # configure side output module
             if num_scales[i] in self.side_output_at:
                 setattr(self, 'tensor_to_img_%d'%(num_scales[i]), branch_out2(cur_dim))
-                
+        
+        self.null = Variable(torch.zeros(1).float()).cuda()
         self.apply(weights_init)
 
-        if use_upsamle_skip:
-            print ('>> initialized a {} size generator (with upsample_skip module)'.format(self.side_output_at) )
-            self._foward = self.forward_upsample
-        else:
-            print ('>> initialized a {} size generator (plain)'.format(self.side_output_at) )
-            self._foward = self.forward_plain
+        print ('>> initialized a {} size generator'.format(output_size))
         print (' downsample at {}'.format(str(reduce_dim_at)))
         
-    def forward_upsample(self, sent_embeddings, z):
+    def forward(self, sent_embeddings, z):
         # sent_embeddings: [B, 1024]
         out_dict = OrderedDict()
-        
-        sent_random, kl_loss  = self.condEmbedding(sent_embeddings) # sent_random [B, 128]
-        
+        sent_random, mean, logsigma = self.condEmbedding(sent_embeddings) # sent_random [B, 128]
+        # import pdb; pdb.set_trace()
+        # print ('sent_random sum {}, min {}, max {}'.format(sent_random.sum()[0], sent_random.min()[0], sent_random.max()[0]))
+
         text = torch.cat([sent_random, z], dim=1)
 
         x = self.vec_to_tensor(text)
@@ -289,67 +312,29 @@ class Generator(nn.Module):
         x_16 = self.scale_16(x_8)
         x_32 = self.scale_32(x_16)
         
-        # skip 4x4 feature map to 32 and send to 64
-        x_32_4 = self.upsample_4(x_4, x_32)
-        x_64 = self.scale_64(x_32_4)
+        # output_64 = self.null
+        output_128 = self.null
+        output_256 = self.null
 
-        if 64 in self.side_output_at:
-            out_dict['output_64'] = self.tensor_to_img_64(x_64)
-        
-        if self.max_output_size > 64:
-            # skip 8x8 feature map to 64 and send to 128
-            x_64_8 = self.upsample_8(x_8, x_64)
-            x_128 = self.scale_128(x_64_8)
-            if 128 in self.side_output_at:
-                out_dict['output_128'] = self.tensor_to_img_128(x_128)
-
-        if self.max_output_size > 128:
-            # skip 16x16 feature map to 128 and send to 256
-            x_128_16 = self.upsample_16(x_16, x_128)
-            out_256 = self.scale_256(x_128_16)
-
-            if 256 in self.side_output_at:
-                out_dict['output_256'] = self.tensor_to_img_256(out_256)
-
-        return out_dict, kl_loss
-    
-    def forward_plain(self, sent_embeddings, z):
-        # sent_embeddings: [B, 1024]
-        out_dict = OrderedDict()
-        sent_random, kl_loss  = self.condEmbedding(sent_embeddings) # sent_random [B, 128]
-        text = torch.cat([sent_random, z], dim=1)
-
-        x = self.vec_to_tensor(text)
-        x_4 = self.scale_4(x)
-        x_8 = self.scale_8(x_4)
-        x_16 = self.scale_16(x_8)
-        x_32 = self.scale_32(x_16)
-        
         # skip 4x4 feature map to 32 and send to 64
         x_64 = self.scale_64(x_32)
         if 64 in self.side_output_at:
-            out_dict['output_64'] = self.tensor_to_img_64(x_64)
-            self.keep_out_64 = x_64
+            output_64 = self.tensor_to_img_64(x_64)
             
         if self.max_output_size > 64:
             # skip 8x8 feature map to 64 and send to 128
             x_128 = self.scale_128(x_64)
-            self.keep_out_128 = x_128
             if 128 in self.side_output_at:
-                out_dict['output_128'] = self.tensor_to_img_128(x_128)
+                output_128 = self.tensor_to_img_128(x_128)
 
         if self.max_output_size > 128:
             # skip 16x16 feature map to 128 and send to 256
             out_256 = self.scale_256(x_128)
-            self.keep_out_256 = out_256
             if 256 in self.side_output_at:
-                out_dict['output_256'] = self.tensor_to_img_256(out_256)
+                output_256 = self.tensor_to_img_256(out_256)
 
-        return out_dict, kl_loss
+        return output_64, output_128, output_256, mean, logsigma
     
-    def forward(self, sent_embeddings, z):
-        #print(sent_embeddings.get_device(), z.get_device(), self.device_id.get_device(), self.condEmbedding.linear.weight.get_device())
-        return self._foward(sent_embeddings, z)
 
 class ImageDown(torch.nn.Module):
     '''
@@ -357,7 +342,6 @@ class ImageDown(torch.nn.Module):
     '''
     def __init__(self, input_size, num_chan, out_dim, norm='norm'):
         super(ImageDown, self).__init__()
-        self.register_buffer('device_id', torch.zeros(1))
         
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
@@ -448,7 +432,6 @@ class DiscriminatorSuper(nn.Module):
     def __init__(self, input_size, num_chan,  hid_dim, sent_dim, emb_dim, 
                  norm='bn', disc_mode= ['global']):
         super(DiscriminatorSuper, self).__init__()
-        self.register_buffer('device_id', torch.IntTensor(1))
         self.__dict__.update(locals())
         activ = discAct()
         norm_layer = getNormLayer(norm)
@@ -528,7 +511,6 @@ class Discriminator(torch.nn.Module):
                  norm='bn', disc_mode= ['global']):
 
         super(Discriminator, self).__init__()
-        self.register_buffer('device_id', torch.IntTensor(1))
         self.__dict__.update(locals())
         activ = discAct()
         norm_layer = getNormLayer(norm)
@@ -550,7 +532,7 @@ class Discriminator(torch.nn.Module):
         self.img_encoder_64   = ImageDown(64,  num_chan,  enc_dim, norm)  # 4x4
         self.pair_disc_64   = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
         _layers =  [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]
-        
+
         if 64 in self.side_output_at:
             self.global_img_disc_64 = nn.Sequential(*_layers)
             _layers = [nn.Linear(sent_dim, emb_dim)]
@@ -590,6 +572,7 @@ class Discriminator(torch.nn.Module):
             _layers += [activ]
             self.context_emb_pipe_256 = nn.Sequential(*_layers)
 
+        self.null = Variable(torch.zeros((1)).float()).cuda()
         self.apply(weights_init)
         print ('>> initialized a {} size discriminator'.format(self.side_output_at) )
 
@@ -623,22 +606,22 @@ class Discriminator(torch.nn.Module):
             pair_disc_out = pair_disc(sent_code, img_code)
             #shrink_img_code = img_code
 
-        out_dict['local_img_disc']   = 1
-        out_dict['global_img_disc']  = 1
-
+        # out_dict['local_img_disc']   = 1
+        # out_dict['global_img_disc']  = 1
+        # local_img_disc_out = self.null
+        # global_img_disc_out = self.null
         # 64 never uses local discriminator
         if 'local' in self.disc_mode and this_img_size != 64:
             local_img_disc_out          = local_img_disc(img_code) 
-            out_dict['local_img_disc']  = local_img_disc_out
+            # out_dict['local_img_disc']  = local_img_disc_out
             
         if 'global' in self.disc_mode:
             global_img_disc_out         = global_img_disc(img_code)
             #global_img_disc_out         = global_img_disc(shrink_img_code) # pls note it is probably a bug and make it a local disc
                 # print('{} global dis shape {}'.format(this_img_size, global_img_disc_out.size()))
-            out_dict['global_img_disc'] = global_img_disc_out
+            # out_dict['global_img_disc'] = global_img_disc_out
             
-        out_dict['pair_disc']     = pair_disc_out
-        out_dict['content_code']  = None # useless
-
-        return out_dict
+        # out_dict['pair_disc']     = pair_disc_out
+        # out_dict['content_code']  = None # useless
+        return pair_disc_out, global_img_disc_out
 

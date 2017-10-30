@@ -1,15 +1,21 @@
-import sys, os
-sys.path.insert(0, os.path.join('..'))
+# -*- coding: utf-8 -*-
 
 import numpy as np
-import argparse, os
+import argparse, os, sys
 import torch, h5py
-from torch.nn.utils import weight_norm
 
-from LaplacianGan.HDGan import train_gans
-from LaplacianGan.HDGan512 import train_gans_super
-from LaplacianGan.fuel.zz_datasets import TextDataset
+import torch.nn as nn
+from collections import OrderedDict
+sys.path.insert(0, os.path.join('..'))
 
+from LaplacianGan.HDGan_COCO_parallel import train_gans
+from LaplacianGan.fuel.zz_datasets_coco import MultiThreadLoader
+
+class Dataset():
+    def __init__(self, train_loader, test_loader):
+        self.train = train_loader
+        self.test = test_loader
+        
 if  __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description = 'Gans')    
@@ -51,7 +57,7 @@ if  __name__ == '__main__':
                         help='the channel of each image.')
     parser.add_argument('--ngen', type=int, default= 1, metavar='N',
                         help='the channel of each image.')
-    parser.add_argument('--KL_COE', type=float, default= 4, metavar='N',
+    parser.add_argument('--KL_COE', type=float, default=4, metavar='N',
                         help='kl divergency coefficient.')
     parser.add_argument('--use_content_loss', type=bool, default= False, metavar='N',
                         help='whether or not to use content loss.')
@@ -61,6 +67,8 @@ if  __name__ == '__main__':
     ## add more
     parser.add_argument('--device_id', type=int, default=0, 
                         help='which device')
+    parser.add_argument('--gpus', type=str, default='0', 
+                        help='which gpu')
     parser.add_argument('--imsize', type=int, default=256, 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=100, 
@@ -81,47 +89,49 @@ if  __name__ == '__main__':
     
     parser.add_argument('--dataset', type=str, default='birds', help='which dataset to use [birds or flowers]')  
     parser.add_argument('--ncritic_epoch_range', type=int, default=100, help='How many epochs the ncritic effective')
-
-    args = parser.parse_args()
+    parser.add_argument('--img_loss_ratio', type=float, default =1, help='coefficient of img_loss')
     
-    args.cuda = torch.cuda.is_available()
+    args = parser.parse_args()
+
+    args.cuda  = torch.cuda.is_available()
     data_root = os.path.join('..', 'Data')
     model_root = os.path.join('..', 'Models')
-    data_name = args.dataset
+    data_name  = args.dataset
+    assert data_name == 'coco', 'dataset is {}'.format(data_name)
     datadir = os.path.join(data_root, data_name)
-
-    # Generator
+    
+     # Generator
     if args.which_gen == 'origin':
-        from LaplacianGan.models.hd_networks import Generator
+        from LaplacianGan.models.hd_networks_parallel import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
     elif args.which_gen == 'upsample_skip':   
-        from LaplacianGan.models.hd_networks import Generator 
+        from LaplacianGan.models.hd_networks_parallel import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True)              
     elif args.which_gen == 'single_256':   
-        from LaplacianGan.models.hd_networks import Generator 
+        from LaplacianGan.models.hd_networks_parallel import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=[256])   
     elif args.which_gen == 'comb_64_256':   
-        from LaplacianGan.models.hd_networks import Generator 
+        from LaplacianGan.models.hd_networks_parallel import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=[64, 256]) 
     elif args.which_gen == 'comb_128_256':
-        from LaplacianGan.models.hd_networks import Generator
+        from LaplacianGan.models.hd_networks_parallel import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128,
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=[128, 256])          
     elif args.which_gen == 'super':   
-        from LaplacianGan.models.hd_networks import GeneratorSuper
+        from LaplacianGan.models.hd_networks_parallel import GeneratorSuper
         netG = GeneratorSuper(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
             norm=args.norm_type, activation=args.gen_activation_type)   
     elif args.which_gen == 'super2':   
-        from LaplacianGan.models.hd_networks import GeneratorSuper2
+        from LaplacianGan.models.hd_networks_parallel import GeneratorSuper2
         netG = GeneratorSuper2(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
             norm=args.norm_type, activation=args.gen_activation_type)   
                    
     elif args.which_gen == 'super_small':   
-        from LaplacianGan.models.hd_networks import GeneratorSuperSmall
+        from LaplacianGan.models.hd_networks_parallel import GeneratorSuperSmall
         netG = GeneratorSuperSmall(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
             norm=args.norm_type, activation=args.gen_activation_type) 
         # print(netG) 
@@ -132,71 +142,71 @@ if  __name__ == '__main__':
     # Discriminator
     if args.which_disc == 'origin': 
         # only has global discriminator
-        from LaplacianGan.models.hd_networks import Discriminator 
+        from LaplacianGan.models.hd_networks_parallel import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
     elif args.which_disc == 'origin_global_local':
         # has global and local discriminator
-        from LaplacianGan.models.hd_networks import Discriminator 
+        from LaplacianGan.models.hd_networks_parallel import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['global', 'local'])
     elif args.which_disc == 'single_256':
         # has global and local discriminator
-        from LaplacianGan.models.hd_networks import Discriminator 
+        from LaplacianGan.models.hd_networks_parallel import Discriminator 
         netD = Discriminator(input_size=[256], num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
     elif args.which_disc == 'comb_64_256':
         # has global and local discriminator
-        from LaplacianGan.models.hd_networks import Discriminator 
+        from LaplacianGan.models.hd_networks_parallel import Discriminator 
         netD = Discriminator(input_size=[64, 256], num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
     elif args.which_disc == 'comb_128_256':
         # has global and local discriminator
-        from LaplacianGan.models.hd_networks import Discriminator
+        from LaplacianGan.models.hd_networks_parallel import Discriminator
         netD = Discriminator(input_size=[128, 256], num_chan = 3, hid_dim = 128,
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
     elif args.which_disc == 'super':
         # has global and local discriminator
-        from LaplacianGan.models.hd_networks import DiscriminatorSuper
+        from LaplacianGan.models.hd_networks_parallel import DiscriminatorSuper
         netD = DiscriminatorSuper(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type)
         # print(netD) 
     elif args.which_disc == 'super_local':
         # has global and local discriminator
-        from LaplacianGan.models.hd_networks import DiscriminatorSuper
+        from LaplacianGan.models.hd_networks_parallel import DiscriminatorSuper
         netD = DiscriminatorSuper(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['local'])
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
         
-    
-    #print(netG)
-    #print(netD) 
-    
-    device_id = getattr(args, 'device_id', 0)
-    print ('>> model initialized')
+    print(args)
+    gpus = [int(ix) for ix in args.gpus.split(',')]
+    assert(gpus[0] == 0)
+    torch.cuda.set_device(gpus[0])
+    assert(args.batch_size % len(gpus) == 0)
     if args.cuda:
-        netD = netD.cuda(device_id)
-        netG = netG.cuda(device_id)
+        print ('Parallel models in {} GPUS'.format(len(gpus)))
+        netD = nn.parallel.DataParallel(netD, device_ids=range(len(gpus)))
+        netG = nn.parallel.DataParallel(netG, device_ids=range(len(gpus)))
+
+        netD = netD.cuda()
+        netG = netG.cuda()
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
 
     if not args.debug_mode:
-        print ('>> initialize dataset')
-        sys.stdout.flush()
-        dataset = TextDataset(datadir, 'cnn-rnn', 4)
-        filename_test = os.path.join(datadir, 'test')
-        dataset.test = dataset.get_data(filename_test)
-        filename_train = os.path.join(datadir, 'train')
-        dataset.train = dataset.get_data(filename_train)
+        print ('>> initialize dataset')   
+
+        train_loader = MultiThreadLoader(os.path.join(datadir, 'train'), batch_size=args.batch_size, 
+                                         num_embed=4, threads=2, data_dir=datadir, drop_last=True).load_data()
+        test_loader  = MultiThreadLoader(os.path.join(datadir,  'val'), batch_size=args.batch_size, 
+                                         num_embed=1, threads=2, aug_flag=False, data_dir=datadir,drop_last=True).load_data()
+        dataset = Dataset(train_loader, test_loader)
+
     else:
         dataset = []
         print ('>> in debug mode')
 
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
-    print ('>> START training ')
-    sys.stdout.flush()
-    if 'super' in args.which_gen:
-        train_gans_super(dataset, model_root, model_name, netG, netD, args)
-    else:
-        train_gans(dataset, model_root, model_name, netG, netD, args)
+    print ('>> START training {}'.format(model_name))
+    train_gans(dataset, model_root, model_name, netG, netD, args, gpus)

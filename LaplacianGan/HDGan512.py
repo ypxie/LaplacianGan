@@ -106,10 +106,10 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
     num_test_forward = 1 # 64 // args.batch_size // args.test_sample_num # number of testing samples to show
     if args.wgan:
         optimizerD = optim.RMSprop(netD.parameters(), lr= d_lr,  weight_decay=args.weight_decay)
-        optimizerG = optim.RMSprop(netG.parameters(), lr= g_lr,  weight_decay=args.weight_decay)
+        optimizerG = optim.RMSprop(netG.partial_parameters(), lr= g_lr,  weight_decay=args.weight_decay)
     else:
         optimizerD = optim.Adam(netD.parameters(), lr= d_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
-        optimizerG = optim.Adam(netG.parameters(), lr= g_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
+        optimizerG = optim.Adam(netG.partial_parameters(), lr= g_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
 
     model_folder = os.path.join(model_root, mode_name)
     if not os.path.exists(model_folder):
@@ -236,12 +236,24 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                 # compute loss
                 #chose_img_real = wrong_img_logit if random.random() > 0.1 else real_img_logit
                 discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan)
-                local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local, prob=0.5, wgan=args.wgan )
-                global_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global, fake_img_logit_global, prob=0.5, wgan=args.wgan )
+                
+                # local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local, prob=0.5, wgan=args.wgan )
+                # global_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global, fake_img_logit_global, prob=0.5, wgan=args.wgan )
+                # if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
+                #     discriminator_loss += local_loss + global_loss
+                # else:
+                #     discriminator_loss += (local_loss + global_loss)*0.5
+
+                img_loss_ratio = 0.2
+                # import pdb; pdb.set_trace()
+                # if use_img_loss:
+                local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local,  prob=0.5, wgan=args.wgan )
+                global_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global,  fake_img_logit_global, prob=0.5, wgan=args.wgan )
                 if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
-                    discriminator_loss += local_loss + global_loss
+                    img_loss = local_loss + global_loss
                 else:
-                    discriminator_loss += (local_loss + global_loss)*0.5
+                    img_loss = (local_loss + global_loss)*0.5
+                discriminator_loss +=  img_loss_ratio * img_loss 
 
                 d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
                 d_loss_val = -d_loss_val if args.wgan else d_loss_val
@@ -257,11 +269,13 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
            
 
             z.data.normal_(0, 1) # resample random noises
-            fake_images, _ = netG(embeddings, z)
+            fake_images, pixelwise_loss = netG(embeddings, z)
 
             loss_val  = 0
-            generator_loss = 0
-
+            pixelwise_loss = pixelwise_loss * 10
+            pw_val = pixelwise_loss.cpu().data.numpy()
+            generator_loss = pixelwise_loss 
+            
             # iterate over image of different sizes.
             this_fake  = fake_images[key]
             fake_dict  = netD(this_fake,  embeddings)
@@ -274,10 +288,9 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                 generator_loss += local_loss + global_loss
             else:
                 generator_loss += (local_loss + global_loss)*0.5
-
             generator_loss.backward()
             g_loss_val = generator_loss.cpu().data.numpy().mean()
-
+            
             optimizerG.step()
             netG.zero_grad()
             g_loss_plot.plot(g_loss_val)
@@ -290,7 +303,7 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                 for k, sample in fake_images.items():
                     # plot_imgs(sample.cpu().data.numpy(), epoch, k, 'train_samples')
                     plot_imgs([images[k], sample.cpu().data.numpy()], epoch, k, 'train_images')
-                print ('[epoch %d/%d iter %d]: lr = %.6f g_loss = %.5f d_loss= %.5f' % (epoch, tot_epoch, it, g_lr, g_loss_val, d_loss_val))
+                print ('[epoch %d/%d iter %d]: lr = %.6f g_loss = %.5f (%.5f) d_loss= %.5f' % (epoch, tot_epoch, it, g_lr, g_loss_val, pw_val, d_loss_val))
                 sys.stdout.flush()
 
         ''' visualize test per epoch '''

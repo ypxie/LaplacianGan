@@ -244,7 +244,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
             for p in netD.parameters(): p.requires_grad = False  # to avoid computation
             netG.zero_grad()
            
-
             z.data.normal_(0, 1) # resample random noises
             fake_images, kl_loss = netG(embeddings, z)
 
