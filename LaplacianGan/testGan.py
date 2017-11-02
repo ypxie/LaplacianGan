@@ -84,7 +84,7 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
             padding = np.zeros(dst_shape + (3,), dtype=np.uint8)
             this_row = [padding]
             # First row with up to 8 samples
-            for tidx in range(np.minimum(8, img_tensor.shape[1] )):
+            for tidx in range(np.minimum(100, img_tensor.shape[1] )):
                 this_img  = img_tensor[bidx][tidx]
                 re_sample = imresize_shape(this_img, dst_shape)
                 this_row.append(re_sample)

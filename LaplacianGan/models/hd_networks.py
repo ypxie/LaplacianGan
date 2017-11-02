@@ -129,7 +129,7 @@ class GeneratorSuperSmall(nn.Module):
 
         print ('>> initialized a {} size supersmall generator'.format(output_size))
 
-    def forward(self, sent_embeddings, z):
+    def forward(self, sent_embeddings, z, epsilon=None):
 
         out, _ = self.generator_256(sent_embeddings, z)
         scale_256 = self.generator_256.keep_out_256.detach() #Variable(self.generator_256.keep_out_256.data, volatile=True) 

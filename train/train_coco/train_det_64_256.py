@@ -5,9 +5,10 @@ sys.path.insert(0, os.path.join('..','..'))
 
 home = os.path.expanduser("~")
 #data_root  = os.path.join('..','..', 'Data')
-data_root  = os.path.join(home, 'ganData')
+#model_root = os.path.join( '..','..', 'Models')
 
-model_root = os.path.join( '..','..', 'Models')
+data_root  = os.path.join(home, 'ganData')
+model_root = os.path.join(data_root, 'Models')
 
 import torch.multiprocessing as mp
 
