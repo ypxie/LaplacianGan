@@ -65,7 +65,7 @@ class Sent2FeatMap(nn.Module):
         return output
 
 class GeneratorSuper2(nn.Module):
-    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512):
+    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512, num_resblock=2):
         super(GeneratorSuper2, self).__init__()
         self.__dict__.update(locals())
         self.register_buffer('device_id', torch.IntTensor(1))
@@ -77,7 +77,6 @@ class GeneratorSuper2(nn.Module):
         # puch it to every high dimension
         scale = 512
         cur_dim = 64
-        num_resblock = 3
         seq = []
         for i in range(num_resblock):
             seq += [ResnetBlock(cur_dim, norm, activation=activation)]
@@ -90,7 +89,7 @@ class GeneratorSuper2(nn.Module):
         setattr(self, 'tensor_to_img_%d'%(scale), branch_out2(cur_dim))
         self.apply(weights_init)
 
-        print ('>> initialized a {} size generator super2'.format(output_size))
+        print ('>> initialized a {} size generator super2 (resblock={})'.format(output_size, num_resblock))
         
     def partial_parameters(self):
         fixed = list(self.generator_256.parameters())
@@ -111,7 +110,7 @@ class GeneratorSuper2(nn.Module):
         out2 = {}
         out2['output_256'] = out['output_256']
         out2['output_512'] = self.tensor_to_img_512(scale_512)
-        # import pdb; pdb.set_trace()
+
         pwloss=  F.l1_loss(out2['output_512'], up_img_256)
 
         return out2, pwloss

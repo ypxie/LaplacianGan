@@ -278,15 +278,15 @@ if __name__ == "__main__":
     # print ('has totally {}  images', len(data_noclass[0]))
     # res = evalute(data_noclass, '{}_{}_noclass.json'.format(target_path, 200))
 
-    target_path = 'results/test_large_samples2_29330'
-    data = load_data(target_path)
-    # print ('results of {} .. '.format(target_path))
-    #  res = evalute(data, '{}_{}.json'.format(target_path, SAMPLE))
-    data_noclass = {0: []}
-    for v in data.values():
-        data_noclass[0] += v
-    print ('has totally {}  images', len(data_noclass[0]))
-    res = evalute(data, '{}_{}.json'.format(target_path, 200))
+    # target_path = 'results/test_large_samples2_29330'
+    # data = load_data(target_path)
+    # # print ('results of {} .. '.format(target_path))
+    # #  res = evalute(data, '{}_{}.json'.format(target_path, SAMPLE))
+    # data_noclass = {0: []}
+    # for v in data.values():
+    #     data_noclass[0] += v
+    # print ('has totally {}  images', len(data_noclass[0]))
+    # res = evalute(data, '{}_{}.json'.format(target_path, 200))
 
 
 #    target_path = 'results/progressive_gan'
@@ -295,35 +295,40 @@ if __name__ == "__main__":
 #    res = evalute(data, '{}_{}.json'.format(target_path, 200))
 
 
-    # ours_res = json.load(open('results/zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5_20.json','r'))
-    # stackgan_res = json.load(open('results/test_large_samples2_29330_20.json','r'))
-    # keys = ours_res.keys()
-    # x = []
-    # y = []
-    # for k in keys:
-    #     y.append(ours_res[k])
-    #     x.append(stackgan_res[k])
-    # plt.ion()
+    ours_res = json.load(open('results/zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5_20.json','r'))
+    stackgan_res = json.load(open('results/test_large_samples2_29330_20.json','r'))
+    keys = ours_res.keys()
+    x = []
+    y = []
+    for k in keys:
+        y.append(ours_res[k])
+        x.append(stackgan_res[k])
+    plt.ion()
 
-    # # area = np.pi * (1 * 1)**2 
-    # plt.figure(1)
-    # linex = [a/10 for  a in range(0,10)]
-    # plt.plot(linex, linex, color='grey', linestyle='--', label='Equality line', linewidth=2)
-    # # for i, j in zip(y, x):
-    # #     size = j / i
-    # #     color = np.random.rand(50)
-    # plt.scatter(x, y, s=80, alpha=0.3, label='Class-wise score', edgecolors='black', color='navy')
-    
-    # mean_x = np.mean(x)
-    # mean_y = np.mean(y)
-    
-    # axes = plt.gca()
-    # axes.set_xlim([0.1,.4])
-    # axes.set_ylim([0.1,.4])
-    # plt.xlabel('StackGAN (mean: %.3f)'%(mean_x), fontsize=20)
-    # plt.ylabel('HDGAN  (mean: %.3f)'%(mean_y),  fontsize=20)
-    # plt.legend(loc=0, fontsize=18)
-    # plt.tight_layout()
+    # area = np.pi * (1 * 1)**2 
+    import matplotlib as mpl
 
-    # plt.show()
-    # plt.savefig('compare_ssim_sample_{}.png'.format(SAMPLE))
+    mpl.rcParams['axes.linewidth'] = 2 #set the value globally
+
+
+    plt.figure(1)
+    linex = [a/10 for  a in range(0,10)]
+    plt.plot(linex, linex, color='grey', linestyle='--', label='Equality line', linewidth=3)
+    # for i, j in zip(y, x):
+    #     size = j / i
+    #     color = np.random.rand(50)
+    plt.scatter(x, y, s=150, alpha=0.6, label='Class-wise score', edgecolors='black', color='navy')
+    
+    std_x = np.std(x)
+    std_y = np.std(y)
+    
+    axes = plt.gca()
+    axes.set_xlim([0.15,.4])
+    axes.set_ylim([0.15,.4])
+    plt.xlabel('StackGAN (std: %.3f)'%(std_x), fontsize=24)
+    plt.ylabel('HDGAN (std: %.3f)'%(std_y),  fontsize=24)
+    plt.legend(loc=0, fontsize=20)
+    plt.tight_layout()
+
+    plt.show()
+    plt.savefig('compare_ssim_sample_{}.png'.format(SAMPLE))

@@ -131,7 +131,6 @@ class condEmbedding2(nn.Module):
         stddev  = torch.exp(logsigma)
         epsilon.mul(stddev).add_(mean)
         # kl_loss = self.KL_loss(mean, logsigma) if kl_loss else None
-
         return epsilon
 
     def forward(self, inputs, kl_loss=True):

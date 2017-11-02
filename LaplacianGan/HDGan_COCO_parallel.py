@@ -78,24 +78,8 @@ def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_img_logit, real_lab
     return fake_d_loss + (wrong_d_loss+real_d_loss) / 2
 
 
-    # wrong_d_loss = 0 if type(wrong_img_logit) in [int, float] else torch.mean( ((wrong_img_logit) -1)**2)
-    # real_d_loss  = 0 if type(real_img_logit) in [int, float]  else torch.mean( ((real_img_logit) -1)**2)
-
-    # real_img_d_loss = wrong_d_loss * prob + real_d_loss * (1-prob)
-    # fake_d_loss  = 0 if type(fake_logit) in [int, float]  else  torch.mean( ((fake_logit))**2)
-
-    # return fake_d_loss + real_img_d_loss
-
 def compute_g_loss(fake_logit, real_labels):
-    # if wgan:
-    #     gloss = -fake_logit
-    #     #gloss = -fake_img_logit
-    #     return torch.mean(gloss)
-    # else:
-    #     if type(fake_logit) in [int, float]:
-    #         return 0
-    #     else:
-    #         generator_loss = torch.mean( ((fake_logit) -1)**2 )
+
     criterion = nn.L1Loss()
     generator_loss = criterion(fake_logit, real_labels)
     return generator_loss
@@ -126,17 +110,11 @@ def load_partial_state_dict(model, state_dict):
 '''
 
 def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
-    # if len(gpus) == 1:
-    #     def data_parallel(func, ins):
-    #         return func(ins[0], ins[1])
-    # else:
-    #     data_parallel = partial(nn.parallel.data_parallel, device_ids=gpus)
 
     def data_parallel(func, ins):
             return func(ins[0], ins[1])
 
     use_img_loss = getattr(args, 'use_img_loss', True)
-    img_loss_ratio = getattr(args, 'img_loss_ratio', 1)
 
     print('>> using hd gan trainer')
     # helper function
@@ -160,7 +138,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
         #number_example = len(dataset.train)
         #updates_per_epoch = int(number_example / args.batch_size)
         updates_per_epoch =  len(dataset.train) 
-        
     else:
         train_sampler = fake_sampler
         test_sampler  = fake_sampler
@@ -218,11 +195,13 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
     z = to_device(z)
     # test the fixed image for every epoch
     fixed_images, _, fixed_embeddings, _, _ = test_sampler.next()
+    test_batch_size = fixed_embeddings.size(0)
     fixed_embeddings = to_device(fixed_embeddings)
-    fixed_z_data = [torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1) for _ in range(args.test_sample_num)]
+    fixed_z_data = [torch.FloatTensor(test_batch_size, args.noise_dim).normal_(0, 1) for _ in range(args.test_sample_num)]
     fixed_z_list = [to_device(a) for a in fixed_z_data] # what?
-
-
+    test_z = torch.FloatTensor(test_batch_size, args.noise_dim).normal_(0, 1)
+    test_z = to_device(test_z)
+    #import pdb; pdb.set_trace()
     REAL_global_LABELS = Variable(torch.FloatTensor(args.batch_size, 1).fill_(1)).cuda()
     FAKE_global_LABELS = Variable(torch.FloatTensor(args.batch_size, 1).fill_(0)).cuda()
     # now assume the local is 5x5
@@ -278,11 +257,15 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
 
 
                 ''' update D '''
-                for p in netD.parameters(): p.requires_grad = True
+                for p in netD.parameters(): 
+                    p.requires_grad = True
                 netD.zero_grad()
-                g_emb = Variable(embeddings.data, volatile=True)
-                g_z = Variable(z.data , volatile=True)
-                fake_images, _ = to_img_dict(data_parallel(netG, (g_emb, g_z)))
+
+                # g_emb = Variable(embeddings.data, volatile=True)
+                # g_z = Variable(z.data , volatile=True)
+                # fake_images, mean_var = to_img_dict(data_parallel(netG, (g_emb, g_z)))
+                ''' Note that by setting this, we use different fake images in G and D updates '''
+                fake_images, mean_var = to_img_dict(data_parallel(netG, (embeddings, z)))
 
                 d_loss_val = 0
                 for key, _ in fake_images.items():
@@ -302,7 +285,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                     real_labels, fake_labels = get_labels(real_img_logit_global)
                     img_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global, fake_img_logit_global, real_labels, fake_labels)
 
-                    discriminator_loss = pair_loss + img_loss_ratio * img_loss 
+                    discriminator_loss = pair_loss + img_loss 
                     discriminator_loss.backward() # backward per discriminator (save memory)
                     d_loss_val += discriminator_loss.cpu().data.numpy().mean()
 
@@ -317,11 +300,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                 p.requires_grad = False  # to avoid computation
             netG.zero_grad()
 
-            z.data.normal_(0, 1) # resample random noises
-            fake_images, mean_var = to_img_dict(data_parallel(netG, (embeddings, z)))
+            ''' Note that by setting this, we use different fake images in G and D updates '''
+            # z.data.normal_(0, 1) # resample random noises
+            # fake_images, mean_var = to_img_dict(data_parallel(netG, (embeddings, z)))
+
             loss_val  = 0
             kl_loss = get_KL_Loss(mean_var[0], mean_var[1])
-            # import pdb; pdb.set_trace()
             generator_loss = args.KL_COE*kl_loss
             for key, _ in fake_images.items():
                 # iterate over image of different sizes.
@@ -334,7 +318,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                 real_labels, _ = get_labels(fake_img_logit_global)
                 img_loss = compute_g_loss(fake_img_logit_global, real_labels)
 
-                generator_loss += img_loss * img_loss_ratio
+                generator_loss += img_loss 
 
             generator_loss.backward()
             optimizerG.step()
@@ -367,7 +351,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
             else:
                 test_images, _, test_embeddings, _, _ = test_sampler.next()
                 test_embeddings = to_device(test_embeddings) 
-                testing_z = Variable(z.data, volatile=True)
+                testing_z = Variable(test_z.data, volatile=True)
 
             tmp_samples = {}
 
@@ -378,8 +362,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                 else:
                     testing_z.data.normal_(0, 1)
 
-                samples, _ = netG(test_embeddings, testing_z)
-
+                fake_images, _ = to_img_dict(data_parallel(netG, (test_embeddings, testing_z)))
+                samples = fake_images
                 if idx_test == 0 and t == 0:
                     for k in samples.keys():
                         vis_samples[k] = [None for i in range(args.test_sample_num + 1)] # +1 to fill real image
@@ -389,12 +373,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                 for k, v in samples.items():
                     cpu_data = v.cpu().data.numpy()
                     if t == 0:
-                        if vis_samples[k][0] == None:
+                        if vis_samples[k][0] is None:
                             vis_samples[k][0] = test_images[k].numpy()
                         else:
                             vis_samples[k][0] =  np.concatenate([vis_samples[k][0], test_images[k].numpy() ], 0)
 
-                    if vis_samples[k][t+1] == None:
+                    if vis_samples[k][t+1] is None:
                         vis_samples[k][t+1] = cpu_data
                     else:
                         vis_samples[k][t+1] = np.concatenate([vis_samples[k][t+1], cpu_data], 0)

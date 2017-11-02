@@ -268,7 +268,7 @@ class TextDataset(object):
                 class_id = pickle.load(f, encoding="bytes")
             else:
                 class_id = pickle.load(f)
-            
+
         return Dataset(images, self.image_shape[0], embeddings,
                        list_filenames, self.workdir, None,
                        aug_flag, class_id)
