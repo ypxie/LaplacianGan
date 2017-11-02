@@ -140,31 +140,32 @@ class Dataset(object):
             sampled_embeddings_array = np.array(sampled_embeddings)
             return np.squeeze(sampled_embeddings_array), sampled_captions
 
-    def next_batch(self, batch_size, window):
+    def next_batch(self, index, window):
         """Return the next `batch_size` examples from this data set."""
 
-        start = self._index_in_epoch
-        self._index_in_epoch += batch_size
+        # start = self._index_in_epoch
+        # self._index_in_epoch += batch_size
+        # print (self._index_in_epoch)
+        # if self._index_in_epoch > self._num_examples:
+        #     # Finished epoch
+        #     self._epochs_completed += 1
+        #     # Shuffle the data
+        #     self._perm = np.arange(self._num_examples)
+        #     np.random.shuffle(self._perm)
 
-        if self._index_in_epoch > self._num_examples:
-            # Finished epoch
-            self._epochs_completed += 1
-            # Shuffle the data
-            self._perm = np.arange(self._num_examples)
-            np.random.shuffle(self._perm)
+        #     # Start next epoch
+        #     start = 0
+        #     self._index_in_epoch = batch_size
+        #     assert batch_size <= self._num_examples
+        #     #print (self._index_in_epoch,  self._num_examples)
+        #     #print ('go to next round')
 
-            # Start next epoch
-            start = 0
-            self._index_in_epoch = batch_size
-            assert batch_size <= self._num_examples
-            #print (self._index_in_epoch,  self._num_examples)
-            #print ('go to next round')
+        # end = self._index_in_epoch
 
-        end = self._index_in_epoch
-
-        current_ids = self._perm[start:end]
+        # current_ids = self._perm[start:end]
+        current_ids = [index] # only take one
         
-        fake_ids = np.random.randint(self._num_examples, size=batch_size)
+        fake_ids = np.random.randint(self._num_examples, size=len(current_ids))
 
         # collision_flag =\
         #     (self._class_id[current_ids] == self._class_id[fake_ids])
@@ -216,10 +217,12 @@ class Dataset(object):
             ret_list.append([])
             ret_list.append([])
 
-        if self._labels is not None:
-            ret_list.append(self._labels[current_ids])
-        else:
-            ret_list.append([])
+        # if self._labels is not None:
+        #     ret_list.append(self._labels[current_ids])
+        # else:
+        #     ret_list.append([])
+
+        ret_list.append(filenames)
 
         return ret_list
 
@@ -335,9 +338,9 @@ class WrapperLoader():
     def __getitem__(self, index):
         if self.test_mode:
             # data = self.dataset.next_batch_test(1, index, self.num_embed)
-            data = self.dataset.next_batch(1, self.num_embed)
+            data = self.dataset.next_batch(index, self.num_embed)
         else:
-            data = self.dataset.next_batch(1, self.num_embed)
+            data = self.dataset.next_batch(index, self.num_embed)
 
         return data
 

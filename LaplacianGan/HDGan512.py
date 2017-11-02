@@ -58,8 +58,11 @@ def load_partial_state_dict(model, state_dict):
         own_state = model.state_dict()
         for name, param in state_dict.items():
             if name not in own_state:
-                raise KeyError('unexpected key "{}" in state_dict'
-                               .format(name))
+                #raise KeyError('unexpected key "{}" in state_dict'
+               #                .format(name))
+                print ('Warning! unexpected key "{}" {} in state_dict'
+                               .format(name, param))
+                
             if isinstance(param, Parameter):
                 # backwards compatibility for serialized parameters
                 param = param.data
@@ -202,7 +205,6 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
             if last_ncritic != ncritic:
                 print ('change ncritic {} -> {}'.format(last_ncritic, ncritic))
                 last_ncritic = ncritic
-
             key = 'output_512'
             for _ in range(ncritic):
                 ''' Sample data '''
@@ -244,8 +246,7 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                 # else:
                 #     discriminator_loss += (local_loss + global_loss)*0.5
 
-                img_loss_ratio = 0.2
-                # import pdb; pdb.set_trace()
+                img_loss_ratio = 1
                 # if use_img_loss:
                 local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local,  prob=0.5, wgan=args.wgan )
                 global_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global,  fake_img_logit_global, prob=0.5, wgan=args.wgan )
@@ -272,7 +273,9 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
             fake_images, pixelwise_loss = netG(embeddings, z)
 
             loss_val  = 0
-            pixelwise_loss = pixelwise_loss * 10
+            ''' add weight '''
+            pixelwise_loss = pixelwise_loss * 1
+
             pw_val = pixelwise_loss.cpu().data.numpy()
             generator_loss = pixelwise_loss 
             
@@ -298,6 +301,7 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
             plot_dict['gen'].append(g_loss_val)
             gen_iterations += 1
             global_iter += 1
+            sys.stdout.flush()
             # visualize train samples
             if it % args.verbose_per_iter == 0:
                 for k, sample in fake_images.items():
@@ -330,7 +334,8 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                 else:
                     testing_z.data.normal_(0, 1)
 
-                samples, _ = netG(test_embeddings, testing_z)
+                fake_images, _ = netG(test_embeddings, testing_z)
+                samples = fake_images
 
                 if idx_test == 0 and t == 0:
                     for k in samples.keys():

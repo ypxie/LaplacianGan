@@ -174,7 +174,6 @@ def load_data_from_h5(fullpath):
     print ('evaluate scale ', ms_images.keys())
     for k in ms_images.keys():
         data = h5py.File(h5file)[k]
-        import pdb; pdb.set_trace()
         images = []
         for i in range(data.shape[0]):
             img = data[i]
@@ -203,11 +202,13 @@ def load_data_from_h5_fakehr(fullpath):
     print ('read h5 from {}'.format(h5file))
 
     
-    ms_images = {'output_64': [], 'output_128': [], 'output_256': [], }
-
+    # ms_images = {'output_64': [], 'output_128': [], 'output_256': [], }
+    ms_images = {'output_512': [], }
     # assert len(ms_data.keys()) == 3, 'keys {}'.format(ms_data.keys())   
 
-    k = 'output_64'
+    k = 'output_256'
+    print ('upsample {} to {}'.format(k, ms_images.keys()))
+    assert(os.path.isfile(h5file))
     data = h5py.File(h5file)[k]
     images = []
     for i in range(data.shape[0]):
@@ -218,13 +219,12 @@ def load_data_from_h5_fakehr(fullpath):
             print ('WARNING {}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean()))
             continue	
         #assert img.min() >= 0 and img.max() <= 255 and img.mean() > 1, '{}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean())
-        ms_images['output_64'].append(img)
-        ms_images['output_128'].append(scipy.misc.imresize(img, [128, 128]))
-        ms_images['output_256'].append(scipy.misc.imresize(img, [256, 256]))
+        # ms_images['output_64'].append(img)
+        # ms_images['output_128'].append(scipy.misc.imresize(img, [128, 128]))
+        # ms_images['output_256'].append(scipy.misc.imresize(img, [256, 256]))
+        ms_images['output_512'].append(scipy.misc.imresize(img, [512, 512]))
 
     print ('read {} with {} images'.format(k, data.shape[0]))
-
-    print ('Totally {} images/scale are loaded at scales {}'.format(len(images), ms_images.keys() ))
 
     return ms_images, return_path      
 
@@ -312,7 +312,7 @@ def main(unused_argv=None):
                 print('Restore the model from %s).' % FLAGS.checkpoint_dir)
                 # images = load_data(fullpath)
                 ms_images, return_save_path = load_data_from_h5(fullpath)
-                #ms_images, return_save_path = load_data_from_h5_fakehr(fullpath)
+                # ms_images, return_save_path = load_data_from_h5_fakehr(fullpath)
                 ms_means = {k:[] for k in ms_images.keys()}
                 ms_std = {k:[] for k in ms_images.keys()}
                 for scale, images in ms_images.items():

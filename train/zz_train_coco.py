@@ -128,7 +128,7 @@ if  __name__ == '__main__':
     elif args.which_gen == 'super2':   
         from LaplacianGan.models.hd_networks_parallel import GeneratorSuper2
         netG = GeneratorSuper2(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
-            norm=args.norm_type, activation=args.gen_activation_type)   
+            norm=args.norm_type, activation=args.gen_activation_type, num_resblock=2)   
                    
     elif args.which_gen == 'super_small':   
         from LaplacianGan.models.hd_networks_parallel import GeneratorSuperSmall
@@ -198,8 +198,8 @@ if  __name__ == '__main__':
         print ('>> initialize dataset')   
 
         train_loader = MultiThreadLoader(os.path.join(datadir, 'train'), batch_size=args.batch_size, 
-                                         num_embed=4, threads=2, data_dir=datadir, drop_last=True).load_data()
-        test_loader  = MultiThreadLoader(os.path.join(datadir,  'val'), batch_size=args.batch_size, 
+                                         num_embed=4, threads=4, data_dir=datadir, drop_last=True).load_data()
+        test_loader  = MultiThreadLoader(os.path.join(datadir,  'val'), batch_size=16, 
                                          num_embed=1, threads=2, aug_flag=False, data_dir=datadir,drop_last=True).load_data()
         dataset = Dataset(train_loader, test_loader)
 
