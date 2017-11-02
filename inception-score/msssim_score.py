@@ -2,7 +2,7 @@ import os
 import argparse
 import sys
 
-import tensorflow as tf
+# import tensorflow as tf
 import numpy as np
 
 from skimage.transform import resize
@@ -11,7 +11,11 @@ from scipy.ndimage.filters import convolve
 import glob
 import deepdish as dd
 import json
+from multiprocessing import Pool
+from multiprocessing import Process
 
+import matplotlib.pyplot as plt
+import shutil
 
 def _FSpecialGauss(size, sigma):
     """Function to mimic the 'fspecial' gaussian MATLAB function."""
@@ -222,38 +226,104 @@ def load_data(fullpath):
         print ('label {} has {} images'.format(k, len(v)))
     return images
 
-def evalute(data):
+def load_img(full_path):
+    import scipy.misc as misc
+    imgfile = glob.glob(os.path.join(full_path, '*.png'))
+    images = {0: []}
+    for imf in imgfile:
+        img = misc.imread(imf)
+        images[0].append(img)
+
+    print ('label {} has {} images'.format(0, len(images)))
+    return images
+
+def evalute(data, name):
+    
     labels = data.keys()
     
     res = {}
     for lab in labels:
         ldata = data[lab]
         n = len(ldata)
-        
+        test_sample = np.random.permutation(n)[:SAMPLE]
         score = []
-        for i in range(n-1):
-            for j in range(i, n):
+        # import scipy.misc as misc
+        # import pdb; pdb.set_trace()
+        for i in test_sample[:-1]:
+            for j in test_sample[1:]:
                 ssim = MultiScaleSSIM(ldata[i][np.newaxis,:,:,:], ldata[j][np.newaxis,:,:,:])
-                score.append(ssim)
-        sys.stdout.write('eval {} with {} images score {}, '.format(lab, n, score[-1]))
+                if not np.isnan(ssim):
+                    score.append(ssim)
+        sys.stdout.write('{}-{}-{}, '.format(lab, len(score), score[-1]))
         sys.stdout.flush()
         sys.stdout.write(".")
         sys.stdout.flush()
-        res[lab] = float(np.mean(score))
+        res[str(lab)] = float(np.mean(score))
+        json.dump(res, open(name,'w'), indent=True, sort_keys=True)
     return res
 
+
+SAMPLE = 20
 if __name__ == "__main__":
-    ours_path = '/data/data2/Shared_YZ/Results/birds/eval_bs_1testing_num_10/zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5'
-    stackgan_path = '/data/data2/Shared_YZ/StackGAN_visual_results/test_large_samples2_29330/'
 
-    stackgan_data = load_data(stackgan_path)
-    ours_data = load_data_from_h5(ours_path)
-    assert(len(stackgan_data) == len(ours_data))
+    # path = '/data/data2/Shared_YZ/Results/birds/eval_bs_1testing_num_10/zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5'
+    
+    # path='./zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5'
+    # target_path = 'results/'+os.path.basename(path)
+    # # shutil.copy(path, target_path)
+    # data = load_data_from_h5(target_path)
+    # data_noclass = {0: []}
+    # for v in data.values():
+    #     data_noclass[0] += v
+    # print ('has totally {}  images', len(data_noclass[0]))
+    # res = evalute(data_noclass, '{}_{}_noclass.json'.format(target_path, 200))
 
-    print ('results of ours .. ')
-    our_score = evalute(ours_data)
-    print ('results of stackgan .. ')
-    stackgan_score = evalute(stackgan_data)
+    target_path = 'results/test_large_samples2_29330'
+    data = load_data(target_path)
+    # print ('results of {} .. '.format(target_path))
+    #  res = evalute(data, '{}_{}.json'.format(target_path, SAMPLE))
+    data_noclass = {0: []}
+    for v in data.values():
+        data_noclass[0] += v
+    print ('has totally {}  images', len(data_noclass[0]))
+    res = evalute(data, '{}_{}.json'.format(target_path, 200))
 
-    json.dump(our_score, open('ours_ssim_score.json','w'), indent=True)
-    json.dump(stackgan_score, open('stackgan_ssim_score.json','w'), indent=True)
+
+#    target_path = 'results/progressive_gan'
+#    data = load_img('/data/data2/Shared_YZ/Progressive_gan_visual_results/114-lsun-bird-256-100k-ours')
+#    import pdb; pdb.set_trace()
+#    res = evalute(data, '{}_{}.json'.format(target_path, 200))
+
+
+    # ours_res = json.load(open('results/zz_mmgan_plain_gl_disc_birds_256_G_epoch_500.h5_20.json','r'))
+    # stackgan_res = json.load(open('results/test_large_samples2_29330_20.json','r'))
+    # keys = ours_res.keys()
+    # x = []
+    # y = []
+    # for k in keys:
+    #     y.append(ours_res[k])
+    #     x.append(stackgan_res[k])
+    # plt.ion()
+
+    # # area = np.pi * (1 * 1)**2 
+    # plt.figure(1)
+    # linex = [a/10 for  a in range(0,10)]
+    # plt.plot(linex, linex, color='grey', linestyle='--', label='Equality line', linewidth=2)
+    # # for i, j in zip(y, x):
+    # #     size = j / i
+    # #     color = np.random.rand(50)
+    # plt.scatter(x, y, s=80, alpha=0.3, label='Class-wise score', edgecolors='black', color='navy')
+    
+    # mean_x = np.mean(x)
+    # mean_y = np.mean(y)
+    
+    # axes = plt.gca()
+    # axes.set_xlim([0.1,.4])
+    # axes.set_ylim([0.1,.4])
+    # plt.xlabel('StackGAN (mean: %.3f)'%(mean_x), fontsize=20)
+    # plt.ylabel('HDGAN  (mean: %.3f)'%(mean_y),  fontsize=20)
+    # plt.legend(loc=0, fontsize=18)
+    # plt.tight_layout()
+
+    # plt.show()
+    # plt.savefig('compare_ssim_sample_{}.png'.format(SAMPLE))

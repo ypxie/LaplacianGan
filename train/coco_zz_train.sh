@@ -1,13 +1,13 @@
 
 D=256
-name='zz_mmgan_plain_gl_disc_ncric_comb128_256'
+name='zz_mmgan_plain_gl_disc'
 
 ## if you pretrained from an outside model 
 root=../Models
-folder=${name}_birds_${D}   
+folder=${name}_coco_${D}   
 mkdir -p ${root}/${folder}
 
-CUDA_VISIBLE_DEVICES=${device} python train.py --dataset birds --batch_size 16 --imsize ${D} --model_name ${name}  --which_gen comb_128_256 --which_disc comb_128_256 --reuse_weights --load_from_epoch 280 --g_lr 0.00005 --d_lr 0.00005 | tee ${root}/${folder}/log.txt
+CUDA_VISIBLE_DEVICES=${device} python zz_train_coco.py --dataset coco --batch_size 96 --imsize ${D} --model_name ${name} --ncritic_epoch_range 0 --epoch_decay 50 --img_loss_ratio 0.5 --gpus ${device} --which_gen comb_64_256 --which_disc comb_64_256 | tee ${root}/${folder}/log.txt
 
 
 

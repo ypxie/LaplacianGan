@@ -157,18 +157,29 @@ def load_data_from_h5(fullpath):
     return_path = os.path.join(fullpath, FLAGS.h5_file[:-3]+'_inception_score')
     print ('read h5 from {}'.format(h5file))
 
-    
+    fh = h5py.File(h5file)
+    keys = [a for a in fh.keys() if 'output' in a]
+    if 'output_512' in keys:
+        ms_images = {'output_512': [], 'output_256': [], }
+    elif 'output_256' in keys:
+        ms_images = {'output_256': [], }
+    elif 'output_128' in keys:
+        ms_images = {'output_128': [], }
+    elif 'output_64' in keys:
+        ms_images = {'output_64': [], }
     # ms_images = {'output_64': [], 'output_128': [], 'output_256': [], }
-    ms_images = {'output_256': [], }
+    # ms_images = {'output_256': [], }
+    # ms_images = {'output_512': [], }
     # assert len(ms_data.keys()) == 3, 'keys {}'.format(ms_data.keys())   
-
+    print ('evaluate scale ', ms_images.keys())
     for k in ms_images.keys():
         data = h5py.File(h5file)[k]
+        import pdb; pdb.set_trace()
         images = []
         for i in range(data.shape[0]):
             img = data[i]
             # import pdb; pdb.set_trace()
-            assert((img.shape[0] == 256 or img.shape[0] == 128 or img.shape[0] == 64) and img.shape[2] == 3)
+            assert((img.shape[0] in [256, 128, 64, 512]) and img.shape[2] == 3)
             if not (img.min() >= 0 and img.max() <= 255 and img.mean() > 1):
                 print ('WARNING {}, min {}, max {}, mean {}'.format(i, img.min(), img.max(), img.mean()))
                 continue	

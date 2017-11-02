@@ -86,7 +86,6 @@ def preprocess(img):
     return np.expand_dims(img, 0)
 
 
-
 def load_data_from_h5(fullpath):
     import glob
     import deepdish as dd
@@ -98,14 +97,21 @@ def load_data_from_h5(fullpath):
     print ('read h5 from {}'.format(h5file))
 
     
-    #ms_images = {'output_64': [], 'output_128': [], 'output_256': [], }
-    ms_images = {'output_64': [], }
-    # ms_images = {'output_64': [], 'output_128': []}
-    # assert len(ms_data.keys()) == 3, 'keys {}'.format(ms_data.keys())   
-
+    fh = h5py.File(h5file)
+    keys = [a for a in fh.keys() if 'output' in a]
+    if 'output_512' in keys:
+        ms_images = {'output_512': [], 'output_256': [], }
+    elif 'output_256' in keys:
+        ms_images = {'output_256': [], }
+    elif 'output_128' in keys:
+        ms_images = {'output_128': [], 'output_64': [], }
+    elif 'output_64' in keys:
+        ms_images = {'output_64': [], }
+    import pdb; pdb.set_trace()
     for k in ms_images.keys():
         data = h5py.File(h5file)[k]
         images = []
+        import pdb; pdb.set_trace()
         for i in range(data.shape[0]):
             img = data[i]
             # import pdb; pdb.set_trace()
