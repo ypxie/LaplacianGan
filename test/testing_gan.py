@@ -130,7 +130,6 @@ zz_mmgan_plain_local_512_ncit30_50decay_super3_birds_512_180 = \
                  'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'super',
                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256] }
 
-
 training_pool = np.array([
                 zz_mmgan_plain_local_512_ncit30_50decay_super3_birds_512_180,
                 #zz_mmgan_plain_gl_disc_ncric_comb128_256_birds_256_500

@@ -7,8 +7,8 @@ home = os.path.expanduser('~')
 proj_root = os.path.join('..')
 data_root = os.path.join(proj_root, 'Data')
 
-#model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
-model_root = os.path.join(proj_root, 'Models')
+model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
+#model_root = os.path.join(proj_root, 'Models')
 save_root  =  os.path.join(home, 'devbox', 'Shared_YZ', 'Results')
 
 import torch.multiprocessing as mp
@@ -59,9 +59,24 @@ save_spec = 'eval_nobug'
 #                 'model_name':'zz_mmgan_plain_gl_512_birds_512', 'save_spec': save_spec, 'test_sample_num' : 10,
 #                 'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
 
-zz_birds_512_res_4_80  = {'batch_size': 8, 'device_id': 6,'imsize':256, 'load_from_epoch': 80, 'train_mode': False,
-                          'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super3_res_4_birds_512',
-                          'save_spec': save_spec, 'test_sample_num' : 10, 
+# zz_birds_512_res_3_80  = {'batch_size': 4, 'device_id': 0,'imsize':256, 'load_from_epoch': 80, 'train_mode': False,
+#                           'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super3_res_3_birds_512',
+#                           'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":3,
+#                           'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+
+# zz_birds_512_res_2_80  = {'batch_size': 4, 'device_id': 1,'imsize':256, 'load_from_epoch': 80, 'train_mode': False,
+#                           'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super4_res_2_birds_512',
+#                           'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":2,
+#                           'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+
+zz_birds_512_res_2_150  = {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_from_epoch': 150, 'train_mode': False,
+                          'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super4_res_2_birds_512',
+                          'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":2,
+                          'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+
+zz_birds_512_res_2_180  = {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_from_epoch': 180, 'train_mode': False,
+                          'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super4_res_2_birds_512',
+                          'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":2,
                           'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
 
 
@@ -144,6 +159,8 @@ zz_birds_512_res_4_80  = {'batch_size': 8, 'device_id': 6,'imsize':256, 'load_fr
 
 
 training_pool = np.array([
+                zz_birds_512_res_2_150,
+                zz_birds_512_res_2_180
                 #gen_origin_disc_local_no_img_flowers_501,
                 #gen_origin_disc_local_no_img_flowers_597
                 #gen_origin_disc_global_local_low_birds_597,
@@ -179,7 +196,7 @@ show_progress = 0
 processes = []
 Totalnum = len(training_pool)
 
-for select_ind in Indexflow(Totalnum, 4, random=False):
+for select_ind in Indexflow(Totalnum, 1, random=False):
     select_pool = training_pool[select_ind]
 
     for this_dick in select_pool:

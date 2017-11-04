@@ -67,6 +67,7 @@ class Sent2FeatMap(nn.Module):
 class GeneratorSuper2(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512, num_resblock=2):
         super(GeneratorSuper2, self).__init__()
+        print(locals())
         self.__dict__.update(locals())
         self.register_buffer('device_id', torch.IntTensor(1))
         norm_layer = getNormLayer(norm)

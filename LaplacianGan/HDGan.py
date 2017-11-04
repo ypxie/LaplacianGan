@@ -56,6 +56,9 @@ def compute_g_loss(fake_logit, wgan=False):
 def load_partial_state_dict(model, state_dict):
 
         own_state = model.state_dict()
+        #print('own_Dict', own_state.keys(), 'state_Dict',state_dict.keys())
+        for a,b in zip( own_state.keys(), state_dict.keys()):
+            print(a,'=====', b)
         for name, param in state_dict.items():
             if name not in own_state:
                 raise KeyError('unexpected key "{}" in state_dict'

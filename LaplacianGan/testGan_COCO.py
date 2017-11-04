@@ -13,7 +13,7 @@ from .proj_utils.plot_utils import *
 from .proj_utils.local_utils import *
 
 from .proj_utils.torch_utils import *
-from .zzGan import load_partial_state_dict
+from .HDGan import load_partial_state_dict
 
 from PIL import Image, ImageDraw, ImageFont
 

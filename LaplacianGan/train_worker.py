@@ -13,6 +13,7 @@ def train_worker(data_root, model_root, training_dict):
 
     save_freq           = training_dict.get('save_freq', 3)
     ncritic_epoch_range = training_dict.get('ncritic_epoch_range', 100)
+    epoch_decay         = training_dict.get('epoch_decay', 30) 
     g_lr                = training_dict.get('g_lr', .0002)
     d_lr                = training_dict.get('d_lr', .0002)
     reduce_dim_at       = training_dict.get('reduce_dim_at', [8, 32, 128, 256])
@@ -72,7 +73,7 @@ def train_worker(data_root, model_root, training_dict):
                         help='which devices to parallel the data')
     parser.add_argument('--imsize',  default=training_dict['imsize'], 
                         help='output image size')
-    parser.add_argument('--epoch_decay', type=float, default=100, 
+    parser.add_argument('--epoch_decay', type=float, default=epoch_decay, 
                         help='decay epoch image size')
     parser.add_argument('--load_from_epoch', type=int, default= training_dict['load_from_epoch'], 
                         help='load from epoch')
