@@ -15,18 +15,18 @@ import time, json
 
 TINY = 1e-8
 
-def compute_d_pair_loss(real_logit, wrong_logit, fake_logit, wgan=False):
-    if wgan:
-        disc = wrong_logit  + fake_logit - 2*real_logit
-        return torch.mean(disc)
-    else:
-        real_d_loss  = torch.mean( ((real_logit) -1)**2)
-        wrong_d_loss = torch.mean( ((wrong_logit))**2)
-        fake_d_loss  = torch.mean( ((fake_logit))**2)
+# def compute_d_pair_loss(real_logit, wrong_logit, fake_logit, wgan=False):
+#     if wgan:
+#         disc = wrong_logit  + fake_logit - 2*real_logit
+#         return torch.mean(disc)
+#     else:
+#         real_d_loss  = torch.mean( ((real_logit) -1)**2)
+#         wrong_d_loss = torch.mean( ((wrong_logit))**2)
+#         fake_d_loss  = torch.mean( ((fake_logit))**2)
 
-        discriminator_loss =\
-            real_d_loss + (wrong_d_loss + fake_d_loss) / 2.
-        return discriminator_loss
+#         discriminator_loss =\
+#             real_d_loss + (wrong_d_loss + fake_d_loss) / 2.
+#         return discriminator_loss
 
 def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_logit, prob=0.5, wgan=False):
     if wgan:
@@ -188,6 +188,7 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
 
         for it in range(updates_per_epoch):
             netG.train()
+            netD.train()
             if epoch <= args.ncritic_epoch_range:
                 if (epoch < 2) and (gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
                     ncritic = 5
@@ -206,6 +207,11 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                 print ('change ncritic {} -> {}'.format(last_ncritic, ncritic))
                 last_ncritic = ncritic
             key = 'output_512'
+            d_loss_val = 0
+            img_loss_ratio = 1
+            for p in netD.parameters(): 
+                p.requires_grad = True
+            
             for _ in range(ncritic):
                 ''' Sample data '''
                 images, wrong_images, np_embeddings, _, _ = train_sampler(args.batch_size, args.num_emb, super_resolution=True)
@@ -213,16 +219,14 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                 z.data.normal_(0, 1)
 
                 ''' update D '''
-                for p in netD.parameters(): p.requires_grad = True
                 netD.zero_grad()
+                # g_emb = Variable(embeddings.data, volatile=True)
+                # g_z = Variable(z.data , volatile=True)
+                # fake_images, _ = netG(g_emb, g_z)
 
-                g_emb = Variable(embeddings.data, volatile=True)
-                g_z = Variable(z.data , volatile=True)
-                fake_images, _ = netG(g_emb, g_z)
+                fake_images, pixelwise_loss = netG(embeddings, z)
 
-                discriminator_loss = 0
-                d_loss_val_dict = {}
-               
+                discriminator_loss = 0               
                 # iterate over image of different sizes.
                 this_img   = to_device(images[key], netD.device_id)
                 this_wrong = to_device(wrong_images[key], netD.device_id)
@@ -235,18 +239,9 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                 wrong_logit, wrong_img_logit_local, wrong_img_logit_global =  wrong_dict['pair_disc'], wrong_dict['local_img_disc'], wrong_dict['global_img_disc']
                 fake_logit,  fake_img_logit_local,  fake_img_logit_global  =  fake_dict['pair_disc'], fake_dict['local_img_disc'], fake_dict['global_img_disc']
 
-                # compute loss
-                #chose_img_real = wrong_img_logit if random.random() > 0.1 else real_img_logit
-                discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan)
+                # compute pair loss
+                # discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan)
                 
-                # local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local, prob=0.5, wgan=args.wgan )
-                # global_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global, fake_img_logit_global, prob=0.5, wgan=args.wgan )
-                # if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
-                #     discriminator_loss += local_loss + global_loss
-                # else:
-                #     discriminator_loss += (local_loss + global_loss)*0.5
-
-                img_loss_ratio = 1
                 # if use_img_loss:
                 local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local,  prob=0.5, wgan=args.wgan )
                 global_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global,  fake_img_logit_global, prob=0.5, wgan=args.wgan )
@@ -254,23 +249,22 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                     img_loss = local_loss + global_loss
                 else:
                     img_loss = (local_loss + global_loss)*0.5
-                discriminator_loss +=  img_loss_ratio * img_loss 
+                discriminator_loss += img_loss_ratio * img_loss 
 
-                d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
-                d_loss_val = -d_loss_val if args.wgan else d_loss_val
                 discriminator_loss.backward()
                 optimizerD.step()
                 netD.zero_grad()
+
+                d_loss_val += discriminator_loss.cpu().data.numpy().mean()
                 d_loss_plot.plot(d_loss_val)
                 plot_dict['disc'].append(d_loss_val)
-
+            
             ''' update G '''
             for p in netD.parameters(): p.requires_grad = False  # to avoid computation
             netG.zero_grad()
            
-
-            z.data.normal_(0, 1) # resample random noises
-            fake_images, pixelwise_loss = netG(embeddings, z)
+            # z.data.normal_(0, 1) # resample random noises
+            # fake_images, pixelwise_loss = netG(embeddings, z)
 
             loss_val  = 0
             ''' add weight '''
@@ -283,19 +277,25 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
             this_fake  = fake_images[key]
             fake_dict  = netD(this_fake,  embeddings)
             fake_pair_logit, fake_img_logit_local, fake_img_logit_global, fake_img_code  = \
-            fake_dict['pair_disc'], fake_dict['local_img_disc'], fake_dict['global_img_disc'], fake_dict['content_code']
-            generator_loss += compute_g_loss(fake_pair_logit, args.wgan)
-            local_loss  = compute_g_loss(fake_img_logit_local, args.wgan)
-            global_loss = compute_g_loss(fake_img_logit_global, args.wgan)
-            if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
-                generator_loss += local_loss + global_loss
-            else:
-                generator_loss += (local_loss + global_loss)*0.5
-            generator_loss.backward()
-            g_loss_val = generator_loss.cpu().data.numpy().mean()
+            fake_dict['pair_disc'], fake_dict['local_img_disc'], fake_dict['global_img_disc'], fake_dict['content_code'] 
+
+            # pair loss 
+            # generator_loss += compute_g_loss(fake_pair_logit, args.wgan)
             
+            # local_loss  = compute_g_loss(fake_img_logit_local, args.wgan)
+            global_loss = compute_g_loss(fake_img_logit_global, args.wgan)
+            img_loss = global_loss
+            # if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
+            #     img_loss += local_loss + global_loss
+            # else:
+            #     img_loss += (local_loss + global_loss)*0.5
+            generator_loss += img_loss_ratio * img_loss
+
+            generator_loss.backward()
             optimizerG.step()
             netG.zero_grad()
+
+            g_loss_val = generator_loss.cpu().data.numpy().mean()
             g_loss_plot.plot(g_loss_val)
             lr_plot.plot(g_lr)
             plot_dict['gen'].append(g_loss_val)

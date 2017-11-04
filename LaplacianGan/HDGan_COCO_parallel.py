@@ -49,12 +49,12 @@ def to_img_dict(*inputs):
 
 def get_KL_Loss(mu, logvar):
     kld = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
-    kl_loss = torch.mean(kld).mul_(-1)
+    kl_loss = torch.mean(kld).mul_(-0.5)
     return kl_loss
 
 def compute_d_pair_loss(real_logit, wrong_logit, fake_logit,  real_labels, fake_labels):
 
-    criterion = nn.L1Loss()
+    criterion = nn.MSELoss()
    
     real_d_loss = criterion(real_logit, real_labels)
     wrong_d_loss = criterion(wrong_logit, fake_labels)
@@ -70,7 +70,7 @@ def compute_d_pair_loss(real_logit, wrong_logit, fake_logit,  real_labels, fake_
 
 def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_img_logit, real_labels, fake_labels):
 
-    criterion = nn.L1Loss()
+    criterion = nn.MSELoss()
     wrong_d_loss = criterion(wrong_img_logit, real_labels)
     real_d_loss = criterion(real_img_logit, real_labels)
     fake_d_loss = criterion(fake_img_logit, fake_labels)
@@ -80,7 +80,7 @@ def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_img_logit, real_lab
 
 def compute_g_loss(fake_logit, real_labels):
 
-    criterion = nn.L1Loss()
+    criterion = nn.MSELoss()
     generator_loss = criterion(fake_logit, real_labels)
     return generator_loss
 
@@ -146,12 +146,9 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
 
     ''' configure optimizer '''
     num_test_forward = 1 # 64 // args.batch_size // args.test_sample_num # number of testing samples to show
-    if args.wgan:
-        optimizerD = optim.RMSprop(netD.parameters(), lr= d_lr,  weight_decay=args.weight_decay)
-        optimizerG = optim.RMSprop(netG.parameters(), lr= g_lr,  weight_decay=args.weight_decay)
-    else:
-        optimizerD = optim.Adam(netD.parameters(), lr= d_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
-        optimizerG = optim.Adam(netG.parameters(), lr= g_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
+
+    optimizerD = optim.Adam(netD.parameters(), lr= d_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
+    optimizerG = optim.Adam(netG.parameters(), lr= g_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
 
     model_folder = os.path.join(model_root, mode_name)
     if not os.path.exists(model_folder):
@@ -201,7 +198,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
     fixed_z_list = [to_device(a) for a in fixed_z_data] # what?
     test_z = torch.FloatTensor(test_batch_size, args.noise_dim).normal_(0, 1)
     test_z = to_device(test_z)
-    #import pdb; pdb.set_trace()
     REAL_global_LABELS = Variable(torch.FloatTensor(args.batch_size, 1).fill_(1)).cuda()
     FAKE_global_LABELS = Variable(torch.FloatTensor(args.batch_size, 1).fill_(0)).cuda()
     # now assume the local is 5x5
@@ -216,7 +212,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
 
     global_iter = 0
     gen_iterations = 0
-
+    netG.train()
+    netD.train()
     for epoch in range(start_epoch, tot_epoch):
         start_timer = time.time()
         # learning rate
@@ -231,7 +228,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
         test_sampler  = iter(dataset.test)
         
         for it in range(updates_per_epoch):
-            netG.train()
+
             if epoch <= args.ncritic_epoch_range:
                 if (epoch < 2) and (gen_iterations < 100 or (gen_iterations < 1000 and gen_iterations % 20 == 0))  :
                     ncritic = 5

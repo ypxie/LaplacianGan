@@ -238,13 +238,13 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                     else:
                         discriminator_loss += (local_loss + global_loss)*0.5
 
-                d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
-                d_loss_val = -d_loss_val if args.wgan else d_loss_val
-                discriminator_loss.backward()
-                optimizerD.step()
-                netD.module.zero_grad()
-                d_loss_plot.plot(d_loss_val)
-                plot_dict['disc'].append(d_loss_val)
+                    d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
+                    d_loss_val = -d_loss_val if args.wgan else d_loss_val
+                    discriminator_loss.backward()
+                    optimizerD.step()
+                    netD.module.zero_grad()
+                    d_loss_plot.plot(d_loss_val)
+                    plot_dict['disc'].append(d_loss_val)
 
             ''' update G '''
             for p in netD.module.parameters(): p.requires_grad = False  # to avoid computation
