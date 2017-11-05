@@ -1,13 +1,13 @@
 
 D=64
-name='zz_mmgan_plain_gl_disc_64'
+name='zz_mmgan_plain_gl_disc_64_pral'
 
 ## if you pretrained from an outside model 
 root=../Models
 folder=${name}_coco_${D}   
 mkdir -p ${root}/${folder}
 
-python zz_train_coco.py --dataset coco --batch_size 128 --imsize ${D} --model_name ${name} --ncritic_epoch_range 0 --epoch_decay 60 --gpus ${device} --save_freq 1 | tee ${root}/${folder}/log.txt
+python zz_train_coco.py --dataset coco --batch_size 128 --imsize ${D} --model_name ${name} --ncritic_epoch_range 0 --epoch_decay 60 --gpus ${device} --save_freq 1 --KL_COE 2 | tee ${root}/${folder}/log.txt
 
 
 

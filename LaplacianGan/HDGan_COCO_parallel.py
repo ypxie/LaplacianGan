@@ -53,11 +53,6 @@ def get_KL_Loss(mu, logvar):
     kl_loss = torch.mean(kld)
     return kl_loss
 
-# def get_KL_Loss(mu, log_sigma):
-#     loss = -log_sigma + .5 * (-1 + torch.exp(2. * log_sigma) + mu**2)
-#     loss = torch.mean(loss)
-#     return loss
-
 def compute_d_pair_loss(real_logit, wrong_logit, fake_logit,  real_labels, fake_labels):
 
     criterion = nn.MSELoss()
@@ -265,9 +260,9 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                     p.requires_grad = True
                 netD.zero_grad()
 
-                #g_emb = Variable(embeddings.data, volatile=True)
-                #g_z = Variable(z.data , volatile=True)
-                #fake_images, _ = to_img_dict(data_parallel(netG, (g_emb, g_z)))
+                # g_emb = Variable(embeddings.data, volatile=True)
+                # g_z = Variable(z.data , volatile=True)
+                # fake_images, _ = to_img_dict(data_parallel(netG, (g_emb, g_z)))
                 ## ''' Note that by setting this, we use different fake images in G and D updates '''
                 fake_images, mean_var = to_img_dict(data_parallel(netG, (embeddings, z)))
 
@@ -307,8 +302,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
             netG.zero_grad()
 
             ''' Note that by setting this, we use different fake images in G and D updates '''
-            #z.data.normal_(0, 1) # resample random noises
-            #fake_images, mean_var = to_img_dict(data_parallel(netG, (embeddings, z)))
+            # z.data.normal_(0, 1) # resample random noises
+            # fake_images, mean_var = to_img_dict(data_parallel(netG, (embeddings, z)))
 
             loss_val  = 0
             kl_loss = get_KL_Loss(mean_var[0], mean_var[1])
@@ -352,7 +347,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
         gen_samples = []
         img_samples = []
         vis_samples = {}
-        netG.eval()
         for idx_test in range(num_test_forward + 1):
             #sent_emb_test, _ =  netG.condEmbedding(test_embeddings)
             if idx_test == 0:
