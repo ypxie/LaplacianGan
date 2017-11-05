@@ -19,12 +19,12 @@ from LaplacianGan.neuralDist.train_nd_worker import train_worker
 # 2   4   8   16  32  64
 
 
-bird_neudist  = { 'reuse_weights': True, 'batch_size': 64, 'device_id': 0, 'lr': .0002/(2**0),
-                  'imsize':[64, 256], 'load_from_epoch': 40, 'model_name':'neural_dist', 
+bird_neudist  = { 'reuse_weights': True, 'batch_size': 64, 'device_id': 0, 'lr': .0002/(2**1),
+                  'imsize':[64, 256], 'load_from_epoch': 110, 'model_name':'neural_dist', 
                   'dataset':'birds',
-                    }
-flower_neudist  = { 'reuse_weights': True, 'batch_size': 64, 'device_id': 0, 'lr': .0002/(2**0),
-                  'imsize':[64, 256], 'load_from_epoch': 50, 'model_name':'neural_dist', 
+                }
+flower_neudist  = { 'reuse_weights': True, 'batch_size': 64, 'device_id': 0, 'lr': .0002/(2**1),
+                  'imsize':[64, 256], 'load_from_epoch': 150, 'model_name':'neural_dist', 
                   'dataset':'flowers',
                     }
 

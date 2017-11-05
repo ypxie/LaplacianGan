@@ -64,10 +64,10 @@ class Sent2FeatMap(nn.Module):
         output = output.view(-1, self.channel, self.row, self.col)
         return output
 
-class GeneratorSuper2(nn.Module):
+class GeneratorSuperL1Loss(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512, num_resblock=2):
-        super(GeneratorSuper2, self).__init__()
-        print(locals())
+
+        super(GeneratorSuperL1Loss, self).__init__()
         self.__dict__.update(locals())
         self.register_buffer('device_id', torch.IntTensor(1))
         norm_layer = getNormLayer(norm)
@@ -165,6 +165,7 @@ class GeneratorSuper(nn.Module):
 
         return out2, 0
 
+
 class GeneratorSuperSmall(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512):
         super(GeneratorSuperSmall, self).__init__()
@@ -201,6 +202,7 @@ class GeneratorSuperSmall(nn.Module):
         out['output_512'] = self.tensor_to_img_512(scale_512)
 
         return out, 0
+
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
                  output_size=256, use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], 
@@ -499,8 +501,8 @@ class DiscriminatorSuper(nn.Module):
         shrink_img_code = self.shrink(img_code)
         pair_disc_out = pair_disc(sent_code, shrink_img_code)
 
-        out_dict['local_img_disc']   = 1
-        out_dict['global_img_disc']  = 1
+        out_dict['local_img_disc']   = 0
+        out_dict['global_img_disc']  = 0
 
         # 64 never uses local discriminator
         if 'local' in self.disc_mode and this_img_size != 64:
@@ -624,8 +626,8 @@ class Discriminator(torch.nn.Module):
             pair_disc_out = pair_disc(sent_code, img_code)
             #shrink_img_code = img_code
 
-        out_dict['local_img_disc']   = 1
-        out_dict['global_img_disc']  = 1
+        out_dict['local_img_disc']   = 0
+        out_dict['global_img_disc']  = 0
 
         # 64 never uses local discriminator
         if 'local' in self.disc_mode and this_img_size != 64:

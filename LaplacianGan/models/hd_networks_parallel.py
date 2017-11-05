@@ -128,7 +128,7 @@ class condEmbedding2(nn.Module):
     
         # epsilon = Variable(torch.randn(mean.size())).cuda()
         epsilon = Variable(torch.cuda.FloatTensor(mean.size()).normal_())
-        stddev  = torch.exp(logsigma)
+        stddev  = logsigma.mul(0.5).exp_()
         epsilon.mul(stddev).add_(mean)
         # kl_loss = self.KL_loss(mean, logsigma) if kl_loss else None
         return epsilon
@@ -146,89 +146,7 @@ class condEmbedding2(nn.Module):
         c = self.sample_encoded_context(mean, log_sigma)
         return c, mean, log_sigma
 
-class GeneratorSuper(nn.Module):
-    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512):
-        super(GeneratorSuper, self).__init__()
-        self.__dict__.update(locals())
-        norm_layer = getNormLayer(norm)
-        act_layer = get_activation_layer(activation)
-        
-        self.generator_256 = Generator(sent_dim, noise_dim, emb_dim, hid_dim)
 
-        # puch it to every high dimension
-        scale = 512
-        cur_dim = 64
-        num_resblock = 3
-        seq = []
-        for i in range(num_resblock):
-            seq += [ResnetBlock(cur_dim, norm, activation=activation)]
-        
-        seq += [nn.Upsample(scale_factor=2, mode='nearest')]
-        seq += [pad_conv_norm(cur_dim, cur_dim//2, norm_layer, activation=act_layer)]
-        cur_dim = cur_dim // 2
-
-        setattr(self, 'scale_%d'%(scale), nn.Sequential(*seq) )
-        setattr(self, 'tensor_to_img_%d'%(scale), branch_out2(cur_dim))
-        self.apply(weights_init)
-
-        print ('>> initialized a {} size generator'.format(output_size))
-        
-    def partial_parameters(self):
-        fixed = list(self.generator_256.parameters())
-        all_params = list(self.parameters())
-        partial_params = list(set(all_params) - set(fixed))
-        print ('fixed params {} training params {}'.format(len(fixed), len(partial_params)))
-
-        return partial_params
-
-    def forward(self, sent_embeddings, z):
-
-        out, _ = self.generator_256(sent_embeddings, z)
-        scale_256 = self.generator_256.keep_out_256.detach() #Variable(self.generator_256.keep_out_256.data, volatile=True) 
-        # print (scale_256.size())
-        scale_512 = self.scale_512(scale_256)
-
-        out2 = {}
-        out2['output_256'] = out['output_256']
-        out2['output_512'] = self.tensor_to_img_512(scale_512)
-
-        return out2, 0
-
-class GeneratorSuperSmall(nn.Module):
-    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512):
-        super(GeneratorSuperSmall, self).__init__()
-        self.__dict__.update(locals())
-        norm_layer = getNormLayer(norm)
-        act_layer = get_activation_layer(activation)
-        
-        self.generator_256 = Generator(sent_dim, noise_dim, emb_dim, hid_dim)
-
-        # puch it to every high dimension
-        scale = 512
-        cur_dim = 64
-        num_resblock = 2
-        seq = []
-        seq += [pad_conv_norm(cur_dim, cur_dim//2, norm_layer, activation=act_layer)]
-        cur_dim = cur_dim // 2
-        seq += [nn.Upsample(scale_factor=2, mode='nearest')]
-        for i in range(num_resblock):
-            seq += [ResnetBlock(cur_dim, norm, activation=activation)]
-
-        setattr(self, 'scale_%d'%(scale), nn.Sequential(*seq) )
-        setattr(self, 'tensor_to_img_%d'%(scale), branch_out2(cur_dim))
-        self.apply(weights_init)
-
-        print ('>> initialized a {} size supersmall generator'.format(output_size))
-
-    def forward(self, sent_embeddings, z):
-
-        out, _ = self.generator_256(sent_embeddings, z)
-        scale_256 = self.generator_256.keep_out_256.detach() #Variable(self.generator_256.keep_out_256.data, volatile=True) 
-        # print (scale_256.size())
-        scale_512 = self.scale_512(scale_256)
-        out['output_512'] = self.tensor_to_img_512(scale_512)
-
-        return out, 0
 class Generator(nn.Module):
     def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu',
                  output_size=256, use_upsamle_skip=False, reduce_dim_at= [8, 32, 128, 256], num_resblock = 1):

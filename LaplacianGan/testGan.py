@@ -201,8 +201,8 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
     print('reload weights from {}'.format(G_weightspath))
     weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
-    load_partial_state_dict(netG, weights_dict)
-    
+    #load_partial_state_dict(netG, weights_dict)
+    netG.load_state_dict(weights_dict)
     testing_z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     testing_z = to_device(testing_z, netG.device_id, volatile=True)
 
@@ -257,14 +257,14 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                 ridx = random.randint(0, B-1)
                 testing_z.data.normal_(0, 1)
 
-                this_test_embeddings = test_embeddings_list[ridx]
-                this_test_embeddings = to_device(this_test_embeddings, netG.device_id, volatile=True)
+                this_test_embeddings_np = test_embeddings_list[ridx]
+                this_test_embeddings = to_device(this_test_embeddings_np, netG.device_id, volatile=True)
                 test_outputs, _ = netG(this_test_embeddings, testing_z[0:this_batch_size])
                 
                 if  t == 0: 
                     if init_flag is True:
                         dset['classIDs'] = h5file.create_dataset('classIDs', shape=(total_number,), dtype=np.int64)
-
+                        dset['embedding'] = h5file.create_dataset('embedding', shape=(total_number, 1024), dtype=np.float)
                         for k in test_outputs.keys():
                             vis_samples[k] = [None for i in range(args.test_sample_num)] # +1 to fill real image
                             img_shape = test_outputs[k].size()[2::]
@@ -287,6 +287,8 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
 
                     dset[typ][start: start + bs] = this_sample
                     dset['classIDs'][start: start + bs] = classIDs
+                    #print(start, start+bs, dset['embedding'].shape, this_test_embeddings_np.shape)
+                    dset['embedding'][start: start + bs] = this_test_embeddings_np #np.tile(this_test_embeddings_np, (bs,1))
                     data_count[typ] = start + bs
             if args.save_images:
                 save_super_images(vis_samples, chosen_captions, this_batch_size, save_folder, saveIDs)

@@ -69,13 +69,26 @@ save_spec = 'eval_nobug'
 #                           'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":2,
 #                           'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
 
-zz_birds_512_res_2_150  = {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_from_epoch': 150, 'train_mode': False,
-                          'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super4_res_2_birds_512',
+# zz_birds_512_res_2_150  = {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_from_epoch': 150, 'train_mode': False,
+#                           'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super4_res_2_birds_512',
+#                           'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":2,
+#                           'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+
+# zz_birds_512_res_2_180  = {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_from_epoch': 180, 'train_mode': False,
+#                           'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super4_res_2_birds_512',
+#                           'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":2,
+#                           'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+
+
+zz_mmgan_plain_local_512_ncit0_20decay_res3_img2_nopair_birds_512_50 = \
+                         {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_from_epoch': 50, 'train_mode': False,
+                          'model_name':'zz_mmgan_plain_local_512_ncit0_20decay_res2_img2_nopair_birds_512',
                           'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":2,
                           'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
 
-zz_birds_512_res_2_180  = {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_from_epoch': 180, 'train_mode': False,
-                          'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super4_res_2_birds_512',
+zz_mmgan_plain_local_512_ncit0_20decay_res3_img2_nopair_birds_512_99 = \
+                         {'batch_size': 2, 'device_id': 1,'imsize':256, 'load_from_epoch': 99, 'train_mode': False,
+                          'model_name':'zz_mmgan_plain_local_512_ncit0_20decay_res2_img2_nopair_birds_512',
                           'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":2,
                           'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
 
@@ -159,8 +172,10 @@ zz_birds_512_res_2_180  = {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_f
 
 
 training_pool = np.array([
-                zz_birds_512_res_2_150,
-                zz_birds_512_res_2_180
+                zz_mmgan_plain_local_512_ncit0_20decay_res3_img2_nopair_birds_512_50,
+                zz_mmgan_plain_local_512_ncit0_20decay_res3_img2_nopair_birds_512_99
+                #zz_birds_512_res_2_150,
+                #zz_birds_512_res_2_180
                 #gen_origin_disc_local_no_img_flowers_501,
                 #gen_origin_disc_local_no_img_flowers_597
                 #gen_origin_disc_global_local_low_birds_597,

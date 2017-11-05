@@ -58,10 +58,17 @@
 - eval_bs_1testing_num_11/ mean: 3.99 std: 0.05 # evaluate 11 images per data
 - zz_mmgan_plain_gl_disc_ncric_fulglo_256_birds_256_G_epoch_500 scale: output_256 mean: 3.970097780227661 std:0.04089314490556717 (bug free)
 
+# 512
+zz_mmgan_plain_local_512_ncit30_50decay_super
+3_res_3_birds_512_G_epoch_80.h5
+epoch {'output_512': 4.027592658996582, 'output_256': 4.150887966156006} {'output_512': 0.04651995748281479, 'output_256': 0.05927712097764015}
+zz_mmgan_plain_local_512_ncit30_50decay_super4_res_2_birds_512_G_epoch_80.h5
+
 ## **Yuanpu's (bug free)**
 - gen_origin_disc_global_no_img_birds_[64, 128, 256]_G_epoch_501 scale: output_256 mean: 4.0969719886779785 std:0.04281013458967209
 - gen_origin_disc_both_birds_[64, 128, 256]_G_epoch_405 scale: output_256 mean: 4.0880842208862305 std:0.04456903785467148
 - **gen_origin_disc_global_no_img_birds_[64, 128, 256]_G_epoch_597 scale: output_256 mean: 4.270041465759277 std:0.046753715723752975**
+{'output_512': 4.069746971130371, 'output_256': 4.170490741729736} {'output_512': 0.05113579332828522, 'output_256': 0.04243466630578041}
 
 #### Different supervision
 - zz_mmgan_plain_gl_disc_ncric_single_256_birds_256_G_epoch_500 output_256 mean: 3.518810749053955 std:0.044894989579916
