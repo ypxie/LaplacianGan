@@ -119,3 +119,26 @@ output_64 mean 7.79899, 0.132714241
 - Why vanilla 256 GAN is hard to train?
 - Large variances, training instability, graident vanishing, low-high mapping is 
 - 
+
+
+# local bugs:
+- if disc is set to "local", 64 will never use local image loss.
+
+# --------------After terrible bugs-----------
+# local is set to  128 (2x2), 256 (5x5)
+# currently we have
+## flower
+-[64, 256] no img local
+## birds
+- [64, 256]  no img local
+- [64, 256]  img local
+- [64, 128, 256] no img
+
+# what we need
+## flower
+- [64, 256] img local 
+- [64, 128, 256] img local
+- [64, 128, 256] no img 
+## birds
+- [64, 128, 256] img local
+
