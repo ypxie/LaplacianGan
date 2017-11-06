@@ -49,7 +49,73 @@ def drawCaption(img, caption, level=['output 64', 'output 128', 'output 256']):
 
     return img_txt
 
+# def save_super_images(vis_samples, captions_batch, batch_size, save_folder, saveIDs):
+#     dst_shape = (0,0)
+#     all_row = []
+#     level = []
+#     for typ, img_list in vis_samples.items():
+#         this_shape = img_list[0].shape[2::] # bs, 3, row, col
+#         if this_shape[0] > dst_shape[0]:
+#             dst_shape = this_shape
+#         level.append(typ)
+
+#     valid_caption = []
+#     valid_IDS = []
+#     for j in range(batch_size):
+#         if not re.search('[a-zA-Z]+', captions_batch[j]):
+#             continue
+#         else:  
+#             valid_caption.append(captions_batch[j])
+#             valid_IDS.append(saveIDs[j])
+    
+#     for typ, img_list in vis_samples.items(): 
+#         img_tensor = np.stack(img_list, 1) # N * T * 3 *row*col
+#         img_tensor = img_tensor.transpose(0,1,3,4,2)
+#         img_tensor = (img_tensor + 1.0) * 127.5
+#         img_tensor = img_tensor.astype(np.uint8)
+
+#         batch_size  = img_tensor.shape[0]
+#         #imshow(img_tensor[0,0])
+#         batch_all = []
+#         for bidx in range(batch_size):  
+#             if not re.search('[a-zA-Z]+', captions_batch[j]):
+#                 continue
+#             padding = np.zeros(dst_shape + (3,), dtype=np.uint8)
+#             this_row = [padding]
+#             # First row with up to 8 samples
+#             for tidx in range(np.minimum(8, img_tensor.shape[1] )):
+#                 this_img  = img_tensor[bidx][tidx]
+#                 re_sample = imresize_shape(this_img, dst_shape)
+#                 this_row.append(re_sample)
+                
+#             this_row = np.concatenate(this_row, axis=1) # row, col*T, 3
+#             batch_all.append(this_row)
+#         batch_all = np.stack(batch_all, 0) # bs*row*colT*3 
+#         all_row.append(batch_all)
+
+#     all_row = np.stack(all_row, 0) # n_type * bs * shape    
+    
+
+#     batch_size = len(valid_IDS)
+
+#     for idx in range(batch_size):
+#         this_select = all_row[:, idx] # ntype*row*col
+        
+#         ntype, row, col, chn = this_select.shape
+#         superimage = np.reshape(this_select, (-1, col, chn) )  # big_row, col, 3
+
+#         top_padding = np.zeros((128, superimage.shape[1], 3))
+#         superimage =\
+#             np.concatenate([top_padding, superimage], axis=0)
+            
+#         save_path = os.path.join(save_folder, '{}.png'.format(valid_IDS[idx]) )    
+#         superimage = drawCaption(np.uint8(superimage), valid_caption[idx], level)
+#         scipy.misc.imsave(save_path, superimage)
 def save_super_images(vis_samples, captions_batch, batch_size, save_folder, saveIDs):
+    
+    save_folder_caption = os.path.join(save_folder, 'with_captions')
+    save_folder_images  = os.path.join(save_folder, 'images')
+    
     dst_shape = (0,0)
     all_row = []
     level = []
@@ -74,19 +140,29 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
         img_tensor = (img_tensor + 1.0) * 127.5
         img_tensor = img_tensor.astype(np.uint8)
 
+        this_img_list = []
+
         batch_size  = img_tensor.shape[0]
         #imshow(img_tensor[0,0])
         batch_all = []
         for bidx in range(batch_size):  
+            this_folder_id = os.path.join(save_folder_images, '{}'.format(valid_IDS[idx]))
+            mkdirs([this_folder_id])
+
             if not re.search('[a-zA-Z]+', captions_batch[j]):
                 continue
             padding = np.zeros(dst_shape + (3,), dtype=np.uint8)
             this_row = [padding]
             # First row with up to 8 samples
-            for tidx in range(np.minimum(8, img_tensor.shape[1] )):
+            for tidx in range(img_tensor.shape[1]):
                 this_img  = img_tensor[bidx][tidx]
+                
                 re_sample = imresize_shape(this_img, dst_shape)
-                this_row.append(re_sample)
+                if tidx <= 7:
+                    this_row.append(re_sample)  
+                img_rgb = ( (re_sample + 1.0) * 127.5 ).astype(np.uint8)
+                img_rgb = img_rgb.transpose(1,2,0)
+                scipy.misc.imsave(os.path.join(this_folder_id, 'copy_{}.jpg'.format(tidx)),  img_rgb)
                 
             this_row = np.concatenate(this_row, axis=1) # row, col*T, 3
             batch_all.append(this_row)
@@ -95,9 +171,9 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
 
     all_row = np.stack(all_row, 0) # n_type * bs * shape    
     
-
     batch_size = len(valid_IDS)
 
+    mkdirs([save_folder_caption, save_folder_images])
     for idx in range(batch_size):
         this_select = all_row[:, idx] # ntype*row*col
         
@@ -108,7 +184,7 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
         superimage =\
             np.concatenate([top_padding, superimage], axis=0)
             
-        save_path = os.path.join(save_folder, '{}.png'.format(valid_IDS[idx]) )    
+        save_path = os.path.join(save_folder_caption, '{}.png'.format(valid_IDS[idx]) )    
         superimage = drawCaption(np.uint8(superimage), valid_caption[idx], level)
         scipy.misc.imsave(save_path, superimage)
 
@@ -201,7 +277,7 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                         dset['saveIDs'] = h5file.create_dataset('saveIDs', shape=(total_number,), dtype=np.int64)
                         dset['embedding'] = h5file.create_dataset('embedding', shape=(total_number, 1024), dtype=np.float)
                         for k in test_outputs.keys():
-                            vis_samples[k] = [None for i in range(args.test_sample_num)] # +1 to fill real image
+                            vis_samples[k] = [None for i in range(args.test_sample_num + 1)] # +1 to fill real image
                             img_shape = test_outputs[k].size()[2::]
                             
                             print('total number of images is: ', total_number)
@@ -211,8 +287,17 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                 
                 for typ, img_val in test_outputs.items():
                     cpu_data = img_val.cpu().data.numpy()
-                    #print(vis_samples.keys())
-                    vis_samples[typ][t] = cpu_data
+                    row, col = cpu_data.shape[2],cpu_data.shape[3] 
+                    if t==0:
+                        #print("test_images shape: ", test_images.shape, np.mean(test_images))
+                        this_reshape = imresize_shape(test_images,  (row, col) ) 
+                        this_reshape = this_reshape * (2. / 255) - 1.
+                        
+                        this_reshape = this_reshape.transpose(0, 3, 1, 2)
+                        vis_samples[typ][0] = this_reshape
+                        #print("this_reshape shape: ", this_reshape.shape, np.mean(this_reshape))
+
+                    vis_samples[typ][t+1] = cpu_data
 
                     bs = cpu_data.shape[0]
                     

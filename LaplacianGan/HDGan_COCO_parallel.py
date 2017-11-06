@@ -188,6 +188,11 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
     content_loss_plot = plot_scalar(name = "content_loss", env= mode_name, rate = args.display_freq)
     lr_plot = plot_scalar(name = "lr", env=mode_name, rate = args.display_freq)
 
+    for this_key in all_keys:
+        g_plot_dict[this_key] = plot_scalar(name = "g_img_loss_" + this_key, env= mode_name, rate = args.display_freq)
+        d_plot_dict[this_key] = plot_scalar(name = "d_img_loss_" + this_key, env= mode_name, rate = args.display_freq)
+        
+
     z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     z = to_device(z)
     # test the fixed image for every epoch
@@ -280,11 +285,11 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
 
                     real_labels, fake_labels = get_labels(real_img_logit_global)
                     img_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global, fake_img_logit_global, real_labels, fake_labels)
-
+                    d_plot_dict[key].plot(img_loss.cpu().data.numpy().mean())
                     discriminator_loss = pair_loss + img_loss 
                     discriminator_loss.backward() # backward per discriminator (save memory)
                     d_loss_val += discriminator_loss.cpu().data.numpy().mean()
-
+                    
                 optimizerD.step()
                 netD.zero_grad()
 
@@ -315,7 +320,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                 img_loss = compute_g_loss(fake_img_logit_global, real_labels)
 
                 generator_loss += img_loss 
-
+                g_plot_dict[key].plot(img_loss.cpu().data.numpy().mean())
+                
             generator_loss.backward()
             optimizerG.step()
             netG.zero_grad()

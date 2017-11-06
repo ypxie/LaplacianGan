@@ -38,22 +38,22 @@ reduce_dim_at = [8, 32, 128, 256]
 #             'which_gen': 'origin', 'which_disc':'local', 'dataset':'coco',
 #             'reduce_dim_at':[8, 32, 128, 256], 'num_resblock':2 }
 
-# just_fortesting_64 = {'reuse_weights':  False, 'batch_size': 64, 'device_id': 0, 'gpu_list': [0], 
-#                         'imsize':[64], 'load_from_epoch': 273, 'model_name':'just_fortesting', 
-#                         'g_lr': .0002/(2**0),  'd_lr': .0002/(2**0),  'save_freq': 10,
-#                         'which_gen': 'origin', 'which_disc':'local', 'dataset':'coco',
-#                         'reduce_dim_at':[8, 32, 128, 256], 'num_resblock':2 }
-
-coco_64_256 = {         'reuse_weights':  False, 'batch_size': 12, 'device_id': 0, 'gpu_list': [0], 
-                        'imsize':[64, 256], 'load_from_epoch': 273, 'model_name':'gen_origin_disc_local', 
-                        'g_lr': .0002/(2**0),  'd_lr': .0002/(2**0),  'save_freq': 3,
+testing_inplace_kl_64 = {'reuse_weights':  False, 'batch_size': 64, 'device_id': 0, 'gpu_list': [0], 
+                        'imsize':[64], 'load_from_epoch': 0, 'model_name':'just_fortesting', 
+                        'g_lr': .0002/(2**0),  'd_lr': .0002/(2**0),  'save_freq': 10,
                         'which_gen': 'origin', 'which_disc':'local', 'dataset':'coco',
                         'reduce_dim_at':[8, 32, 128, 256], 'num_resblock':2 }
 
+# coco_64_256 = {         'reuse_weights':  False, 'batch_size': 12, 'device_id': 0, 'gpu_list': [0], 
+#                         'imsize':[64, 256], 'load_from_epoch': 273, 'model_name':'gen_origin_disc_local', 
+#                         'g_lr': .0002/(2**0),  'd_lr': .0002/(2**0),  'save_freq': 3,
+#                         'which_gen': 'origin', 'which_disc':'local', 'dataset':'coco',
+#                         'reduce_dim_at':[8, 32, 128, 256], 'num_resblock':2 }
+
 
 training_pool = np.array([
-                 #just_fortesting_64,
-                   coco_64_256
+                 testing_inplace_kl_64,
+                 #  coco_64_256
                  # coco_256,
                  # coco_256_fine
                  # coco_128,

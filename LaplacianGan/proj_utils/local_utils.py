@@ -265,8 +265,7 @@ def imresize_shape(img, outshape):
 
     img = img.astype(np.float32)
     outshape = ( int(outshape[1]) , int(outshape[0])  )
-    if (img.shape[0], img.shape[1]) == outshape:
-        return img
+    
     #temp = cv2.resize(img, outshape).astype(float)
     temp = misc.imresize(img, size=outshape, interp='bilinear').astype(float)
 

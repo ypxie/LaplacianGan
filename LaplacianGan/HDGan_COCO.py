@@ -151,6 +151,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
     g_loss_plot = plot_scalar(name = "g_loss", env= mode_name, rate = args.display_freq)
     kl_loss_plot = plot_scalar(name = "kl_loss", env= mode_name, rate = args.display_freq)
 
+    all_keys = ["output_64", "output_128", "output_256"]
+    g_plot_dict, d_plot_dict = {}, {}
+    for this_key in all_keys:
+        g_plot_dict[this_key] = plot_scalar(name = "g_img_loss_" + this_key, env= mode_name, rate = args.display_freq)
+        d_plot_dict[this_key] = plot_scalar(name = "d_img_loss_" + this_key, env= mode_name, rate = args.display_freq)
+        
     content_loss_plot = plot_scalar(name = "content_loss", env= mode_name, rate = args.display_freq)
     lr_plot = plot_scalar(name = "lr", env=mode_name, rate = args.display_freq)
 
@@ -241,6 +247,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                         else:
                             img_loss = (local_loss + global_loss)*0.5
                         discriminator_loss +=  this_img_loss_ratio * img_loss 
+                        d_plot_dict[key].plot(img_loss.cpu().data.numpy().mean())
 
                 d_loss_val  = discriminator_loss.cpu().data.numpy().mean()
                 d_loss_val = -d_loss_val if args.wgan else d_loss_val
@@ -281,6 +288,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args):
                     else:
                         img_loss_ = (local_loss + global_loss)*0.5
                     generator_loss += img_loss_ * this_img_loss_ratio
+
+                    g_plot_dict[key].plot(img_loss_.cpu().data.numpy().mean())
 
             generator_loss.backward()
             g_loss_val = generator_loss.cpu().data.numpy().mean()

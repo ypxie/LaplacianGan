@@ -101,6 +101,9 @@ def branch_out2(in_dim, out_dim=3):
 def KL_loss(mu, log_sigma):
     loss = -log_sigma + .5 * (-1 + torch.exp(2. * log_sigma) + mu**2)
     loss = torch.mean(loss)
+    # kld = mu.pow(2).add_(log_sigma.exp()).mul_(-1).add_(1).add_(log_sigma)
+    # loss = torch.mean(kld).mul_(-0.5)
+
     return loss
 
 def sample_encoded_context(mean, logsigma, kl_loss=False, epsilon=None):

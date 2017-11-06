@@ -15,6 +15,7 @@ from ..proj_utils.torch_utils import *
 
 from torch.multiprocessing import Pool
 
+import scipy
 import time, json
 import random 
 
@@ -48,11 +49,10 @@ def get_anchor(row_size, col_size, img_shape, boarder=0):
     upleft_col  = random.randint(bc, col_size - dst_col - bc)
     return (upleft_row, upleft_col)
 
-def random_crop(img, dst_shape):
-    row, col,_ = img.shape
-    dst_row, dst_col = dst_shape
-    ur, uc = get_anchor(row, col, dst_shape )
-    return img[ur:ur+dst_row, uc:uc+dst_col,:]
+
+def resize_images(img, dst_shape):
+    tmp = scipy.misc.imresize(img, dst_shape)
+    return tmp
 
 def pre_process_(images, pool=None, trans=None):
     
@@ -87,21 +87,21 @@ def pre_process_(images, pool=None, trans=None):
     return img_tensor_all
 
 
-def get_trans():
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
+def get_trans(img_encoder):
+    # normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    #                                  std=[0.229, 0.224, 0.225])
     img_tensor_list = []
     
     trans = transforms.Compose([
                 transforms.ToTensor(),
                 #transforms.RandomSizedCrop(224),
-                normalize,
+                transforms.Normalize(mean=img_encoder.mean, std=img_encoder.std),
                 ])
     return trans
 
 def _process(inputs):
     this_img, trans =inputs
-    this_crop = random_crop(this_img, (224,224))
+    this_crop = resize_images(this_img, (299, 299))
     this_img_tensor = trans(this_crop)
     return this_img_tensor
 
@@ -154,7 +154,7 @@ def train_nd(dataset, model_root, mode_name, img_encoder, vs_model, args):
     prob_use_train = float(train_num)/number_example
 
     pool = Pool(3)
-    trans_func = get_trans()
+    trans_func = get_trans(img_encoder)
     updates_per_epoch = int(number_example / args.batch_size)
     print("updates_per_epoch: ", updates_per_epoch)
     ''' configure optimizer '''

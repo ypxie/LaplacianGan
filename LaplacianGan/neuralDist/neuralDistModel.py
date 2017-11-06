@@ -2,8 +2,9 @@
 import numpy as np
 import torch
 from torch.autograd import Variable
-import torchvision as tv
+
 import torch.nn as nn
+from .pretrainedmodels import inceptionresnetv2 
 
 #tv.models.resnet18(pretrained=True)
 def l2norm(input, p=2.0, dim=1, eps=1e-12):
@@ -24,14 +25,20 @@ def xavier_weight(tensor):
     return tensor.normal_(0, r)
 
 
+
 class ImageEncoder(nn.Module):
     def __init__(self):
         super(ImageEncoder, self).__init__()
         self.register_buffer('device_id', torch.IntTensor(1))
-        resmodel = tv.models.resnet34(pretrained=True)
+        resmodel = inceptionresnetv2(1000)
+
         self.encoder = nn.Sequential(
                     *list(resmodel.children())[:-1]
                 )
+        self.mean = resmodel.mean
+        self.std = resmodel.std
+        self.input_size =  resmodel.input_size
+
     def forward(self, x):
         feat = self.encoder(x)
         return feat

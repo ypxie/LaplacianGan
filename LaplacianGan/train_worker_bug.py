@@ -106,12 +106,12 @@ def train_worker(data_root, model_root, training_dict):
 
     # Generator
     if args.which_gen == 'origin':
-        from LaplacianGan.models.hd_bugfree import Generator
+        from LaplacianGan.models.hd_local_bug import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize,
                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock)
     elif args.which_gen == 'upsample_skip':   
-        from LaplacianGan.models.hd_bugfree import Generator 
+        from LaplacianGan.models.hd_local_bug import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128,  
                         norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize, 
                         use_upsamle_skip=True, reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock)   
@@ -122,17 +122,17 @@ def train_worker(data_root, model_root, training_dict):
     # Discriminator
     if args.which_disc == 'origin' or args.which_disc == 'global': 
         # only has global discriminator
-        from LaplacianGan.models.hd_bugfree import Discriminator 
+        from LaplacianGan.models.hd_local_bug import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type,disc_mode=['global'])
     elif args.which_disc == 'origin_global_local':
         # has global and local discriminator
-        from LaplacianGan.models.hd_bugfree import Discriminator 
+        from LaplacianGan.models.hd_local_bug import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['global', 'local'])
     elif args.which_disc == 'local':
         # has global and local discriminator
-        from LaplacianGan.models.hd_bugfree import Discriminator 
+        from LaplacianGan.models.hd_local_bug import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['local'])
     else:
@@ -161,5 +161,5 @@ def train_worker(data_root, model_root, training_dict):
         dataset = []
         print ('>> in debug mode')
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
-    print ('>> START training ')
+    print ('>> START training with bug ')
     train_gans(dataset, model_root, model_name, netG, netD, args)

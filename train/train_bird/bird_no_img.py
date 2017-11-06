@@ -35,7 +35,7 @@ from LaplacianGan.train_worker import train_worker
 
 no_img_64_256     = { 'reuse_weights': False, 'batch_size': 16, 'device_id': 0, 
                     'g_lr': .0002/(2**0),'d_lr': .0002/(2**0), 'use_img_loss' : False,
-                    'imsize':[64,  256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_no_img', 
+                    'imsize':[64,  256], 'load_from_epoch': 0, 'model_name':'gen_origin_disc_local_no_img', 
                     'which_gen': 'origin', 'which_disc':'local', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256]}
 
 training_pool = np.array([
