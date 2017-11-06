@@ -15,18 +15,18 @@ import time, json
 
 TINY = 1e-8
 
-# def compute_d_pair_loss(real_logit, wrong_logit, fake_logit, wgan=False):
-#     if wgan:
-#         disc = wrong_logit  + fake_logit - 2*real_logit
-#         return torch.mean(disc)
-#     else:
-#         real_d_loss  = torch.mean( ((real_logit) -1)**2)
-#         wrong_d_loss = torch.mean( ((wrong_logit))**2)
-#         fake_d_loss  = torch.mean( ((fake_logit))**2)
+def compute_d_pair_loss(real_logit, wrong_logit, fake_logit, wgan=False):
+    if wgan:
+        disc = wrong_logit  + fake_logit - 2*real_logit
+        return torch.mean(disc)
+    else:
+        real_d_loss  = torch.mean( ((real_logit) -1)**2)
+        wrong_d_loss = torch.mean( ((wrong_logit))**2)
+        fake_d_loss  = torch.mean( ((fake_logit))**2)
 
-#         discriminator_loss =\
-#             real_d_loss + (wrong_d_loss + fake_d_loss) / 2.
-#         return discriminator_loss
+        discriminator_loss =\
+            real_d_loss + (wrong_d_loss + fake_d_loss) / 2.
+        return discriminator_loss
 
 def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_logit, prob=0.5, wgan=False):
     if wgan:
@@ -107,12 +107,9 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
 
     ''' configure optimizer '''
     num_test_forward = 1 # 64 // args.batch_size // args.test_sample_num # number of testing samples to show
-    if args.wgan:
-        optimizerD = optim.RMSprop(netD.parameters(), lr= d_lr,  weight_decay=args.weight_decay)
-        optimizerG = optim.RMSprop(netG.partial_parameters(), lr= g_lr,  weight_decay=args.weight_decay)
-    else:
-        optimizerD = optim.Adam(netD.parameters(), lr= d_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
-        optimizerG = optim.Adam(netG.partial_parameters(), lr= g_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
+
+    optimizerD = optim.Adam(netD.parameters(), lr= d_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
+    optimizerG = optim.Adam(netG.partial_parameters(), lr= g_lr, betas=(0.5, 0.999), weight_decay=args.weight_decay)
 
     model_folder = os.path.join(model_root, mode_name)
     if not os.path.exists(model_folder):
@@ -240,7 +237,7 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                 fake_logit,  fake_img_logit_local,  fake_img_logit_global  =  fake_dict['pair_disc'], fake_dict['local_img_disc'], fake_dict['global_img_disc']
 
                 # compute pair loss
-                # discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan)
+                discriminator_loss += compute_d_pair_loss(real_logit, wrong_logit, fake_logit, args.wgan)
                 
                 # if use_img_loss:
                 local_loss  = compute_d_img_loss(wrong_img_logit_local,  real_img_logit_local,   fake_img_logit_local,  prob=0.5, wgan=args.wgan )
@@ -268,9 +265,9 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
 
             loss_val  = 0
             ''' add weight '''
-            pixelwise_loss = pixelwise_loss * 1
+            pixelwise_loss = pixelwise_loss * 2
 
-            pw_val = pixelwise_loss.cpu().data.numpy()
+            
             generator_loss = pixelwise_loss 
             
             # iterate over image of different sizes.
@@ -280,11 +277,10 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
             fake_dict['pair_disc'], fake_dict['local_img_disc'], fake_dict['global_img_disc'], fake_dict['content_code'] 
 
             # pair loss 
-            # generator_loss += compute_g_loss(fake_pair_logit, args.wgan)
-            
+            generator_loss += compute_g_loss(fake_pair_logit, args.wgan)
             # local_loss  = compute_g_loss(fake_img_logit_local, args.wgan)
-            global_loss = compute_g_loss(fake_img_logit_global, args.wgan)
-            img_loss = global_loss
+            img_loss = compute_g_loss(fake_img_logit_global, args.wgan)
+            
             # if type(local_loss) in [int, float] or type(global_loss) in [int, float]: # one of them is int
             #     img_loss += local_loss + global_loss
             # else:
@@ -296,6 +292,8 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
             netG.zero_grad()
 
             g_loss_val = generator_loss.cpu().data.numpy().mean()
+            img_loss_val = img_loss.cpu().data.numpy()
+            pw_val = pixelwise_loss.cpu().data.numpy()
             g_loss_plot.plot(g_loss_val)
             lr_plot.plot(g_lr)
             plot_dict['gen'].append(g_loss_val)
@@ -307,7 +305,7 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
                 for k, sample in fake_images.items():
                     # plot_imgs(sample.cpu().data.numpy(), epoch, k, 'train_samples')
                     plot_imgs([images[k], sample.cpu().data.numpy()], epoch, k, 'train_images')
-                print ('[epoch %d/%d iter %d]: lr = %.6f g_loss = %.5f (%.5f) d_loss= %.5f' % (epoch, tot_epoch, it, g_lr, g_loss_val, pw_val, d_loss_val))
+                print ('[epoch %d/%d iter %d]: lr = %.6f g_loss = %.5f (%.5f, %.5f) d_loss= %.5f' % (epoch, tot_epoch, it, g_lr, g_loss_val, pw_val, img_loss_val, d_loss_val))
                 sys.stdout.flush()
 
         ''' visualize test per epoch '''
@@ -363,10 +361,13 @@ def train_gans_super(dataset, model_root, mode_name, netG, netD, args):
 
         # save weights
         if epoch % args.save_freq == 0:
+            netD = netD.cpu()
+            netG = netG.cpu()
             torch.save(netD.state_dict(), os.path.join(model_folder, 'D_epoch{}.pth'.format(epoch)))
             torch.save(netG.state_dict(), os.path.join(model_folder, 'G_epoch{}.pth'.format(epoch)))
             print('save weights at {}'.format(model_folder))
             torch.save(plot_dict, plot_save_path)
-
+            netD = netD.cuda(args.device_id)
+            netG = netG.cuda(args.device_id)
 
         print ('epoch {}/{} finished [time = {}s] ...'.format(epoch, tot_epoch, end_timer))

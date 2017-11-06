@@ -195,7 +195,7 @@ def load_data_from_h5_fakehr(fullpath):
     import glob
     import deepdish as dd
     import h5py
-    print ('use fake h5 loader for hr')
+    print ('*********use fake h5 loader for hr**********')
     # import pdb; pdb.set_trace()
     h5file = os.path.join(fullpath, FLAGS.h5_file)
     return_path = os.path.join(fullpath, FLAGS.h5_file[:-3]+'_inception_score')
@@ -311,8 +311,8 @@ def main(unused_argv=None):
                 saver.restore(sess, FLAGS.checkpoint_dir)
                 print('Restore the model from %s).' % FLAGS.checkpoint_dir)
                 # images = load_data(fullpath)
-                # ms_images, return_save_path = load_data_from_h5(fullpath)
-                ms_images, return_save_path = load_data_from_h5_fakehr(fullpath)
+                ms_images, return_save_path = load_data_from_h5(fullpath)
+                # ms_images, return_save_path = load_data_from_h5_fakehr(fullpath)
                 ms_means = {k:[] for k in ms_images.keys()}
                 ms_std = {k:[] for k in ms_images.keys()}
                 for scale, images in ms_images.items():
@@ -321,7 +321,7 @@ def main(unused_argv=None):
                     ms_std[scale] = float(std)
                     print ('scale: {} mean: {} std:{}'.format(scale, mean, std))
                 print (ms_means, ms_std)
-                json.dump({'mean': ms_means, 'std': ms_std}, open(return_save_path + '_fakehr.json','w'), indent=True)
+                json.dump({'mean': ms_means, 'std': ms_std}, open(return_save_path + '.json','w'), indent=True)
 
   
 

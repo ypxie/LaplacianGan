@@ -105,7 +105,7 @@ class GeneratorSuperL1Loss(nn.Module):
         scale_256 = self.generator_256.keep_out_256.detach() #Variable(self.generator_256.keep_out_256.data, volatile=True) 
         # print (scale_256.size())
         scale_512 = self.scale_512(scale_256)
-        up_img_256 = F.upsample(out['output_256'].detach(), (512,512), mode='nearest')
+        up_img_256 = F.upsample(out['output_256'].detach(), (512,512), mode='bilinear')
 
         out2 = {}
         out2['output_256'] = out['output_256']

@@ -118,7 +118,7 @@ if  __name__ == '__main__':
     elif args.which_gen == 'super_l1loss':   
         from LaplacianGan.models.hd_networks import GeneratorSuperL1Loss
         netG = GeneratorSuperL1Loss(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
-            norm=args.norm_type, activation=args.gen_activation_type)   
+            norm=args.norm_type, activation=args.gen_activation_type, num_resblock=3)   
                    
     elif args.which_gen == 'super_small':   
         from LaplacianGan.models.hd_networks import GeneratorSuperSmall
