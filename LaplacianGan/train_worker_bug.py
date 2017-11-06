@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import argparse, os
 import torch, h5py
@@ -7,30 +6,21 @@ import torch, h5py
 import torch.nn as nn
 from collections import OrderedDict
 
-from .HDGan_COCO import train_gans
-from .fuel.zz_datasets_coco import MultiThreadLoader
+from .HDGan import train_gans
+from .fuel.zz_datasets import TextDataset
 
-class Dataset():
-    def __init__(self, train_loader, test_loader):
-        self.train = train_loader
-        self.test = test_loader
-        
 def train_worker(data_root, model_root, training_dict):
 
     save_freq           = training_dict.get('save_freq', 3)
-    ncritic_epoch_range = training_dict.get('ncritic_epoch_range', 30)
+    ncritic_epoch_range = training_dict.get('ncritic_epoch_range', 100)
     epoch_decay         = training_dict.get('epoch_decay', 30) 
     g_lr                = training_dict.get('g_lr', .0002)
     d_lr                = training_dict.get('d_lr', .0002)
-    dataset             = training_dict.get('dataset', 'coco')
     reduce_dim_at       = training_dict.get('reduce_dim_at', [8, 32, 128, 256])
     use_img_loss        = training_dict.get('use_img_loss', True)
     num_resblock        = training_dict.get('num_resblock', 1)
     img_loss_ratio      = training_dict.get('img_loss_ratio', 1.0)
-    detach_list         = training_dict.get('detach_list', [])
     tune_img_loss       = training_dict.get('tune_img_loss', False)
-    KL_COE              = training_dict.get('KL_COE', 4)
-    use_cond            = training_dict.get('use_cond', True)
 
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
@@ -71,7 +61,7 @@ def train_worker(data_root, model_root, training_dict):
                         help='the channel of each image.')
     parser.add_argument('--ngen', type=int, default= 1, metavar='N',
                         help='the channel of each image.')
-    parser.add_argument('--KL_COE', type=float, default= KL_COE, metavar='N',
+    parser.add_argument('--KL_COE', type=float, default= 4, metavar='N',
                         help='kl divergency coefficient.')
     parser.add_argument('--use_content_loss', type=bool, default= True, metavar='N',
                         help='whether or not to use content loss.')
@@ -79,9 +69,9 @@ def train_worker(data_root, model_root, training_dict):
     ## add more
     parser.add_argument('--device_id', type=int, default=training_dict['device_id'], 
                         help='which device')
-    parser.add_argument('--gpu_list',  default= [], 
+    parser.add_argument('--gpu_list',  default = [], 
                         help='which devices to parallel the data')
-    parser.add_argument('--imsize',  default = training_dict['imsize'], 
+    parser.add_argument('--imsize',  default=training_dict['imsize'], 
                         help='output image size')
     parser.add_argument('--epoch_decay', type=float, default=epoch_decay, 
                         help='decay epoch image size')
@@ -99,59 +89,57 @@ def train_worker(data_root, model_root, training_dict):
     parser.add_argument('--which_gen', type=str, default=training_dict['which_gen'],  help='generator type')
     parser.add_argument('--which_disc', type=str, default=training_dict['which_disc'], help='discriminator type')
     
-    parser.add_argument('--dataset', type=str, default = dataset, help='which dataset to use [birds or flowers]') 
-    parser.add_argument('--ncritic_epoch_range', type=int, default=ncritic_epoch_range, help='How many epochs the ncritic effective')   
-    
+    parser.add_argument('--dataset', type=str, default=training_dict['dataset'], help='which dataset to use [birds or flowers]') 
+    parser.add_argument('--ncritic_epoch_range', type=int, default=ncritic_epoch_range, help='How many epochs the ncritic effective')  
     parser.add_argument('--use_img_loss', type=bool, default = use_img_loss,
                         help='whether to use image loss')
     parser.add_argument('--num_resblock', type=int, default = num_resblock, help='number of resblock')
     parser.add_argument('--img_loss_ratio', type=float, default = img_loss_ratio, help='coefficient of img_loss')
     parser.add_argument('--tune_img_loss', type=bool, default = tune_img_loss, help='tune_img_loss')
-    
-    parser.add_argument('--detach_list', type=float, default = detach_list, help='detach_list')
-    
+
     args = parser.parse_args()
 
     args.cuda  = torch.cuda.is_available()
     
     data_name  = args.dataset
-    assert data_name is 'coco', 'dataset must be coco!!!'
     datadir = os.path.join(data_root, data_name)
-    
+
     # Generator
     if args.which_gen == 'origin':
-        from LaplacianGan.models.hd_bugfree import Generator
-        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
-                         activation=args.gen_activation_type, output_size=args.imsize, reduce_dim_at=reduce_dim_at,
-                         num_resblock = args.num_resblock, detach_list=detach_list, use_cond=use_cond)
+        from LaplacianGan.models.hd_local_bug import Generator
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize,
+                        reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock)
     elif args.which_gen == 'upsample_skip':   
-        from LaplacianGan.models.hd_bugfree import Generator 
-        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
-                         activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True, 
-                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock, 
-                         detach_list=detach_list, use_cond=use_cond)              
+        from LaplacianGan.models.hd_local_bug import Generator 
+        netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128,  
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize, 
+                        use_upsamle_skip=True, reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock)   
+    
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
-
+        
     # Discriminator
-    if args.which_disc == 'origin': 
+    if args.which_disc == 'origin' or args.which_disc == 'global': 
         # only has global discriminator
-        from LaplacianGan.models.hd_bugfree import Discriminator 
+        from LaplacianGan.models.hd_local_bug import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
-                    sent_dim=1024, emb_dim=128, norm=args.norm_type)
+                    sent_dim=1024, emb_dim=128, norm=args.norm_type,disc_mode=['global'])
     elif args.which_disc == 'origin_global_local':
         # has global and local discriminator
-        from LaplacianGan.models.hd_bugfree import Discriminator 
+        from LaplacianGan.models.hd_local_bug import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['global', 'local'])
     elif args.which_disc == 'local':
         # has global and local discriminator
-        from LaplacianGan.models.hd_bugfree import Discriminator 
+        from LaplacianGan.models.hd_local_bug import Discriminator 
         netD = Discriminator(input_size=args.imsize, num_chan = 3, hid_dim = 128, 
                     sent_dim=1024, emb_dim=128, norm=args.norm_type, disc_mode=['local'])
     else:
         raise NotImplementedError('Discriminator [%s] is not implemented' % args.which_disc)
-
+    
+    #print(netG)
+    #print(netD) 
     print(args)
 
     device_id = getattr(args, 'device_id', 0)
@@ -161,20 +149,17 @@ def train_worker(data_root, model_root, training_dict):
         netG = netG.cuda(device_id)
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
-
+    
     if not args.debug_mode:
-        print ('>> initialize dataset')   
-
-        train_loader = MultiThreadLoader(os.path.join(datadir, 'train'), batch_size=args.batch_size, 
-                                         num_embed=4, threads= 4, data_dir=datadir,drop_last=True).load_data()
-        test_loader  = MultiThreadLoader(os.path.join(datadir,  'val'), batch_size=args.batch_size, 
-                                         num_embed=1, threads= 4, aug_flag=False, data_dir=datadir,drop_last=True).load_data()
-        dataset = Dataset(train_loader, test_loader)
-
+        print ('>> initialize dataset')
+        dataset = TextDataset(datadir, 'cnn-rnn', 4)
+        filename_test = os.path.join(datadir, 'test')
+        dataset.test = dataset.get_data(filename_test)
+        filename_train = os.path.join(datadir, 'train')
+        dataset.train = dataset.get_data(filename_train)
     else:
         dataset = []
         print ('>> in debug mode')
-
     model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
-    print ('>> START training {}'.format(model_name))
+    print ('>> START training with bug ')
     train_gans(dataset, model_root, model_name, netG, netD, args)

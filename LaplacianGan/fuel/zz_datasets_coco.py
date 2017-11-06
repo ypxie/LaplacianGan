@@ -181,7 +181,7 @@ class Dataset(object):
         # import pdb; pdb.set_trace()
         sampled_images = self._images(filenames)
         sampled_wrong_images = self._images(fake_filenames)
-    
+        
         sampled_images = sampled_images
         sampled_wrong_images = sampled_wrong_images
         sampled_images = self.transform(sampled_images)

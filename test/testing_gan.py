@@ -94,41 +94,61 @@ save_spec = 'eval_bs_1'
 #                 'model_name':'gen_origin_disc_both_birds_[64, 128, 256]', 'save_spec': save_spec, 'test_sample_num' : 10,
 #                 'which_gen': 'origin', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
 
-zz_mmgan_plain_gl_disc_ncric10_flowers_256_500 \
-                                    = {'batch_size': 8, 'device_id': 2,'imsize':[64,128,256], 'load_from_epoch': 500, 'train_mode': False,
-                                       'model_name':'zz_mmgan_plain_gl_disc_ncric10_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
-                                       'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256],
-                                       'save_images':True}
+# zz_mmgan_plain_gl_disc_ncric10_flowers_256_500 \
+#                                     = {'batch_size': 8, 'device_id': 2,'imsize':[64,128,256], 'load_from_epoch': 500, 'train_mode': False,
+#                                        'model_name':'zz_mmgan_plain_gl_disc_ncric10_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
+#                                        'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256],
+#                                        'save_images':True}
 
-zz_mmgan_plain_gl_disc_ncric10_flowers_256_580 \
-                                    = {'batch_size': 8, 'device_id': 0,'imsize':[64, 128,256], 'load_from_epoch': 580, 'train_mode': False,
-                                       'model_name':'zz_mmgan_plain_gl_disc_ncric10_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
-                                       'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256],
-                                       'save_images':True}
+# zz_mmgan_plain_gl_disc_ncric10_flowers_256_580 \
+#                                     = {'batch_size': 8, 'device_id': 0,'imsize':[64, 128,256], 'load_from_epoch': 580, 'train_mode': False,
+#                                        'model_name':'zz_mmgan_plain_gl_disc_ncric10_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
+#                                        'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256],
+#                                        'save_images':True}
 
-zz_mmgan_plain_gl_disc_ncric10_flowers_256_600 \
-                                    = {'batch_size': 8, 'device_id': 0,'imsize':[64, 128,256], 'load_from_epoch': 600, 'train_mode': False,
-                                       'model_name':'zz_mmgan_plain_gl_disc_ncric10_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
-                                       'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256],
-                                       'save_images':True}
+# zz_mmgan_plain_gl_disc_ncric10_flowers_256_600 \
+#                                     = {'batch_size': 8, 'device_id': 0,'imsize':[64, 128,256], 'load_from_epoch': 600, 'train_mode': False,
+#                                        'model_name':'zz_mmgan_plain_gl_disc_ncric10_flowers_256', 'save_spec': save_spec, 'test_sample_num' : 26,
+#                                        'which_gen': 'origin', 'which_disc':'origin', 'dataset':'flowers','reduce_dim_at':[8, 32, 128, 256],
+#                                        'save_images':True}
+
+# zz_mmgan_plain_gl_disc_ncric_comb128_256_birds_256_500  =   \
+#                 { 'test_sample_num' : 10,  'load_from_epoch': 500, 'dataset':'birds', 
+#                  'device_id': 6,'imsize':[128, 256], 'model_name':'zz_mmgan_plain_gl_disc_ncric_comb128_256_birds_256',
+#                  'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+#                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256] }
+
+zz_mmgan_plain_local_512_ncit30_50decay_super3_birds_512_100 = \
+                { 'test_sample_num' : 10,  'load_from_epoch': 100, 'dataset':'birds', 
+                 'device_id': 0,'imsize':[512], 'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super3_birds_512',
+                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'super',
+                 'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256] }
+
+zz_mmgan_plain_local_512_ncit30_50decay_super3_birds_512_180 = \
+                { 'test_sample_num' : 10,  'load_from_epoch': 180, 'dataset':'birds', 
+                 'device_id': 0,'imsize':[512], 'model_name':'zz_mmgan_plain_local_512_ncit30_50decay_super3_birds_512',
+                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'super',
+                 'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256] }
 
 training_pool = np.array([
+                zz_mmgan_plain_local_512_ncit30_50decay_super3_birds_512_180,
+                #zz_mmgan_plain_gl_disc_ncric_comb128_256_birds_256_500
                 #zz_mmgan_plain_gl_disc_ncric10_flowers_256_500,
-                zz_mmgan_plain_gl_disc_ncric10_flowers_256_580,
-                zz_mmgan_plain_gl_disc_ncric10_flowers_256_600
+                #zz_mmgan_plain_gl_disc_ncric10_flowers_256_580,
+                #zz_mmgan_plain_gl_disc_ncric10_flowers_256_600
                 #gen_origin_disc_both_birds_561,
                 #gen_origin_disc_both_birds_540,
                 #gen_origin_disc_both_birds_510
-                 #birds_plain_gl_disc_ncric_580,
-                 #flower_plain_gl_disc_ncric_540,
-                 #flower_plain_gl_disc_ncric_560,
-                 #flower_plain_gl_disc_ncric_580
-                 #flower_plain_gl_disc_allncric,
-                 #flower_plain_gl_disc_ncric,
-                 #bird_plain_gl_disc_ncric_comb_64_256v2,
-                 #bird_plain_gl_disc_ncric_single_256,
-                 #bird_plain_gl_disc_birds
-                 ])
+                #birds_plain_gl_disc_ncric_580,
+                #flower_plain_gl_disc_ncric_540,
+                #flower_plain_gl_disc_ncric_560,
+                #flower_plain_gl_disc_ncric_580
+                #flower_plain_gl_disc_allncric,
+                #flower_plain_gl_disc_ncric,
+                #bird_plain_gl_disc_ncric_comb_64_256v2,
+                #bird_plain_gl_disc_ncric_single_256,
+                #bird_plain_gl_disc_birds
+                ])
 
 
 show_progress = 0

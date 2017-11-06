@@ -106,7 +106,7 @@ class GeneratorSuperL1Loss(nn.Module):
         scale_256 = self.generator_256.keep_out_256.detach() #Variable(self.generator_256.keep_out_256.data, volatile=True) 
         # print (scale_256.size())
         scale_512 = self.scale_512(scale_256)
-        up_img_256 = F.upsample(out['output_256'].detach(), (512,512), mode='bilinear')
+        up_img_256 = F.upsample(out['output_256'].detach(), (512,512), mode='nearest')
 
         out2 = {}
         out2['output_256'] = out['output_256']
@@ -565,10 +565,10 @@ class Discriminator(torch.nn.Module):
             self.pair_disc_128  = DiscClassifier(enc_dim, emb_dim, feat_size=4,  norm=norm, activ=activ)
 
             if 'local' in self.disc_mode:
-                _layers = [nn.Conv2d(enc_dim, 1, kernel_size=1, padding=0, bias=True)]   # 4
+                _layers = [nn.Conv2d(enc_dim, 1, kernel_size = 3, padding=0, bias=True)]   # 4
                 self.local_img_disc_128 = nn.Sequential(*_layers)
             if 'global' in self.disc_mode:
-                _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 4
+                _layers = [nn.Conv2d(enc_dim, 1, kernel_size = 4, padding=0, bias=True)]   # 4
                 self.global_img_disc_128 = nn.Sequential(*_layers)
 
             _layers = [nn.Linear(sent_dim, emb_dim)]
@@ -577,14 +577,15 @@ class Discriminator(torch.nn.Module):
 
         if 256 in self.side_output_at:
             self.img_encoder_256  = ImageDown(256, num_chan, enc_dim, norm)  # 8
-            self.pair_disc_256  = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
+            self.pair_disc_256    = DiscClassifier(enc_dim, emb_dim, feat_size=4, norm=norm, activ=activ)
             
             # shrink is used for mapping 8x8 FM to 4x4
             self.shrink = conv_norm(enc_dim, enc_dim,  norm_layer, stride=1, activation=activ, kernel_size=5, padding=0)
 
             if 'local' in self.disc_mode:
-                _layers = [nn.Conv2d(enc_dim, 1, kernel_size=1, padding=0, bias=True)]   # 8
+                _layers = [nn.Conv2d(enc_dim, 1, kernel_size = 4, padding=0, bias=True)]   # 8
                 self.local_img_disc_256 = nn.Sequential(*_layers)
+            
             if 'global' in self.disc_mode:
                 _layers = [nn.Conv2d(enc_dim, 1, kernel_size=4, padding=0, bias=True)]   # 1
                 self.global_img_disc_256 = nn.Sequential(*_layers)
@@ -633,15 +634,17 @@ class Discriminator(torch.nn.Module):
         if 'local' in self.disc_mode and this_img_size != 64:
             local_img_disc_out          = local_img_disc(img_code) 
             out_dict['local_img_disc']  = local_img_disc_out
-            
-        if 'global' in self.disc_mode:
+            #print('{} local dis shape {}'.format(this_img_size, out_dict['local_img_disc'].size()))   
+
+        if 'global' in self.disc_mode or this_img_size == 64:
             global_img_disc_out         = global_img_disc(img_code)
             #global_img_disc_out         = global_img_disc(shrink_img_code) # pls note it is probably a bug and make it a local disc
                 # print('{} global dis shape {}'.format(this_img_size, global_img_disc_out.size()))
             out_dict['global_img_disc'] = global_img_disc_out
-            
+            #print('{} global dis shape {}'.format(this_img_size, out_dict['global_img_disc'].size()))
+
         out_dict['pair_disc']     = pair_disc_out
         out_dict['content_code']  = None # useless
-
+        
         return out_dict
 

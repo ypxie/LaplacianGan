@@ -205,7 +205,7 @@ def save_images_list(X_list, save_path=None, save=True, dim_ordering='tf'):
     
     # X_list: list of X
     # X: B*C*H*W
-
+    
     X = X_list[0]
     n_samples = X.shape[0]
     nh = n_samples
@@ -227,6 +227,7 @@ def save_images_list(X_list, save_path=None, save=True, dim_ordering='tf'):
 
     elif X.ndim == 3:
         h, w = X[0].shape[:2]
+        c = 0
         hgap, wgap = int(0.1*h), int(0.1*w)
         img = np.zeros(((h+hgap)*nh - hgap, (w+wgap)*nw - wgap))
     else:

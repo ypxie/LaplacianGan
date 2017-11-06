@@ -73,8 +73,8 @@ def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_img_logit, real_lab
 
     criterion = nn.MSELoss()
     wrong_d_loss = criterion(wrong_img_logit, real_labels)
-    real_d_loss = criterion(real_img_logit, real_labels)
-    fake_d_loss = criterion(fake_img_logit, fake_labels)
+    real_d_loss  = criterion(real_img_logit, real_labels)
+    fake_d_loss  = criterion(fake_img_logit, fake_labels)
 
     return fake_d_loss + (wrong_d_loss+real_d_loss) / 2
 
@@ -190,6 +190,11 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
     lr_plot = plot_scalar(name = "lr", env=mode_name, rate = args.display_freq)
     kl_loss_plot = plot_scalar(name = "kl_loss", env= mode_name, rate = args.display_freq)
 
+    for this_key in all_keys:
+        g_plot_dict[this_key] = plot_scalar(name = "g_img_loss_" + this_key, env= mode_name, rate = args.display_freq)
+        d_plot_dict[this_key] = plot_scalar(name = "d_img_loss_" + this_key, env= mode_name, rate = args.display_freq)
+        
+
     z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     z = to_device(z)
     # test the fixed image for every epoch
@@ -254,7 +259,6 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                 embeddings = to_device(np_embeddings) 
                 z.data.normal_(0, 1)
 
-
                 ''' update D '''
                 for p in netD.parameters(): 
                     p.requires_grad = True
@@ -290,6 +294,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
 
                 discriminator_loss.backward() # backward per discriminator (save memory)
                 d_loss_val += discriminator_loss.cpu().data.numpy().mean()
+
                 optimizerD.step()
                 netD.zero_grad()
 

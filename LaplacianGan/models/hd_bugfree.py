@@ -138,11 +138,11 @@ class Generator(nn.Module):
             self._foward = self.forward_plain
         print (' downsample at {}'.format(str(reduce_dim_at)))
         
-    def forward_upsample(self, sent_embeddings, z):
+    def forward_upsample(self, sent_embeddings, z, epsilon=None):
         # sent_embeddings: [B, 1024]
         out_dict = OrderedDict()
         
-        sent_random, kl_loss  = self.condEmbedding(sent_embeddings) # sent_random [B, 128]
+        sent_random, kl_loss  = self.condEmbedding(sent_embeddings, epsilon=epsilon) # sent_random [B, 128]
         
         text = torch.cat([sent_random, z], dim=1)
 
@@ -182,7 +182,7 @@ class Generator(nn.Module):
               
         return out_dict, kl_loss
     
-    def forward_plain(self, sent_embeddings, z):
+    def forward_plain(self, sent_embeddings, z, epsilon=None):
         # sent_embeddings: [B, 1024]
         out_dict = OrderedDict()
         sent_random, kl_loss  = self.condEmbedding(sent_embeddings) # sent_random [B, 128]
@@ -220,9 +220,9 @@ class Generator(nn.Module):
 
         return out_dict, kl_loss
     
-    def forward(self, sent_embeddings, z):
+    def forward(self, sent_embeddings, z, epsilon=None):
         #print(sent_embeddings.get_device(), z.get_device(), self.device_id.get_device(), self.condEmbedding.linear.weight.get_device())
-        return self._foward(sent_embeddings, z)
+        return self._foward(sent_embeddings, z, epsilon=epsilon)
 
 class ImageDown(torch.nn.Module):
     '''
@@ -421,7 +421,7 @@ class Discriminator(torch.nn.Module):
             local_img_disc_out          = local_img_disc(img_code) 
             out_dict['local_img_disc']  = local_img_disc_out
             
-        if 'global' in self.disc_mode:
+        if 'global' in self.disc_mode or this_img_size == 64:  # serious bug!!!
             global_code = shrink_img_code if this_img_size == 256 else img_code
             global_img_disc_out         = global_img_disc(global_code)
             assert global_img_disc_out.size()[3] == 1, 'global output does not equal 1x1'

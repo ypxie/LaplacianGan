@@ -160,7 +160,7 @@ class Dataset(object):
         output_res = [64, 128, 256]
         if super_resolution:
             output_res += [512]
-
+                
         for size in output_res:
             tmp = resize_images(sampled_images, shape=[size, size])
             tmp = tmp * (2. / 255) - 1.

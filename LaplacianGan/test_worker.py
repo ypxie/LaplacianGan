@@ -19,6 +19,7 @@ def test_worker(data_root, model_root, save_root, testing_dict):
     test_sample_num     = testing_dict.get('test_sample_num', 10)
     save_images         = testing_dict.get('save_images', False)
     imsize              = testing_dict.get('imsize')
+    num_resblock        = testing_dict.get('num_resblock', 2)
 
     parser = argparse.ArgumentParser(description = 'Gans')    
 
@@ -69,10 +70,11 @@ def test_worker(data_root, model_root, save_root, testing_dict):
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
                activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True,reduce_dim_at=reduce_dim_at)              
     elif args.which_gen == 'super':   
-        from LaplacianGan.models.hd_networks import GeneratorSuper
-        netG = GeneratorSuper(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
-                norm=args.norm_type, activation=args.gen_activation_type)
-
+        from LaplacianGan.models.hd_networks import GeneratorSuperL1Loss
+        
+        netG = GeneratorSuperL1Loss(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+                norm=args.norm_type, activation=args.gen_activation_type, num_resblock = num_resblock)
+        #print(netG)        
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 
