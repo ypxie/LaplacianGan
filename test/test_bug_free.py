@@ -9,8 +9,8 @@ proj_root = os.path.join('..')
 data_root = os.path.join(home, 'ganData')
 
 #model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
-model_root = os.path.join(proj_root, 'Models')
-#model_root = os.path.join(data_root, 'Models')
+#model_root = os.path.join(proj_root, 'Models')
+model_root = os.path.join(data_root, 'Models')
 
 save_root  =  os.path.join(home, 'devbox', 'Shared_YZ', 'Results')
 
@@ -93,7 +93,32 @@ save_spec = 'eval_nobug'
 #                           'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":2,
 #                           'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
 
-if 1: #local flower and bird
+
+
+if 1:
+    data_root = os.path.join(home, 'ganData')
+    model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
+    
+    zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_20 = \
+                         {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_from_epoch': 20, 'train_mode': False,
+                          'model_name':'zz_mmgan_plain_local_512_ncit0_10decay_res3-pw2_birds_512',
+                          'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":3,
+                          'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+    
+    zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_40 = \
+                         {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_from_epoch': 40, 'train_mode': False,
+                          'model_name':'zz_mmgan_plain_local_512_ncit0_10decay_res3-pw2_birds_512',
+                          'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":3,
+                          'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+
+    zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_60 = \
+                         {'batch_size': 2, 'device_id': 0,'imsize':256, 'load_from_epoch': 60, 'train_mode': False,
+                          'model_name':'zz_mmgan_plain_local_512_ncit0_10decay_res3-pw2_birds_512',
+                          'save_spec': save_spec, 'test_sample_num' : 10,       "num_resblock":3,
+                          'which_gen': 'super', 'which_disc':'origin', 'dataset':'birds','reduce_dim_at':[8, 32, 128, 256] }
+
+
+if 0: #local flower and bird
     pass
     #---Following 4 has been done------
     # gen_origin_disc_global_local_birds_597  =   \
@@ -120,7 +145,7 @@ if 1: #local flower and bird
     #                  'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
     #                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256] }
 #-----------------------------------------------------------
-if 1: # local low image and flower
+if 0: # local low image and flower
     "-------Following not been done yet.------------------------"
     pass
     # gen_origin_disc_global_local_low_birds_597  =   \
@@ -147,7 +172,7 @@ if 1: # local low image and flower
     #                  'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
     #                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256] }
     
-if 1:  # no image bird and flower
+if 0:  # no image bird and flower
     "------------------The following no image bird---------- already done---------"
     pass
     # gen_origin_disc_global_no_img_birds_498  =   \
@@ -175,66 +200,44 @@ if 1:  # no image bird and flower
     #                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256] }
 
 
-if 1: #local [64, 256]
-    gen_origin_disc_local_birds_597  =   \
-                   { 'test_sample_num' : 10,  'load_from_epoch': 597, 'dataset':'birds', "save_images":True, 
-                     'device_id': 0,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_birds_[64, 256]',
-                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
-                     'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
+if 0: # no img loss [64, 256]
+    data_root = os.path.join(home, 'ganData')
+    model_root = os.path.join(data_root, 'Models')
 
-    gen_origin_disc_local_birds_501  =   \
-                   { 'test_sample_num' : 10,  'load_from_epoch': 501, 'dataset':'birds', "save_images":True,
-                     'device_id': 0,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_birds_[64, 256]',
-                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
-                     'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
-
-    gen_origin_disc_local_flowers_597  =   \
-                   { 'test_sample_num' : 26,  'load_from_epoch': 597, 'dataset':'flowers', "save_images":True,
-                     'device_id': 1,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_flowers_[64, 256]',
-                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
-                     'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
-
-    gen_origin_disc_local_flowers_501  =   \
-                   { 'test_sample_num' : 26,  'load_from_epoch': 501, 'dataset':'flowers', "save_images":True,
-                     'device_id': 1,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_flowers_[64, 256]',
-                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
-                     'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
-
-if 1: # no img loss [64, 256]
     gen_origin_disc_local_no_img_birds_597  =   \
                    { 'test_sample_num' : 10,  'load_from_epoch': 597, 'dataset':'birds', "save_images":True, 
                      'device_id': 0,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_birds_[64, 256]',
-                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 2, 'which_gen': 'origin',
                      'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
 
     gen_origin_disc_local_no_img_birds_501  =   \
                    { 'test_sample_num' : 10,  'load_from_epoch': 501, 'dataset':'birds', "save_images":True,
-                     'device_id': 0,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_birds_[64, 256]',
-                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
-                     'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
-
-    gen_origin_disc_local_no_img_flowers_597  =   \
-                   { 'test_sample_num' : 26,  'load_from_epoch': 597, 'dataset':'flowers', "save_images":True,
-                     'device_id': 1,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_flowers_[64, 256]',
-                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+                     'device_id': 1,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_birds_[64, 256]',
+                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 2, 'which_gen': 'origin',
                      'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
 
     gen_origin_disc_local_no_img_flowers_501  =   \
                    { 'test_sample_num' : 26,  'load_from_epoch': 501, 'dataset':'flowers', "save_images":True,
-                     'device_id': 1,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_flowers_[64, 256]',
-                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+                     'device_id': 1, 'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_flowers_[64, 256]',
+                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 2, 'which_gen': 'origin',
+                     'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
+
+    gen_origin_disc_local_no_img_flowers_597  =   \
+                   { 'test_sample_num' : 26,  'load_from_epoch': 597, 'dataset':'flowers', "save_images":True,
+                     'device_id': 0,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_flowers_[64, 256]',
+                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 2, 'which_gen': 'origin',
                      'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
     
+    
 training_pool = np.array([
-                #gen_origin_disc_local_birds_597,
-                gen_origin_disc_local_birds_501,
-                gen_origin_disc_local_flowers_597,
-                gen_origin_disc_local_flowers_501,
-
-                # gen_origin_disc_local_no_img_birds_597,
-                # gen_origin_disc_local_no_img_birds_501,
-                # gen_origin_disc_local_no_img_flowers_597,
-                # gen_origin_disc_local_no_img_flowers_501
+                zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_20,
+                zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_40,
+                zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_60
+                
+                #gen_origin_disc_local_no_img_birds_597,
+                #gen_origin_disc_local_no_img_birds_501,
+                #gen_origin_disc_local_no_img_flowers_597,
+                #gen_origin_disc_local_no_img_flowers_501
 
                 #zz_mmgan_plain_local_512_ncit0_20decay_res3_img2_nopair_birds_512_50,
                 #zz_mmgan_plain_local_512_ncit0_20decay_res3_img2_nopair_birds_512_99

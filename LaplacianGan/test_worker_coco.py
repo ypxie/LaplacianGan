@@ -28,6 +28,9 @@ def test_worker(data_root, model_root, save_root, testing_dict):
     detach_list         = training_dict.get('detach_list', [])
     use_cond            = training_dict.get('use_cond', True)
     
+    data_root           = testing_dict.get('data_root', data_root)
+    model_root          = testing_dict.get('model_root', model_root)
+    
     parser = argparse.ArgumentParser(description = 'Gans')    
 
     parser.add_argument('--noise_dim', type=int, default= 100, metavar='N',

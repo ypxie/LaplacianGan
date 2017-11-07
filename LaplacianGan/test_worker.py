@@ -20,6 +20,9 @@ def test_worker(data_root, model_root, save_root, testing_dict):
     save_images         = testing_dict.get('save_images', False)
     imsize              = testing_dict.get('imsize')
     num_resblock        = testing_dict.get('num_resblock', 2)
+    
+    data_root           = testing_dict.get('data_root', data_root)
+    model_root          = testing_dict.get('model_root', model_root)     
 
     parser = argparse.ArgumentParser(description = 'Gans')    
 

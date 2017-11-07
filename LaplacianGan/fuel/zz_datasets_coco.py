@@ -81,7 +81,7 @@ class Dataset(object):
 
     def saveIDs(self):
         self._saveIDs = np.arange(self._num_examples)
-        np.random.shuffle(self._saveIDs)
+        #np.random.shuffle(self._saveIDs) why do we need to shuffle ????
         return self._saveIDs
 
     def readCaptions(self, filenames):
@@ -197,7 +197,7 @@ class Dataset(object):
             tmp = tmp * (2. / 255) - 1.
             tmp = np.squeeze(tmp, 0) # squeee is to remove the extra dimensions since we use pytorch multithread loader
             images_dict['output_{}'.format(size)] = tmp.astype(np.float32)
-
+            
             tmp = resize_images(sampled_wrong_images, shape=[size, size])
             tmp = tmp * (2. / 255) - 1.
             tmp = np.squeeze(tmp, 0)

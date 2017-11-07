@@ -13,7 +13,7 @@ def train_worker(data_root, model_root, training_dict):
 
     save_freq           = training_dict.get('save_freq', 3)
     ncritic_epoch_range = training_dict.get('ncritic_epoch_range', 100)
-    epoch_decay         = training_dict.get('epoch_decay', 30) 
+    epoch_decay         = training_dict.get('epoch_decay', 100) 
     g_lr                = training_dict.get('g_lr', .0002)
     d_lr                = training_dict.get('d_lr', .0002)
     reduce_dim_at       = training_dict.get('reduce_dim_at', [8, 32, 128, 256])
@@ -22,6 +22,7 @@ def train_worker(data_root, model_root, training_dict):
     img_loss_ratio      = training_dict.get('img_loss_ratio', 1.0)
     tune_img_loss       = training_dict.get('tune_img_loss', False)
 
+    print('locals of train_work: ', locals())
     parser = argparse.ArgumentParser(description = 'Gans')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')

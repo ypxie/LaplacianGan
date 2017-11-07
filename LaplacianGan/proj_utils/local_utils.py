@@ -590,6 +590,14 @@ def Indexflow(Totalnum, batch_size, random=True):
         chunkstart += thisnum
         yield thisInd
 
+def IndexH5(h5_array, indices):
+    read_list = []
+    for idx in indices:
+        read_list.append(h5_array[idx])
+    return np.stack(read_list, 0)
+
+
+
 def batchflow(batch_size, *Data):
     # we dont check Data, they should all have equal first dimension
     Totalnum = Data[0].shape[0]
