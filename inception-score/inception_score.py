@@ -195,7 +195,7 @@ def load_data_from_h5_fakehr(fullpath):
     import glob
     import deepdish as dd
     import h5py
-    print ('use fake h5 loader for hr')
+    print ('*********use fake h5 loader for hr**********')
     # import pdb; pdb.set_trace()
     h5file = os.path.join(fullpath, FLAGS.h5_file)
     return_path = os.path.join(fullpath, FLAGS.h5_file[:-3]+'_inception_score')

@@ -128,10 +128,10 @@ class condEmbedding2(nn.Module):
     
         # epsilon = Variable(torch.randn(mean.size())).cuda()
         epsilon = Variable(torch.cuda.FloatTensor(mean.size()).normal_())
-        stddev  = logsigma.mul(0.5).exp_()
-        epsilon.mul(stddev).add_(mean)
+        stddev  = logsigma.exp()
+        
         # kl_loss = self.KL_loss(mean, logsigma) if kl_loss else None
-        return epsilon
+        return epsilon.mul(stddev).add_(mean)
 
     def forward(self, inputs, kl_loss=True):
         '''

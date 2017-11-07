@@ -48,8 +48,9 @@ def to_img_dict(*inputs):
     return res, mean_var
 
 def get_KL_Loss(mu, logvar):
-    kld = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
-    kl_loss = torch.mean(kld).mul_(-0.5)
+    # import pdb; pdb.set_trace()
+    kld = mu.pow(2).add(logvar.mul(2).exp()).add(-1).mul(0.5).add(logvar.mul(-1))
+    kl_loss = torch.mean(kld)
     return kl_loss
 
 def compute_d_pair_loss(real_logit, wrong_logit, fake_logit,  real_labels, fake_labels):
@@ -187,6 +188,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
     g_loss_plot = plot_scalar(name = "g_loss", env= mode_name, rate = args.display_freq)
     content_loss_plot = plot_scalar(name = "content_loss", env= mode_name, rate = args.display_freq)
     lr_plot = plot_scalar(name = "lr", env=mode_name, rate = args.display_freq)
+    kl_loss_plot = plot_scalar(name = "kl_loss", env= mode_name, rate = args.display_freq)
 
     for this_key in all_keys:
         g_plot_dict[this_key] = plot_scalar(name = "g_img_loss_" + this_key, env= mode_name, rate = args.display_freq)
@@ -217,8 +219,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
 
     global_iter = 0
     gen_iterations = 0
-    netG.train()
-    netD.train()
+    
     for epoch in range(start_epoch, tot_epoch):
         start_timer = time.time()
         # learning rate
@@ -231,7 +232,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
         
         train_sampler = iter(dataset.train) # reset
         test_sampler  = iter(dataset.test)
-        
+        netG.train()
+        netD.train()
         for it in range(updates_per_epoch):
 
             if epoch <= args.ncritic_epoch_range:
@@ -242,7 +244,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                     ncritic = 10    
                 else:
                     ncritic = args.ncritic
-                #print ('>> set ncritic to {}'.format(ncritic))
+                   #print ('>> set ncritic to {}'.format(ncritic))
             else:
                 ncritic = args.ncritic
 
@@ -264,11 +266,13 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
 
                 # g_emb = Variable(embeddings.data, volatile=True)
                 # g_z = Variable(z.data , volatile=True)
-                # fake_images, mean_var = to_img_dict(data_parallel(netG, (g_emb, g_z)))
-                ''' Note that by setting this, we use different fake images in G and D updates '''
+                # fake_images, _ = to_img_dict(data_parallel(netG, (g_emb, g_z)))
+                ## ''' Note that by setting this, we use different fake images in G and D updates '''
                 fake_images, mean_var = to_img_dict(data_parallel(netG, (embeddings, z)))
 
                 d_loss_val = 0
+                discriminator_loss = 0
+                image_loss_ratio = 1
                 for key, _ in fake_images.items():
                     # iterate over image of different sizes.
                     this_img   = to_device(images[key]) 
@@ -285,11 +289,12 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
 
                     real_labels, fake_labels = get_labels(real_img_logit_global)
                     img_loss = compute_d_img_loss(wrong_img_logit_global, real_img_logit_global, fake_img_logit_global, real_labels, fake_labels)
-                    d_plot_dict[key].plot(img_loss.cpu().data.numpy().mean())
-                    discriminator_loss = pair_loss + img_loss 
-                    discriminator_loss.backward() # backward per discriminator (save memory)
-                    d_loss_val += discriminator_loss.cpu().data.numpy().mean()
-                    
+
+                    discriminator_loss += (pair_loss + img_loss * image_loss_ratio)
+
+                discriminator_loss.backward() # backward per discriminator (save memory)
+                d_loss_val += discriminator_loss.cpu().data.numpy().mean()
+
                 optimizerD.step()
                 netD.zero_grad()
 
@@ -307,7 +312,9 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
 
             loss_val  = 0
             kl_loss = get_KL_Loss(mean_var[0], mean_var[1])
+            kl_loss_val = kl_loss.cpu().data.numpy().mean()
             generator_loss = args.KL_COE*kl_loss
+            kl_loss_plot.plot(kl_loss_val)
             for key, _ in fake_images.items():
                 # iterate over image of different sizes.
                 this_fake  = fake_images[key]
@@ -319,9 +326,8 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                 real_labels, _ = get_labels(fake_img_logit_global)
                 img_loss = compute_g_loss(fake_img_logit_global, real_labels)
 
-                generator_loss += img_loss 
-                g_plot_dict[key].plot(img_loss.cpu().data.numpy().mean())
-                
+                generator_loss += img_loss * image_loss_ratio
+
             generator_loss.backward()
             optimizerG.step()
             netG.zero_grad()
@@ -338,7 +344,7 @@ def train_gans(dataset, model_root, mode_name, netG, netD, args, gpus):
                 for k, sample in fake_images.items():
                     # plot_imgs(sample.cpu().data.numpy(), epoch, k, 'train_samples')
                     plot_imgs([images[k].numpy(), sample.cpu().data.numpy()], epoch, k, 'train_images')
-                print ('[epoch %d/%d iter %d/%d]: lr = %.6f g_loss = %.5f d_loss= %.5f' % (epoch, tot_epoch, it, updates_per_epoch, g_lr, g_loss_val, d_loss_val))
+                print ('[epoch %d/%d iter %d/%d]: lr = %.6f g_loss = %.5f d_loss= %.5f kl_loss: %.5f' % (epoch, tot_epoch, it, updates_per_epoch, g_lr, g_loss_val, d_loss_val, kl_loss_val))
                 sys.stdout.flush()
 
         ''' visualize test per epoch '''

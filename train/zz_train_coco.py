@@ -104,7 +104,7 @@ if  __name__ == '__main__':
     if args.which_gen == 'origin':
         from LaplacianGan.models.hd_networks_parallel import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
-                        norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+                        norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize, num_resblock=1)
     elif args.which_gen == 'upsample_skip':   
         from LaplacianGan.models.hd_networks_parallel import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
