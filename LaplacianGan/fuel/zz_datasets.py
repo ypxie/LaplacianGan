@@ -58,7 +58,7 @@ class Dataset(object):
 
     def saveIDs(self):
         self._saveIDs = np.arange(self._num_examples)
-        np.random.shuffle(self._saveIDs)
+        #np.random.shuffle(self._saveIDs) why do we need to shuffle????
         return self._saveIDs
 
     def readCaptions(self, filenames, class_id):
@@ -222,7 +222,7 @@ class Dataset(object):
             batch = sampled_embeddings[:, i, :]
             sampled_embeddings_batchs.append(batch)
             #sampled_embeddings_batchs.append(np.squeeze(batch))
-        return [sampled_images, sampled_embeddings_batchs,self._saveIDs[start:end],
+        return [sampled_images, sampled_embeddings_batchs, self._saveIDs[start:end],
                  self._class_id[start:end], sampled_captions]
 
 

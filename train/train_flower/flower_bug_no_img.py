@@ -18,10 +18,11 @@ from LaplacianGan.train_worker_bug import train_worker
 # 101 201 301 401 501 601
 # 2   4   8   16  32  64
 
-local_bug_local_no_img_64_128_256      = { 'reuse_weights': False, 'batch_size': 16, 'device_id': 0, 'use_img_loss' : False,
-                                'which_gen': 'origin', 'which_disc':'local', 'g_lr': .0002/(2**0), 'd_lr': .0002/(2**0), 
-                                'imsize':[64, 128, 256],  'load_from_epoch': 0, 'model_name':'gen_origin_disc_local_no_img_bug', 
-                                'dataset':'flowers', 'reduce_dim_at':[8, 32, 128, 256] }
+local_bug_local_no_img_64_128_256     \
+                = { 'reuse_weights': True, 'batch_size': 16, 'device_id': 0, 'use_img_loss' : False,
+                    'which_gen': 'origin', 'which_disc':'local', 'g_lr': .0002/(2**0), 'd_lr': .0002/(2**0), 
+                    'imsize':[64, 128, 256],  'load_from_epoch': 30, 'model_name':'gen_origin_disc_local_no_img_bug', 
+                    'dataset':'flowers', 'reduce_dim_at':[8, 32, 128, 256] }
 
 training_pool = np.array([
                         local_bug_local_no_img_64_128_256

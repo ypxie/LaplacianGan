@@ -12,12 +12,13 @@ import torchvision.transforms as transforms
 from torch.nn.utils import clip_grad_norm
 from ..proj_utils.plot_utils import *
 from ..proj_utils.torch_utils import *
+from ..proj_utils.local_utils import Indexflow, IndexH5
 
 from torch.multiprocessing import Pool
 
 import scipy
 import time, json
-import random 
+import random, h5py
 
 TINY = 1e-8
 
@@ -56,11 +57,11 @@ def pre_process(images, pool, trans=None):
     return img_tensor_all
 
 
-def train_nd(h5_path, model_root, mode_name, img_encoder, vs_model, args):
+def test_nd(h5_path, model_root, mode_name, img_encoder, vs_model, args):
     h5_folder, h5_name = os.path.split(h5_path)
     h5_name_noext = os.path.splitext(h5_name)[0]
     result_path = os.path.join(h5_folder, h5_name_noext+"_neu_dist.json")
-    
+    print("{} exists or not: ".format(h5_path), os.path.exists(h5_path))
     with h5py.File(h5_path,'r') as h5_data:
         pool = Pool(3)
         all_embeddings = h5_data["embedding"]
@@ -95,9 +96,11 @@ def train_nd(h5_path, model_root, mode_name, img_encoder, vs_model, args):
             num_imgs = this_images.shape[0]
             all_distance = 0
             all_cost_list = []
-            for thisInd in Indexflow(num_imgs, args.batch_size, random=False):
-                this_batch    = this_images[thisInd]
-                np_embeddings = all_embeddings[thisInd]
+            print("Now processing {}".format(this_key))
+            for thisInd in Indexflow(num_imgs, args.batch_size, random=False): #
+                this_batch    = IndexH5(this_images, thisInd) 
+                np_embeddings = IndexH5(all_embeddings, thisInd)
+
                 img_299     =  pre_process(this_batch, pool, trans_func)
                 
                 embeddings  =  to_device(np_embeddings, vs_model.device_id, volatile=True)
@@ -112,15 +115,15 @@ def train_nd(h5_path, model_root, mode_name, img_encoder, vs_model, args):
 
                 sent_emb, img_emb = vs_model(embeddings, img_feat)
                 #cost = calculate_dist(img_emb, sent_emb)
-                cost     = torch.sum(im*sent, 1, keepdim=False)
+                cost     = torch.sum(img_emb*sent_emb, 1, keepdim=False)
                 cost_val = cost.cpu().data.numpy()
                 all_cost_list.append(cost_val)
 
             all_cost = np.concatenate(all_cost_list, 0)    
-            cost_mean = np.mean(all_cost)
-            cost_std  = np.std(all_cost)
+            cost_mean = float(np.mean(all_cost))
+            cost_std  = float(np.std(all_cost))
 
             all_results[this_key] = {"mean":cost_mean, "std":cost_std}
-            
+        print(all_results)    
         with open(result_path, 'w') as f:
             json.dump(all_results, f)

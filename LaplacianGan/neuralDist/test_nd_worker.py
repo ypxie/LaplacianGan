@@ -6,12 +6,12 @@ import torch, h5py
 
 import torch.nn as nn
 from collections import OrderedDict
-from .proj_utils.local_utils import mkdirs
-from .trainNeuralDist  import train_nd
+from ..proj_utils.local_utils import mkdirs
+from .testNeuralDist  import test_nd
 from .neuralDistModel  import ImgSenRanking
 from .neuralDistModel  import ImageEncoder
 
-def test_worker(data_root, model_root, save_root, testing_dict):
+def test_worker(data_root, model_root, testing_dict):
     print('testing_dict: ', testing_dict)
 
     batch_size   =  testing_dict.get('batch_size')
@@ -36,30 +36,23 @@ def test_worker(data_root, model_root, save_root, testing_dict):
 
     args.cuda = torch.cuda.is_available()
     
-    
-    data_name  = testing_dict['dataset']
-    datadir    = os.path.join(data_root, data_name)
+    vs_model    = ImgSenRanking(dim_image, sent_dim, hid_dim)
+    img_encoder = ImageEncoder()
 
     device_id = getattr(args, 'device_id', 0)
     print('device_id: ', device_id)
     if args.cuda:
-        #netD = netD.cuda(device_id)
-        netG = netG.cuda(device_id)
+        vs_model    = vs_model.cuda(device_id)
+        img_encoder = img_encoder.cuda(device_id)
+
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
-
-    print ('>> initialize dataset')
-    dataset = TextDataset(datadir, 'cnn-rnn', 4)
-    filename_test = os.path.join(datadir, 'test')
-    dataset.test = dataset.get_data(filename_test)
-
+ 
     model_name = args.model_name   #'{}_{}_{}'.format(args.model_name, data_name, args.imsize)
+    
+    testing_path = os.path.join(testing_dict['data_folder'],  testing_dict['file_name'])
 
-
-    save_folder  = os.path.join(save_root, data_name, args.save_spec + 'testing_num_{}'.format(args.test_sample_num) )
-    mkdirs(save_folder)
-
-    test_gans(dataset, model_root, model_name, save_folder, netG, args)
+    test_nd(testing_path, model_root, model_name, img_encoder, vs_model, args)
 
     
     

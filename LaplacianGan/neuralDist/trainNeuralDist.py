@@ -27,7 +27,7 @@ def PairwiseRankingLoss(im, sent, margin):
     diagonal = scores.diag()
     batch_size = scores.size()[0]
 
-    sent_zeros = Variable(im.data.new(scores.size()[0], scores.size()[1]).fill_(0.0)  )
+    sent_zeros = Variable(sent.data.new(scores.size()[0], scores.size()[1]).fill_(0.0)  )
     img_zeros  = Variable(im.data.new(scores.size()[0], scores.size()[1]).fill_(0.0)  )
     
     # compare every diagonal score to scores in its column (i.e, all contrastive images for each sentence)
