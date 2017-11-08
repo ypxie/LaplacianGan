@@ -38,7 +38,7 @@ def compute_d_img_loss(wrong_img_logit, real_img_logit, fake_logit, prob=0.5, wg
 
         real_img_d_loss = wrong_d_loss * prob + real_d_loss * (1-prob)
         fake_d_loss  = 0 if type(fake_logit) in [int, float]  else  torch.mean( ((fake_logit))**2)
-
+        
         return fake_d_loss + real_img_d_loss
 
 def compute_g_loss(fake_logit, wgan=False):
@@ -58,7 +58,7 @@ def load_partial_state_dict(model, state_dict):
         own_state = model.state_dict()
         #print('own_Dict', own_state.keys(), 'state_Dict',state_dict.keys())
         for a,b in zip( own_state.keys(), state_dict.keys()):
-            print(a,'=====', b)
+            print(a,'_from model =====_loaded: ', b)
         for name, param in state_dict.items():
             if name not in own_state:
                 raise KeyError('unexpected key "{}" in state_dict'

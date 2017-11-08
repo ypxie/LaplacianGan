@@ -159,7 +159,8 @@ class Generator(nn.Module):
         self.condEmbedding = condEmbedding2(sent_dim, emb_dim)
         self.vec_to_tensor = Sent2FeatMap(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm=norm)
         self.use_upsamle_skip = use_upsamle_skip
-
+        self.register_buffer('device_id', torch.IntTensor(1))
+        #self.device_id  = torch.IntTensor(1)
         '''user defefined'''
         if type(output_size) is int:
             if output_size==256: self.side_output_at = [64, 128, 256] 

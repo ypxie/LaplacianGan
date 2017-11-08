@@ -1,4 +1,4 @@
-import os
+import os, pickle
 import sys, os
 import numpy as np
 sys.path.insert(0, os.path.join('..'))
@@ -238,23 +238,26 @@ if __name__ == "__main__":
     interv = 1.0/5
     args.alpha_list =  np.linspace(0,1,11)
     test_sample_num =  len(args.alpha_list)
+    path_left  =  None
+    path_right =  None
+    with open(path_left, 'rb') as f:
+        dict_left_list   = pickle.load(f)
+    with open(path_right, 'rb') as f:
+        dict_right_right   = pickle.load(f)    
     
-    #dict_left  = dd.io.load(path_left)
-    #dict_right = dd.io.load(path_right)
+    for dict_left, dict_right in zip(dict_left_list, dict_right_right)
+        dict_left  = {'emb':np.random.rand(1, 1024), 'caption':'random captions'}
+        dict_right = {'emb':np.random.rand(1, 1024), 'caption':'random captions'}
+        
+        args.batch_size = dict_left['emb'].shape[0]
+        testing_z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
+        epsilon   = torch.FloatTensor(args.batch_size, 128).normal_(0, 1)
+        
+        print({'dict_left':dict_left, 'z':testing_z , 'eps':epsilon})
 
-    dict_left  = {'emb':np.random.rand(1, 1024), 'caption':'random captions'}
-    dict_right = {'emb':np.random.rand(1, 1024), 'caption':'random captions'}
-
-    
-    args.batch_size = dict_left['emb'].shape[0]
-    testing_z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
-    epsilon   = torch.FloatTensor(args.batch_size, 128).normal_(0, 1)
-    
-    print({'dict_left':dict_left, 'z':testing_z , 'eps':epsilon})
-
-    save_folder  = os.path.join(save_root, data_name, args.save_spec + 'testing_num_{}'.format(test_sample_num) )
-    
-    mkdirs(save_folder)
-    
-    test_gans(dict_left, dict_right, testing_z, epsilon, model_root, args.model_name, save_folder, netG, args)
-    
+        save_folder  = os.path.join(save_root, data_name, args.save_spec + 'testing_num_{}'.format(test_sample_num) )
+        
+        mkdirs(save_folder)
+        
+        test_gans(dict_left, dict_right, testing_z, epsilon, model_root, args.model_name, save_folder, netG, args)
+        

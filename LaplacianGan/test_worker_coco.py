@@ -93,7 +93,7 @@ def test_worker(data_root, model_root, save_root, testing_dict):
     device_id = getattr(args, 'device_id', 0)
     print('device_id: ', device_id)
     if args.cuda:
-        #netD = netD.cuda(device_id)
+        #netG = nn.parallel.DataParallel(netG, device_ids=[device_id])
         netG = netG.cuda(device_id)
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True

@@ -32,7 +32,36 @@ def to_img_dict(*inputs):
         res['output_256'] = inputs[2]
     mean_var = (inputs[3], inputs[4])
     return res, mean_var
+
+def load_partial_state_dict(model, state_dict):
     
+        own_state = model.state_dict()
+        #print('own_Dict', own_state.keys(), 'state_Dict',state_dict.keys())
+        for a,b in zip( own_state.keys(), state_dict.keys()):
+            print(a,'_from model =====_loaded: ', b)
+        
+        for name, _ in own_state.items():
+            if name is "device_id":
+                pass
+            else:
+                wrapper_name = "module."+ name
+                param = state_dict[wrapper_name]
+                if  wrapper_name not in state_dict:
+                    raise KeyError('unexpected key "{}" in constructed own_state'
+                                .format("module."+ name))
+                if isinstance(param, Parameter):
+                    # backwards compatibility for serialized parameters
+                    param = param.data
+                try:
+                    own_state[name].copy_(param)
+                except:
+                    print('While copying the parameter named {}, whose dimensions in the model are'
+                        ' {} and whose dimensions in the checkpoint are {}, ...'.format(
+                            name, own_state[name].size(), param.size()))
+                    raise
+        
+        print ('>> load partial state dict: {} initialized'.format(len(state_dict)))
+
 def drawCaption(img, caption, level=['output 64', 'output 128', 'output 256']):
     img_txt = Image.fromarray(img)
     # get a font
@@ -167,8 +196,8 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
     print('reload weights from {}'.format(G_weightspath))
     weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
-    #load_partial_state_dict(netG, weights_dict)
-    netG.load_state_dict(weights_dict)
+    load_partial_state_dict(netG, weights_dict)
+    #netG.load_state_dict(weights_dict)
 
     testing_z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     testing_z = to_device(testing_z, netG.device_id, volatile=True)

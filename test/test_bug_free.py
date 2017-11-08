@@ -230,11 +230,37 @@ if 0: # no img loss [64, 256]
                      'train_mode': False,  'save_spec': save_spec, 'batch_size': 2, 'which_gen': 'origin',
                      'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
     
-    
+if 1: # FINAL Model
+    data_root = os.path.join(home, 'ganData')
+    model_root = os.path.join(data_root, 'Models')
+
+    gen_origin_disc_local_no_img_birds_597  =   \
+                   { 'test_sample_num' : 10,  'load_from_epoch': 597, 'dataset':'birds', "save_images":True, 
+                     'device_id': 0,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_birds_[64, 256]',
+                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 2, 'which_gen': 'origin',
+                     'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
+
+    gen_origin_disc_local_no_img_birds_501  =   \
+                   { 'test_sample_num' : 10,  'load_from_epoch': 501, 'dataset':'birds', "save_images":True,
+                     'device_id': 1,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_birds_[64, 256]',
+                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 2, 'which_gen': 'origin',
+                     'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
+
+    gen_origin_disc_local_no_img_flowers_501  =   \
+                   { 'test_sample_num' : 26,  'load_from_epoch': 501, 'dataset':'flowers', "save_images":True,
+                     'device_id': 1, 'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_flowers_[64, 256]',
+                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 2, 'which_gen': 'origin',
+                     'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }
+
+    gen_origin_disc_local_no_img_flowers_597  =   \
+                   { 'test_sample_num' : 26,  'load_from_epoch': 597, 'dataset':'flowers', "save_images":True,
+                     'device_id': 0,'imsize':[64, 256], 'model_name':'gen_origin_disc_local_no_img_flowers_[64, 256]',
+                     'train_mode': False,  'save_spec': save_spec, 'batch_size': 2, 'which_gen': 'origin',
+                     'which_disc':'local', 'reduce_dim_at':[8, 32, 128, 256] }    
 training_pool = np.array([
-                zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_20,
-                zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_40,
-                zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_60
+                #zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_20,
+                #zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_40,
+                #zz_mmgan_plain_local_512_ncit0_10decay_res3_pw2_birds_512_60
                 
                 #gen_origin_disc_local_no_img_birds_597,
                 #gen_origin_disc_local_no_img_birds_501,

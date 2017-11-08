@@ -51,12 +51,17 @@ parap_64_256_101  =   \
                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
 
+parap_64_256_100  =   \
+               {'test_sample_num' : 1,  'load_from_epoch': 100, 'dataset':'coco', "num_resblock":1,
+                'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
+                'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+                 'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+
 parap_64_256_50  =   \
                {'test_sample_num' : 1,  'load_from_epoch': 50, 'dataset':'coco', "num_resblock":1,
                 'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
-
 
 parap_64_256_80  =   \
                {'test_sample_num' : 1,  'load_from_epoch': 80, 'dataset':'coco', "num_resblock":1,
@@ -64,11 +69,11 @@ parap_64_256_80  =   \
                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
 
-
 training_pool = np.array([
-                    parap_64_256_101,
-                    #parap_64_256_50,
-                    #parap_64_256_80,
+                    #parap_64_256_101,
+                    parap_64_256_100,
+                    parap_64_256_50,
+                    parap_64_256_80,
                  #gen_origin_disc_origin_coco_64,
                  #gen_origin_disc_origin_coco_128,
                  #gen_origin_disc_origin_coco_128_114
