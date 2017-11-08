@@ -128,17 +128,19 @@ output_64 mean 7.79899, 0.132714241
 # local is set to  128 (2x2), 256 (5x5)
 # currently we have
 ## flower
--[64, 256] no img local
+- [64, 256] no img 
+- [64, 128, 256] no img 
+
 ## birds
-- [64, 256]  no img local
+- [64, 256]  no img 
 - [64, 256]  img local
 - [64, 128, 256] no img
 
 # what we need
-## flower
+## flower # on big machine
 - [64, 256] img local 
 - [64, 128, 256] img local
-- [64, 128, 256] no img 
-## birds
-- [64, 128, 256] img local
+
+## birds # on big machine
+- [64, 128, 256] img bug local
 

@@ -20,7 +20,19 @@ from PIL import Image, ImageDraw, ImageFont
 import time, json, h5py
 
 TINY = 1e-8
-
+def to_img_dict(*inputs):
+    res = {}
+    inputs = inputs[0]
+    # if does not has tat scale image, we return a vector 
+    if len(inputs[0].size()) != 1: 
+        res['output_64'] = inputs[0]
+    if len(inputs[1].size()) != 1: 
+        res['output_128'] = inputs[1]
+    if len(inputs[2].size()) != 1: 
+        res['output_256'] = inputs[2]
+    mean_var = (inputs[3], inputs[4])
+    return res, mean_var
+    
 def drawCaption(img, caption, level=['output 64', 'output 128', 'output 256']):
     img_txt = Image.fromarray(img)
     # get a font
@@ -155,8 +167,9 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
     print('reload weights from {}'.format(G_weightspath))
     weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
-    load_partial_state_dict(netG, weights_dict)
-    
+    #load_partial_state_dict(netG, weights_dict)
+    netG.load_state_dict(weights_dict)
+
     testing_z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     testing_z = to_device(testing_z, netG.device_id, volatile=True)
 
@@ -170,8 +183,11 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     if org_file_not_exists:
         org_h5 = h5py.File(org_h5path,'w')
         org_dset = org_h5.create_dataset('output_256', shape=(num_examples,256, 256,3), dtype=np.uint8)
+        org_emb_dset = org_h5.create_dataset('embedding', shape=(num_examples, 1024), dtype=np.float)
     else:
         org_dset = None
+        org_emb_dset = None
+
     with h5py.File(save_h5,'w') as h5file:
         
         start_count = 0
@@ -198,7 +214,8 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
             all_choosen_caption.extend(chosen_captions)    
             if org_dset is not None:
                 org_dset[start_count:start_count+this_batch_size] = ((test_images + 1) * 127.5 ).astype(np.uint8)
-            
+                org_emb_dset[start_count:start_count+this_batch_size] = test_embeddings_list[0]
+                
             start_count += this_batch_size
             
             #test_embeddings_list is a list of (B,emb_dim)
@@ -213,7 +230,7 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
 
                 this_test_embeddings_np = test_embeddings_list[ridx]
                 this_test_embeddings = to_device(this_test_embeddings_np, netG.device_id, volatile=True)
-                test_outputs, _ = netG(this_test_embeddings, testing_z[0:this_batch_size])
+                test_outputs, _ = to_img_dict(netG(this_test_embeddings, testing_z[0:this_batch_size]))
                 
                 if  t == 0: 
                     if init_flag is True:

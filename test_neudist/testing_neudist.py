@@ -8,7 +8,7 @@ proj_root = os.path.join('..')
 
 data_root = os.path.join(home, 'devbox', 'Shared_YZ', 'Results')
 
-data_root = os.path.join(home, 'devbox', 'Shared_YZ', 'StackGAN_visual_results','Final')
+#data_root = os.path.join(home, 'devbox', 'Shared_YZ', 'StackGAN_visual_results','Final')
 #model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
 model_root = os.path.join(proj_root, 'Models')
 
@@ -19,35 +19,72 @@ from LaplacianGan.neuralDist.test_nd_worker import test_worker
 #/home/yuanpuxie/devbox/Shared_YZ/StackGAN_visual_results/Final/birds_test_large_samples_10copy_29330
 
 if 1: #local [64, 256] 
+
+    # original  =   \
+    #                 { 'load_from_epoch': 70, 'batch_size': 8, 'device_id': 2,
+    #                   "data_folder":os.path.join(data_root, 'birds','testing_with_bugs_testing_num_10'), 
+    #                   "result_marker": "testing_with_bugs_testing_num_10", "dataset":"birds",
+    #                   "file_name": "original.h5",
+    #                   'model_name':'neural_dist_birds',
+    #                 }
+
+    neural_dist_birds_no_img_256  =   \
+                    { 'load_from_epoch': 70, 'batch_size': 8, 'device_id': 2,
+                      "data_folder":os.path.join(data_root, 'birds','testing_with_bugs_testing_num_10'), 
+                      "result_marker": "testing_with_bugs_testing_num_10", "dataset":"birds",
+                      "file_name": "gen_origin_disc_global_no_img_birds_[64, 128, 256]_G_epoch_501.h5",
+                      'model_name':'neural_dist_birds',
+                    }
+    neural_dist_birds_no_img_64_256  =   \
+                    { 'load_from_epoch': 70, 'batch_size': 8, 'device_id': 2,
+                      "data_folder":os.path.join(data_root, 'birds','testing_with_bugs_testing_num_10'), 
+                      "result_marker": "testing_with_bugs_testing_num_10", "dataset":"birds",
+                      "file_name": "gen_origin_disc_local_no_img_birds_[64, 256]_G_epoch_501.h5",
+                      'model_name':'neural_dist_birds',
+                    }
+    
+
     # neural_dist_birds  =   \
     #                 { 'load_from_epoch': 70, 'batch_size': 8, 'device_id': 2,
-    #                   "data_folder":os.path.join(data_root, 'birds',testing_with_bugs_testing_num_10'), 
+    #                   "data_folder":os.path.join(data_root, 'birds','testing_with_bugs_testing_num_10'), 
     #                   "result_marker": "testing_with_bugs_testing_num_10", "dataset":"birds",
     #                   "file_name": "zz_mmgan_plain_gl_disc_ncric_comb_64_256v2_birds_256_G_epoch_500.h5",
     #                   'model_name':'neural_dist_birds',
     #                 }
 
-    stack_birds  =   \
-                    { 'load_from_epoch': 70, 'batch_size': 8, 'device_id': 2, 
-                      "data_folder":os.path.join(data_root, 'birds_test_large_samples_10copy_29330'),
-                      "dataset":"birds",
-                      "file_name": "64_256_results_29360.h5",
-                      'model_name':'neural_dist_birds',
-                    }
+    # neural_dist_flowers  =   \
+    #                 { 'load_from_epoch': 110, 'batch_size': 8, 'device_id': 2,
+    #                   "data_folder":os.path.join(data_root, 'flowers','testing_with_bugs_testing_num_26'), 
+    #                   "result_marker": "testing_with_bugs_testing_num_10", "dataset":"flowers",
+    #                   "file_name": "gen_origin_disc_local_no_img_flowers_[64, 256]_G_epoch_501.h5",
+    #                   'model_name':'neural_dist_flowers',
+    #                 }
+    
+    # stack_birds  =   \
+    #                 { 'load_from_epoch': 70, 'batch_size': 8, 'device_id': 2, 
+    #                   "data_folder":os.path.join(data_root, 'birds_test_large_samples_10copy_29330'),
+    #                   "dataset":"birds",
+    #                   "file_name": "64_256_results_29360.h5",
+    #                   'model_name':'neural_dist_birds',
+    #                 }
 
-    stack_flowers  =   \
-                    { 'load_from_epoch': 110, 'batch_size': 8, 'device_id': 2, 
-                      "data_folder":os.path.join(data_root, 'flowers_test_large_samples_26copy_30030'),
-                      "dataset":"flowers",
-                      "file_name": "64_256_results_30160.h5",
-                      'model_name':'neural_dist_flowers',
-                    }
+    # stack_flowers  =   \
+    #                 { 'load_from_epoch': 110, 'batch_size': 8, 'device_id': 2, 
+    #                   "data_folder":os.path.join(data_root, 'flowers_test_large_samples_26copy_30030'),
+    #                   "dataset":"flowers",
+    #                   "file_name": "64_256_results_30160.h5",
+    #                   'model_name':'neural_dist_flowers',
+    #                 }
 
     
 
 training_pool = np.array([
-                    stack_birds,
-                    stack_flowers
+                    neural_dist_birds_no_img_256,
+                    neural_dist_birds_no_img_64_256,
+                    #neural_dist_birds,
+                    #neural_dist_flowers
+                    #tack_birds,
+                    #stack_flowers
                  ])
 
 show_progress = 0

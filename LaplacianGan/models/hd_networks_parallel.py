@@ -155,7 +155,7 @@ class Generator(nn.Module):
         self.__dict__.update(locals())
         norm_layer = getNormLayer(norm)
         act_layer = get_activation_layer(activation)
-
+        
         self.condEmbedding = condEmbedding2(sent_dim, emb_dim)
         self.vec_to_tensor = Sent2FeatMap(emb_dim+noise_dim, 4, 4, self.hid_dim*8, norm=norm)
         self.use_upsamle_skip = use_upsamle_skip

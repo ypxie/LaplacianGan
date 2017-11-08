@@ -25,8 +25,8 @@ def test_worker(data_root, model_root, save_root, testing_dict):
     num_resblock        = testing_dict.get('num_resblock', 2)
     save_images         = testing_dict.get('save_images', False)
     imsize              = testing_dict.get('imsize')
-    detach_list         = training_dict.get('detach_list', [])
-    use_cond            = training_dict.get('use_cond', True)
+    detach_list         = testing_dict.get('detach_list', [])
+    use_cond            = testing_dict.get('use_cond', True)
     
     data_root           = testing_dict.get('data_root', data_root)
     model_root          = testing_dict.get('model_root', model_root)
@@ -72,15 +72,18 @@ def test_worker(data_root, model_root, save_root, testing_dict):
 
     args.cuda = torch.cuda.is_available()
     if args.which_gen == 'origin':
-        from LaplacianGan.models.hd_bugfree import Generator
+        from LaplacianGan.models.hd_networks_parallel import Generator
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
                          activation=args.gen_activation_type, output_size=args.imsize, reduce_dim_at=reduce_dim_at,
-                         num_resblock = args.num_resblock,detach_list=detach_list, use_cond=use_cond)
+                         num_resblock = args.num_resblock)
+        #netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
+        #                 norm=args.norm_type, activation=args.gen_activation_type, output_size=args.imsize)
+
     elif args.which_gen == 'upsample_skip':   
-        from LaplacianGan.models.hd_bugfree import Generator 
+        from LaplacianGan.models.hd_networks_parallel import Generator 
         netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, norm=args.norm_type, 
                          activation=args.gen_activation_type, output_size=args.imsize, use_upsamle_skip=True, 
-                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock, detach_list=detach_list, use_cond=use_cond)              
+                         reduce_dim_at=reduce_dim_at, num_resblock = args.num_resblock)              
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)
 

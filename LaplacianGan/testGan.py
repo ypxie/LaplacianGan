@@ -198,7 +198,7 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
         netG.eval()
 
     test_sampler  = dataset.test.next_batch_test
-
+    
     model_folder = os.path.join(model_root, mode_name)
     model_marker = mode_name + '_G_epoch_{}'.format(args.load_from_epoch)
 
@@ -212,8 +212,8 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
     G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
     print('reload weights from {}'.format(G_weightspath))
     weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
-    #load_partial_state_dict(netG, weights_dict)
-    netG.load_state_dict(weights_dict)
+    load_partial_state_dict(netG, weights_dict)
+    #netG.load_state_dict(weights_dict)
     testing_z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
     testing_z = to_device(testing_z, netG.device_id, volatile=True)
 
@@ -227,9 +227,12 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
 
     if org_file_not_exists:
         org_h5 = h5py.File(org_h5path,'w')
-        org_dset = org_h5.create_dataset('output_256', shape=(num_examples,256, 256,3), dtype=np.uint8)
+        org_dset     = org_h5.create_dataset('output_256', shape=(num_examples,256, 256,3), dtype=np.uint8)
+        org_emb_dset = org_h5.create_dataset('embedding', shape=(num_examples, 1024), dtype=np.float)
     else:
         org_dset = None
+        org_emb_dset = None
+
     with h5py.File(save_h5,'w') as h5file:
         
         start_count = 0
@@ -255,7 +258,8 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
             all_choosen_caption.extend(chosen_captions)    
             if org_dset is not None:
                 org_dset[start_count:start_count+this_batch_size] = ((test_images + 1) * 127.5 ).astype(np.uint8)
-            
+                org_emb_dset[start_count:start_count+this_batch_size] = test_embeddings_list[0]
+
             start_count += this_batch_size
             
             #test_embeddings_list is a list of (B,emb_dim)
