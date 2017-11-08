@@ -65,7 +65,7 @@ class Sent2FeatMap(nn.Module):
         return output
 
 class GeneratorSuperL1Loss(nn.Module):
-    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512, num_resblock=2):
+    def __init__(self, sent_dim, noise_dim, emb_dim, hid_dim, norm='bn', activation='relu', output_size=512, num_resblock=2, output_lowres=False):
 
         super(GeneratorSuperL1Loss, self).__init__()
         self.__dict__.update(locals())
@@ -109,6 +109,9 @@ class GeneratorSuperL1Loss(nn.Module):
         up_img_256 = F.upsample(out['output_256'].detach(), (512,512), mode='bilinear')
 
         out2 = {}
+        if self.output_lowres:
+            out2['output_128'] = out['output_128']
+            out2['output_64'] = out['output_64']
         out2['output_256'] = out['output_256']
         out2['output_512'] = self.tensor_to_img_512(scale_512)
 

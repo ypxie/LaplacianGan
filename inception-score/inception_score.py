@@ -153,10 +153,11 @@ def load_data_from_h5(fullpath):
     import h5py
 
     # import pdb; pdb.set_trace()
+    
     h5file = os.path.join(fullpath, FLAGS.h5_file)
     return_path = os.path.join(fullpath, FLAGS.h5_file[:-3]+'_inception_score')
     print ('read h5 from {}'.format(h5file))
-
+    assert(os.path.isfile(h5file))
     fh = h5py.File(h5file)
     keys = [a for a in fh.keys() if 'output' in a]
     if 'output_512' in keys:
