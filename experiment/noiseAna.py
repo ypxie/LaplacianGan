@@ -242,8 +242,8 @@ if __name__ == "__main__":
     
     args =  get_args(gen_origin_disc_global_local_low_birds_597)
     
-    args.z_len   = 5
-    args.eps_len = 5
+    args.z_len   = 4
+    args.eps_len = 4
     data_name  = args.dataset
     datadir    = os.path.join(data_root, data_name)
 
@@ -253,8 +253,8 @@ if __name__ == "__main__":
                      norm=args.norm_type, activation=args.gen_activation_type, 
                      output_size=args.imsize, reduce_dim_at = args.reduce_dim_at)
 
-    torch.manual_seed(12345)
-    np.random.seed(12345)
+    torch.manual_seed(123456)
+    np.random.seed(123456)
     # make it on cuda device.
     if args.cuda:
         netG = netG.cuda(args.device_id)

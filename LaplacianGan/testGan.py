@@ -44,7 +44,7 @@ def drawCaption(img, caption, level=['output 64', 'output 128', 'output 256']):
 
     return img_txt
 
-def save_super_images(vis_samples, captions_batch, batch_size, save_folder, saveIDs, classIDs):
+def save_super_images(vis_samples, captions_batch, batch_size, save_folder, saveIDs, classIDs, max_sample_num=8):
     
     save_folder_caption = os.path.join(save_folder, 'with_captions')
     save_folder_images  = os.path.join(save_folder, 'images')
@@ -94,7 +94,7 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
                 this_img  = img_tensor[bidx][tidx]
                 
                 re_sample = imresize_shape(this_img, dst_shape)
-                if tidx <= 7:
+                if tidx <= max_sample_num:
                     this_row.append(re_sample)  
                 #img_rgb = ( (re_sample + 1.0) * 127.5 ).astype(np.uint8)
                 #print("img_rgb shape: ", img_rgb.shape)

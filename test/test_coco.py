@@ -45,39 +45,70 @@ save_spec = 'eval_nobug'
 #                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
 #                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
 
-parap_64_256_101  =   \
-               {'test_sample_num' : 1,  'load_from_epoch': 101, 'dataset':'coco', "num_resblock":1,
-                'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
+# final_coco_64_128_256_100  =   \
+#                {'model_root': os.path.join(home, 'devbox', 'Shared_YZ', 'models', 'FINAL_MODEL'), 
+#                 'test_sample_num' : 1,  'load_from_epoch': 100, 'dataset':'coco', "num_resblock":1,
+#                 'device_id': 0, 'imsize':[64, 128, 256], 'model_name':'zz_mmgan_plain_gl_disc_origin_final_coco_256',
+#                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+#                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+
+# parap_64_256_200  =   \
+#                {'test_sample_num' : 1,  'load_from_epoch': 200, 'dataset':'coco', "num_resblock":1,
+#                 'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
+#                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+#                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+
+final_coco_64_128_256_150  =   \
+               {'test_sample_num' : 1,  'load_from_epoch': 150, 'dataset':'coco', "num_resblock":1,
+                "model_root": os.path.join(home, 'devbox', 'Shared_YZ', 'models', 'FINAL_MODEL'),
+                'device_id': 0,'imsize':[64, 128, 256], 'model_name':'zz_mmgan_plain_gl_disc_origin_final_coco_256',
                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
 
-parap_64_256_100  =   \
-               {'test_sample_num' : 1,  'load_from_epoch': 100, 'dataset':'coco', "num_resblock":1,
-                'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
-                'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
-                 'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+# parap_64_256_150  =   \
+#                {'test_sample_num' : 1,  'load_from_epoch': 150, 'dataset':'coco', "num_resblock":1,
+#                 'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
+#                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+#                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
 
-parap_64_256_50  =   \
-               {'test_sample_num' : 1,  'load_from_epoch': 50, 'dataset':'coco', "num_resblock":1,
-                'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
-                'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
-                 'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
 
-parap_64_256_80  =   \
-               {'test_sample_num' : 1,  'load_from_epoch': 80, 'dataset':'coco', "num_resblock":1,
-                'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
-                'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
-                 'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+# parap_64_256_101  =   \
+#                {'test_sample_num' : 1,  'load_from_epoch': 101, 'dataset':'coco', "num_resblock":1,
+#                 'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
+#                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+#                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+
+# parap_64_256_100  =   \
+#                {'test_sample_num' : 1,  'load_from_epoch': 100, 'dataset':'coco', "num_resblock":1,
+#                 'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
+#                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+#                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+
+# parap_64_256_50  =   \
+#                {'test_sample_num' : 1,  'load_from_epoch': 50, 'dataset':'coco', "num_resblock":1,
+#                 'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
+#                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+#                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
+
+# parap_64_256_80  =   \
+#                {'test_sample_num' : 1,  'load_from_epoch': 80, 'dataset':'coco', "num_resblock":1,
+#                 'device_id': 0,'imsize':[64, 256], 'model_name':'zz_mmgan_plain_gl_disc_comG_coco_256',
+#                 'train_mode': False,  'save_spec': save_spec, 'batch_size': 8, 'which_gen': 'origin',
+#                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256], 'save_images':True }
 
 training_pool = np.array([
+                    final_coco_64_128_256_150,
+                    #final_coco_64_128_256_100,
+                    #parap_64_256_200,
+                    #parap_64_256_150,
                     #parap_64_256_101,
-                    parap_64_256_100,
-                    parap_64_256_50,
-                    parap_64_256_80,
-                 #gen_origin_disc_origin_coco_64,
-                 #gen_origin_disc_origin_coco_128,
-                 #gen_origin_disc_origin_coco_128_114
-                 #gen_origin_disc_origin_coco_64_128
+                    #parap_64_256_100,
+                    #parap_64_256_50,
+                    #parap_64_256_80,
+                    #gen_origin_disc_origin_coco_64,
+                    #gen_origin_disc_origin_coco_128,
+                    #gen_origin_disc_origin_coco_128_114
+                    #gen_origin_disc_origin_coco_64_128
                  ])
 
 show_progress = 0

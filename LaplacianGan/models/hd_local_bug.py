@@ -635,12 +635,14 @@ class Discriminator(torch.nn.Module):
             local_img_disc_out          = local_img_disc(img_code) 
             out_dict['local_img_disc']  = local_img_disc_out
             #print('{} local dis shape {}'.format(this_img_size, out_dict['local_img_disc'].size()))   
-
+            
         if 'global' in self.disc_mode or this_img_size == 64:
             global_img_disc_out         = global_img_disc(img_code)
             #global_img_disc_out         = global_img_disc(shrink_img_code) # pls note it is probably a bug and make it a local disc
                 # print('{} global dis shape {}'.format(this_img_size, global_img_disc_out.size()))
             out_dict['global_img_disc'] = global_img_disc_out
+            assert global_img_disc_out.size()[3] == 1, 'global output does not equal 1x1'
+
             #print('{} global dis shape {}'.format(this_img_size, out_dict['global_img_disc'].size()))
 
         out_dict['pair_disc']     = pair_disc_out

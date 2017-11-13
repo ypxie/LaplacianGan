@@ -18,26 +18,18 @@ from LaplacianGan.neuralDist.train_nd_worker import train_worker
 # 101 201 301 401 501 601
 # 2   4   8   16  32  64
 
-
-# bird_neudist  = { 'reuse_weights': True, 'batch_size': 64, 'device_id': 0, 'lr': .0002/(2**1),
-#                   'imsize':[64, 256], 'load_from_epoch': 170, 'model_name':'neural_dist', 
-#                   'dataset':'birds',
-#                 }
-# flower_neudist  = { 'reuse_weights': True, 'batch_size': 64, 'device_id': 0, 'lr': .0002/(2**2),
-#                   'imsize':[64, 256], 'load_from_epoch': 240, 'model_name':'neural_dist', 
-#                   'dataset':'flowers',
-#                     }
-bird_neudist  = { 'reuse_weights': False, 'batch_size': 64, 'device_id': 0, 'lr': .0002/(2**1),
-                  'imsize':[64, 256], 'load_from_epoch': 0, 'model_name':'neural_dist', 
+bird_neudist  = { 'reuse_weights': True, 'batch_size': 64, 'device_id': 0, 'lr': .0002/(2**1),
+                  'imsize':[64, 256], 'load_from_epoch': 70, 'model_name':'neural_dist', 
                   'dataset':'birds',
                 }
-flower_neudist  = { 'reuse_weights': False, 'batch_size': 64, 'device_id': 1, 'lr': .0002/(2**2),
-                  'imsize':[64, 256], 'load_from_epoch': 0, 'model_name':'neural_dist', 
-                  'dataset':'flowers',
-                    }
+flower_neudist  = { 'reuse_weights': True, 'batch_size': 64, 'device_id': 0, 'lr': .0002/(2**2),
+                    'imsize':[64, 256], 'load_from_epoch': 110, 'model_name':'neural_dist', 
+                    'dataset':'flowers',
+                  }
+
 training_pool = np.array([
                  flower_neudist,
-                 bird_neudist
+                 bird_neudist,
                  ])
 show_progress = 0
 processes = []

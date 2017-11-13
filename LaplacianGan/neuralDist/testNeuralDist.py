@@ -60,7 +60,8 @@ def pre_process(images, pool, trans=None):
 def test_nd(h5_path, model_root, mode_name, img_encoder, vs_model, args):
     h5_folder, h5_name = os.path.split(h5_path)
     h5_name_noext = os.path.splitext(h5_name)[0]
-    result_path = os.path.join(h5_folder, h5_name_noext+"_neu_dist.json")
+    result_path = os.path.join(h5_folder, h5_name_noext+"_epoch_{}_neu_dist.json".format(args.load_from_epoch))
+    
     print("{} exists or not: ".format(h5_path), os.path.exists(h5_path))
     with h5py.File(h5_path,'r') as h5_data:
         pool = Pool(3)

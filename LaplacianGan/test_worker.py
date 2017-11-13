@@ -76,7 +76,7 @@ def test_worker(data_root, model_root, save_root, testing_dict):
         from LaplacianGan.models.hd_networks import GeneratorSuperL1Loss
         
         netG = GeneratorSuperL1Loss(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
-                norm=args.norm_type, activation=args.gen_activation_type, num_resblock = num_resblock)
+                norm=args.norm_type, activation=args.gen_activation_type, num_resblock = num_resblock, output_lowres=True)
         #print(netG)        
     else:
         raise NotImplementedError('Generator [%s] is not implemented' % args.which_gen)

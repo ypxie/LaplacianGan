@@ -6,11 +6,16 @@ import torch, h5py
 import torch.nn as nn
 from collections import OrderedDict
 
-from .trainNeuralDist  import train_nd
+
 from .neuralDistModel  import ImgSenRanking
 from .neuralDistModel  import ImageEncoder
+from .trainNeuralDist_coco  import train_nd
+from ..fuel.zz_datasets_coco import MultiThreadLoader
 
-from ..fuel.zz_datasets import TextDataset
+class Dataset():
+    def __init__(self, train_loader, test_loader):
+        self.train = train_loader
+        self.test = test_loader
 
 def train_worker(data_root, model_root, training_dict):
 
@@ -23,7 +28,8 @@ def train_worker(data_root, model_root, training_dict):
     dim_image   =  training_dict.get('dim_image', 1536) 
     sent_dim    =  training_dict.get('sent_dim', 1024) 
     hid_dim     =  training_dict.get('hid_dim', 512) 
-
+    margin      =  training_dict.get('margin', 0.2)
+    
     parser = argparse.ArgumentParser(description = 'NeuralDist')    
     parser.add_argument('--weight_decay', type=float, default= 0,
                         help='weight decay for training')
@@ -70,14 +76,14 @@ def train_worker(data_root, model_root, training_dict):
 
     parser.add_argument('--dataset', type=str, default=training_dict['dataset'], help='which dataset to use [birds or flowers]') 
 
-    parser.add_argument('--margin',  default = 0.2, help='which devices to parallel the data')
+    parser.add_argument('--margin',  default = margin, help='which devices to parallel the data')
 
     args = parser.parse_args()
 
     args.cuda  = torch.cuda.is_available()
     
     data_name  = args.dataset
-    datadir = os.path.join(data_root, data_name)
+    datadir    = os.path.join(data_root, data_name)
 
     vs_model    = ImgSenRanking(dim_image, sent_dim, hid_dim)
     img_encoder = ImageEncoder()
@@ -92,13 +98,15 @@ def train_worker(data_root, model_root, training_dict):
         cudnn.benchmark = True
     
     print ('>> initialize dataset')
-    dataset = TextDataset(datadir, 'cnn-rnn', 4)
-    filename_test = os.path.join(datadir, 'test')
-    dataset.test = dataset.get_data(filename_test)
-    filename_train = os.path.join(datadir, 'train')
-    dataset.train = dataset.get_data(filename_train)
-  
+    
+    train_loader = MultiThreadLoader(os.path.join(datadir, 'train'), batch_size=args.batch_size, 
+                                         num_embed=1, threads= 4, data_dir=datadir,drop_last=True).load_data()
+    test_loader  = MultiThreadLoader(os.path.join(datadir,  'val'), batch_size=args.batch_size, 
+                                        num_embed=1, threads= 4, aug_flag=False, data_dir=datadir,drop_last=True).load_data()
+    dataset = Dataset(train_loader, test_loader)
+    
     #model_name ='{}_{}_{}'.format(args.model_name, data_name, args.imsize)
     model_name ='{}_{}'.format(args.model_name, data_name)
+
     print ('>> START training ')
     train_nd(dataset, model_root, model_name, img_encoder, vs_model, args)

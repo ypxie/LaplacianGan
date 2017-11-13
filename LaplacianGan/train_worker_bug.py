@@ -10,7 +10,7 @@ from .HDGan import train_gans
 from .fuel.zz_datasets import TextDataset
 
 def train_worker(data_root, model_root, training_dict):
-
+    
     save_freq           = training_dict.get('save_freq', 3)
     ncritic_epoch_range = training_dict.get('ncritic_epoch_range', 100)
     epoch_decay         = training_dict.get('epoch_decay', 100) 

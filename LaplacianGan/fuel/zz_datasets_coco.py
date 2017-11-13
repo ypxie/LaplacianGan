@@ -246,12 +246,13 @@ class Dataset(object):
         sampled_filenames = [self._filenames[i].decode() for i in range(start, end)] 
         sampled_images = self._images(sampled_filenames)
         
-        sampled_images = sampled_images
+        #sampled_images = sampled_images
+        sampled_images = resize_images(sampled_images, shape=[256, 256])
         # from [0, 255] to [-1.0, 1.0]
         sampled_images = sampled_images * (2. / 255) - 1.
         sampled_images = self.transform(sampled_images)
         sampled_images = sampled_images.astype(np.float32)
-
+        sampled_images = sampled_images.transpose(0, 2,3,1)
         sampled_embeddings = self._embeddings[start:end]
         _, embedding_num, _ = sampled_embeddings.shape
         sampled_embeddings_batchs = []
@@ -270,7 +271,7 @@ class Dataset(object):
             sampled_embeddings_batchs.append(np.squeeze(batch))
 
         return [sampled_images, sampled_embeddings_batchs,
-                self._saveIDs[start:end], sampled_captions]
+                self._saveIDs[start:end], sampled_captions, sampled_filenames]
 
 
 class TextDataset(object):

@@ -21,6 +21,9 @@ def test_worker(data_root, model_root, testing_dict):
     sent_dim     =  testing_dict.get('sent_dim',  1024) 
     hid_dim      =  testing_dict.get('hid_dim',    512) 
 
+    data_root           = testing_dict.get('data_root', data_root)
+    model_root          = testing_dict.get('model_root', model_root)    
+    
     parser = argparse.ArgumentParser(description = 'test nd') 
     parser.add_argument('--batch_size', type=int, default=batch_size, metavar='N',
                         help='batch size.')
@@ -47,7 +50,7 @@ def test_worker(data_root, model_root, testing_dict):
 
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
- 
+            
     model_name = args.model_name   #'{}_{}_{}'.format(args.model_name, data_name, args.imsize)
     
     testing_path = os.path.join(testing_dict['data_folder'],  testing_dict['file_name'])

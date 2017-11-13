@@ -65,7 +65,7 @@ def load_partial_state_dict(model, state_dict):
 def drawCaption(img, caption, level=['output 64', 'output 128', 'output 256']):
     img_txt = Image.fromarray(img)
     # get a font
-    fnt = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 40)
+    fnt = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 6)
     # get a drawing context
     d = ImageDraw.Draw(img_txt)
 
@@ -91,7 +91,8 @@ def drawCaption(img, caption, level=['output 64', 'output 128', 'output 256']):
     return img_txt
 
 
-def save_super_images(vis_samples, captions_batch, batch_size, save_folder, saveIDs, classIDs):
+def save_super_images(vis_samples, captions_batch, batch_size, save_folder, 
+                      saveIDs, classIDs, sampled_filenames_woext):
     
     save_folder_caption = os.path.join(save_folder, 'with_captions')
     save_folder_images  = os.path.join(save_folder, 'images')
@@ -108,6 +109,7 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
     valid_caption = []
     valid_IDS = []
     valid_classIDS = []
+    valid_filenames = []
     for j in range(batch_size):
         if not re.search('[a-zA-Z]+', captions_batch[j]):
             print("Not valid caption? :",  captions_batch[j])
@@ -116,6 +118,7 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
             valid_caption.append(captions_batch[j])
             valid_IDS.append(saveIDs[j])
             valid_classIDS.append(classIDs[j])
+            valid_filenames.append(sampled_filenames_woext[j])
 
     for typ, img_list in vis_samples.items(): 
         img_tensor = np.stack(img_list, 1) # N * T * 3 *row*col
@@ -129,7 +132,8 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
         #imshow(img_tensor[0,0])
         batch_all = []
         for bidx in range(batch_size):  
-            this_folder_id = os.path.join(save_folder_images, '{}_{}'.format(valid_classIDS[bidx], valid_IDS[bidx]))
+            this_folder_id = os.path.join(save_folder_images, 
+                            '{}_{}_{}'.format(valid_filenames[bidx], valid_classIDS[bidx], valid_IDS[bidx]))
             mkdirs([this_folder_id])
 
             if not re.search('[a-zA-Z]+', captions_batch[j]):
@@ -167,7 +171,13 @@ def save_super_images(vis_samples, captions_batch, batch_size, save_folder, save
         superimage =\
             np.concatenate([top_padding, superimage], axis=0)
             
-        save_path = os.path.join(save_folder_caption, '{}_{}.png'.format(valid_classIDS[idx], valid_IDS[idx]) )    
+        save_path = os.path.join(save_folder_caption, '{}_{}_{}.png'.format(valid_filenames[idx], valid_classIDS[idx], valid_IDS[idx]) )    
+
+        caption_path = os.path.join(save_folder_caption, '{}_{}_{}.json'.format(valid_filenames[idx],valid_classIDS[idx], valid_IDS[idx]) )  
+        cap_dict = {"captions:": valid_caption[idx] } #.decode("utf-8")
+        with open(caption_path,'w') as f:
+            json.dump(cap_dict, f)
+        
         superimage = drawCaption(np.uint8(superimage), valid_caption[idx], level)
         scipy.misc.imsave(save_path, superimage)
 
@@ -218,7 +228,7 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
         org_emb_dset = None
 
     with h5py.File(save_h5,'w') as h5file:
-        
+       
         start_count = 0
         data_count = {}
         dset = {}
@@ -231,7 +241,10 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
             if start_count >= num_examples:
                 break
             
-            test_images, test_embeddings_list, saveIDs, test_captions = test_sampler(args.batch_size, start_count, 1)
+            test_images, test_embeddings_list, saveIDs, test_captions, sampled_filenames= test_sampler(args.batch_size, start_count, 1)
+            
+            sampled_filenames_woext = [os.path.splitext(_p)[0] for _p in sampled_filenames]
+
             classIDs = [0 for _ in saveIDs]
             this_batch_size = test_images.shape[0]
             
@@ -263,8 +276,8 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                 
                 if  t == 0: 
                     if init_flag is True:
-                        dset['saveIDs'] = h5file.create_dataset('saveIDs', shape=(total_number,), dtype=np.int64)
-                        dset['classIDs'] = h5file.create_dataset('classIDs', shape=(total_number,), dtype=np.int64)
+                        dset['saveIDs']   = h5file.create_dataset('saveIDs', shape=(total_number,), dtype=np.int64)
+                        dset['classIDs']  = h5file.create_dataset('classIDs', shape=(total_number,), dtype=np.int64)
                         dset['embedding'] = h5file.create_dataset('embedding', shape=(total_number, 1024), dtype=np.float)
                         for k in test_outputs.keys():
                             vis_samples[k] = [None for i in range(args.test_sample_num + 1)] # +1 to fill real image
@@ -303,7 +316,8 @@ def test_gans(dataset, model_root, mode_name, save_root , netG,  args):
                     data_count[typ] = start + bs
 
             if args.save_images:
-                save_super_images(vis_samples, chosen_captions, this_batch_size, save_folder, saveIDs, classIDs)
+                save_super_images(vis_samples, chosen_captions, this_batch_size, save_folder, 
+                                  saveIDs, classIDs, sampled_filenames_woext)
 
             print('saved files: ', data_count)  
             

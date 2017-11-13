@@ -5,14 +5,14 @@ sys.path.insert(0, os.path.join('..'))
 
 home = os.path.expanduser("~")
 data_root  = os.path.join('..', 'Data')
-model_root = os.path.join('..', 'Models')
+#model_root = os.path.join('..', 'Models')
 
 #data_root  = os.path.join(home, 'ganData')
 #model_root = os.path.join(data_root, 'Models')
-#model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
+model_root = os.path.join(home, 'devbox', 'Shared_YZ', 'models')
 
-save_root  =  os.path.join(home, 'devbox', 'Shared_YZ', 'Results')
-
+save_root   =  os.path.join(home, 'devbox', 'Shared_YZ', 'Results')
+interp_root =  os.path.join(home, 'devbox', 'Shared_YZ', 'interp') 
 
 import numpy as np
 import os, argparse
@@ -30,7 +30,7 @@ from LaplacianGan.proj_utils.plot_utils import *
 from LaplacianGan.proj_utils.local_utils import *
 
 from LaplacianGan.proj_utils.torch_utils import *
-from LaplacianGan.zzGan import load_partial_state_dict
+from LaplacianGan.HDGan import load_partial_state_dict
 from LaplacianGan.testGan import save_super_images
 
 from PIL import Image, ImageDraw, ImageFont
@@ -41,7 +41,7 @@ import deepdish as dd
 TINY = 1e-8
 
 
-def test_gans(dict_left, dict_right, testing_z, epsilon,
+def test_gans(dict_left, dict_right, this_id, testing_z, epsilon,
               model_root, mode_name, save_root, netG, args):
     # helper function
     if args.train_mode:
@@ -53,7 +53,7 @@ def test_gans(dict_left, dict_right, testing_z, epsilon,
 
     #test_sampler  = dataset.test.next_batch_test
 
-    model_folder = os.path.join(model_root, mode_name)
+    
     model_marker = mode_name + '_G_epoch_{}'.format(args.load_from_epoch)
 
     save_folder  = os.path.join(save_root, model_marker )   # to be defined in the later part
@@ -61,12 +61,6 @@ def test_gans(dict_left, dict_right, testing_z, epsilon,
     org_h5path = os.path.join(save_root, 'original.h5')
     mkdirs(save_folder)
     
-    ''' load model '''
-    assert args.load_from_epoch != '', 'args.load_from_epoch is empty'
-    G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
-    print('reload weights from {}'.format(G_weightspath))
-    weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
-    load_partial_state_dict(netG, weights_dict)
     
     
     
@@ -96,12 +90,15 @@ def test_gans(dict_left, dict_right, testing_z, epsilon,
         tmp_samples = {}
         init_flag = True
         
-        test_emb_1, test_captions_1 = dict_left['emb'],   dict_left['caption']
-        test_emb_2, test_captions_2 = dict_right['emb'],  dict_right['caption']
+        test_emb_1, test_captions_1 = dict_left['embedding'],   dict_left['caption'].decode("utf-8") 
+        test_emb_2, test_captions_2 = dict_right['embedding'],  dict_right['caption'].decode("utf-8") 
         
+        print('test_captions_1: ', test_captions_1)
+        print('test_captions_2: ', test_captions_2)
+
         chosen_captions =  test_captions_1 + test_captions_2
         this_batch_size =  test_emb_1.shape[0]
-        saveIDs         =  [1]*this_batch_size
+        saveIDs         =  [this_id]*this_batch_size
 
         #print('start: {}, this_batch size {}, num_examples {}'.format(start_count, test_images.shape[0], dataset.test._num_examples  ))
         # chosen_captions = []
@@ -124,7 +121,7 @@ def test_gans(dict_left, dict_right, testing_z, epsilon,
             this_alpha = args.alpha_list[test_idx]
             this_test_embeddings  = this_alpha*test_emb_1 + (1-this_alpha)*test_emb_2
             this_test_embeddings  = to_device(this_test_embeddings, netG.device_id, volatile=True)
-            test_outputs, _ = netG(this_test_embeddings, testing_z[0:this_batch_size], epsilon)
+            test_outputs, _  = netG(this_test_embeddings, testing_z[0:this_batch_size], epsilon)
             
             if  t == 0: 
                 if init_flag is True:
@@ -156,7 +153,7 @@ def test_gans(dict_left, dict_right, testing_z, epsilon,
                 #print('saved files: ', data_count) 
 
         if args.save_images:
-            save_super_images(vis_samples, chosen_captions, this_batch_size, save_folder, saveIDs)
+            save_super_images(vis_samples, chosen_captions, this_batch_size, save_folder, saveIDs, saveIDs,max_sample_num=100)
              
         #caption_array = np.array(all_choosen_caption, dtype=object)
         #string_dt = h5py.special_dtype(vlen=str)
@@ -210,54 +207,72 @@ def get_args(testing_dict):
 if __name__ == "__main__":
     
     save_spec = 'interpolation'
-    gen_origin_disc_global_local_low_birds_597  =   \
-               { 'test_sample_num' : 10,  'load_from_epoch': 327, 'dataset':'birds', 
-                 'device_id': 3, 'imsize':256, 'model_name':'gen_origin_disc_local_low_birds_[64, 128, 256]',
+    zz_mmgan_plain_gl_disc_birds_256_500  =   \
+               { 'test_sample_num' : 10,  'load_from_epoch': 500, 'dataset':'birds', 
+                 'device_id': 1, 'imsize':[64,128,256], 'model_name':'zz_mmgan_plain_gl_disc_birds_256',
                  'train_mode': False,  'save_spec': save_spec,  'which_gen': 'origin',
                  'which_disc':'origin', 'reduce_dim_at':[8, 32, 128, 256] }
-    
-    args =  get_args(gen_origin_disc_global_local_low_birds_597)
+     
+    args =  get_args(zz_mmgan_plain_gl_disc_birds_256_500)
     
     data_name  = args.dataset
-    #datadir    = os.path.join(data_root, data_name)
-
+    
     # Generator
     from LaplacianGan.models.hd_bugfree import Generator
     netG = Generator(sent_dim=1024, noise_dim=args.noise_dim, emb_dim=128, hid_dim=128, 
                      norm=args.norm_type, activation=args.gen_activation_type, 
                      output_size=args.imsize, reduce_dim_at = args.reduce_dim_at)
 
-    torch.manual_seed(12345)
-    np.random.seed(12345)
+    
+    seed_list = [0,0, 0, 0]
+    #this_seed = 111
+    #torch.manual_seed(this_seed)
+    #np.random.seed(this_seed)
+
     # make it on cuda device.
     if args.cuda:
         netG = netG.cuda(args.device_id)
         import torch.backends.cudnn as cudnn
         cudnn.benchmark = True
+    
+    ''' load model '''
+    model_folder = os.path.join(model_root, args.model_name)
+    assert args.load_from_epoch != '', 'args.load_from_epoch is empty'
+    G_weightspath = os.path.join(model_folder, 'G_epoch{}.pth'.format(args.load_from_epoch))
+    print('reload weights from {}'.format(G_weightspath))
+    weights_dict = torch.load(G_weightspath, map_location=lambda storage, loc: storage)
+    load_partial_state_dict(netG, weights_dict)
 
     interv = 1.0/5
     args.alpha_list =  np.linspace(0,1,11)
     test_sample_num =  len(args.alpha_list)
-    path_left  =  None
-    path_right =  None
+    path_left  =  os.path.join(interp_root, 'birds', 'text_left.pickle')
+    path_right =  os.path.join(interp_root, 'birds', 'text_right.pickle')
+
     with open(path_left, 'rb') as f:
         dict_left_list   = pickle.load(f)
     with open(path_right, 'rb') as f:
         dict_right_right   = pickle.load(f)    
-    
-    for dict_left, dict_right in zip(dict_left_list, dict_right_right)
-        dict_left  = {'emb':np.random.rand(1, 1024), 'caption':'random captions'}
-        dict_right = {'emb':np.random.rand(1, 1024), 'caption':'random captions'}
+    print(len(dict_right_right))
+
+    for this_id, (dict_left, dict_right) in enumerate(zip(dict_left_list, dict_right_right)):
+        #dict_left  = {'emb':np.random.rand(1, 1024), 'caption':'random captions'}
+        #dict_right = {'emb':np.random.rand(1, 1024), 'caption':'random captions'}
+
+        this_seed = seed_list[this_id]
         
-        args.batch_size = dict_left['emb'].shape[0]
+        torch.manual_seed(this_seed)
+        np.random.seed(this_seed)
+
+        args.batch_size = dict_left['embedding'].shape[0]
         testing_z = torch.FloatTensor(args.batch_size, args.noise_dim).normal_(0, 1)
         epsilon   = torch.FloatTensor(args.batch_size, 128).normal_(0, 1)
         
-        print({'dict_left':dict_left, 'z':testing_z , 'eps':epsilon})
+        #print({'dict_left':dict_left, 'z':testing_z , 'eps':epsilon})
 
         save_folder  = os.path.join(save_root, data_name, args.save_spec + 'testing_num_{}'.format(test_sample_num) )
         
         mkdirs(save_folder)
         
-        test_gans(dict_left, dict_right, testing_z, epsilon, model_root, args.model_name, save_folder, netG, args)
+        test_gans(dict_left, dict_right, this_id, testing_z, epsilon, model_root, args.model_name, save_folder, netG, args)
         
